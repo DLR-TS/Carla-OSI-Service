@@ -90,11 +90,11 @@ target_link_libraries(CoSimulationManagerLib fmi4cpp)
 #add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL) --> Unknown CMake command "protobuf_generate_cpp".
 target_include_directories(CoSimulationManagerLib PUBLIC open-simulation-interface)
 target_link_libraries(CoSimulationManagerLib open-simulation-interface)
-1. OSI herunterladen - check
-2. Protobuf kompilieren
-3. OSI mit Protobuf Libs kombinieren (Umgegungsvariablen)
-4. OSI kompilieren mit Probuf Library
-5. OSI Library einbinden
+#1. OSI herunterladen - check
+#2. Protobuf kompilieren
+#3. OSI mit Protobuf Libs kombinieren (Umgegungsvariablen)
+#4. OSI kompilieren mit Probuf Library
+#5. OSI Library einbinden
 ######################OSI
 
 find_package(Catch2 REQUIRED)
