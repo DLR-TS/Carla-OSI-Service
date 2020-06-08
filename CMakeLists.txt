@@ -54,22 +54,6 @@ include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
 include(${CMAKE_CURRENT_BINARY_DIR}/conan_paths.cmake)
 conan_basic_setup()
 
-# #protobuf
-# add_subdirectory ("lib/protobuf/cmake")
-
-#osi
-# set (ENV{PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/build2/Debug")
-# set (ENV{PROTOBUF} "${CMAKE_SOURCE_DIR}/cosima/lib/protobuf")
-# set (ENV{PROTOBUF_SRC_ROOT_FOLDER} "%PROTOBUF%")
-# set (ENV{CMAKE_INCLUDE_PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/src")
-# set (ENV{CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/build2/Debug")
-
-# find_package(Protobuf REQUIRED)
-# find_package(yaml_cpp)
-# find_package(catch2)
-# find_package(FakeIt)
-
-# add_subdirectory ("lib/open-simulation-interface")
 
 #main project
 # set up variables that are used below
@@ -86,8 +70,20 @@ target_include_directories(CoSimulationManagerLib PUBLIC fmi4cpp)
 target_link_libraries(CoSimulationManagerLib fmi4cpp)
 
 ######################OSI
+#from old config
+#set (ENV{PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/build2/Debug")
+#set (ENV{PROTOBUF} "${CMAKE_SOURCE_DIR}/cosima/lib/protobuf")
+#set (ENV{PROTOBUF_SRC_ROOT_FOLDER} "%PROTOBUF%")
+#set (ENV{CMAKE_INCLUDE_PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/src")
+#set (ENV{CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/build2/Debug")
 
-#add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL) --> Unknown CMake command "protobuf_generate_cpp".
+set (ENV{PATH} "C:/.conan/da210a/1/lib")
+set (ENV{PROTOBUF} "C:/.conan/da210a/1")
+set (ENV{PROTOBUF_SRC_ROOT_FOLDER} "%PROTOBUF%")
+set (ENV{CMAKE_INCLUDE_PATH} "C:/.conan/da210a/1/include/google/protobuf")
+set (ENV{CMAKE_LIBRARY_PATH} "C:/.conan/da210a/1/lib")
+
+add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)# --> Unknown CMake command "protobuf_generate_cpp".
 target_include_directories(CoSimulationManagerLib PUBLIC open-simulation-interface)
 target_link_libraries(CoSimulationManagerLib open-simulation-interface)
 #1. OSI herunterladen - check
