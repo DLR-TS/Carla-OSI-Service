@@ -71,13 +71,6 @@ conan_basic_setup()
 
 # add_subdirectory ("lib/open-simulation-interface")
 
-#fmi library
-# add_subdirectory("lib/fmi-library")
-
-# #test libraries
-# add_subdirectory("lib/Catch2")
-# add_subdirectory("lib/FakeIt")
-
 #main project
 # set up variables that are used below
 add_subdirectory("src")
@@ -91,6 +84,18 @@ target_link_libraries(CoSimulationManagerLib ${CONAN_LIBS})#open_simulation_inte
 # FMI4cpp is not managed by conan, thus it is added here
 target_include_directories(CoSimulationManagerLib PUBLIC fmi4cpp)
 target_link_libraries(CoSimulationManagerLib fmi4cpp)
+
+######################OSI
+
+#add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL) --> Unknown CMake command "protobuf_generate_cpp".
+target_include_directories(CoSimulationManagerLib PUBLIC open-simulation-interface)
+target_link_libraries(CoSimulationManagerLib open-simulation-interface)
+1. OSI herunterladen - check
+2. Protobuf kompilieren
+3. OSI mit Protobuf Libs kombinieren (Umgegungsvariablen)
+4. OSI kompilieren mit Probuf Library
+5. OSI Library einbinden
+######################OSI
 
 find_package(Catch2 REQUIRED)
 add_executable(test_CoSiMa ${TESTFILES})
