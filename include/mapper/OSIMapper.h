@@ -2,7 +2,7 @@
 #define OSIMAPPER_H
 
 #include "Mapper.h"
-#include "open-simulation-interface/build/osi_environment.pb.h"
+#include "osi_lane.pb.h"
 
 class OSIMapper : Mapper {
 
