@@ -77,15 +77,16 @@ target_link_libraries(CoSimulationManagerLib fmi4cpp)
 #set (ENV{CMAKE_INCLUDE_PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/src")
 #set (ENV{CMAKE_LIBRARY_PATH} "${CMAKE_SOURCE_DIR}/lib/protobuf/build2/Debug")
 
-set (ENV{PATH} "C:/.conan/da210a/1/lib")
-set (ENV{PROTOBUF} "C:/.conan/da210a/1")
-set (ENV{PROTOBUF_SRC_ROOT_FOLDER} "%PROTOBUF%")
-set (ENV{CMAKE_INCLUDE_PATH} "C:/.conan/da210a/1/include/google/protobuf")
-set (ENV{CMAKE_LIBRARY_PATH} "C:/.conan/da210a/1/lib")
+#set (ENV{PATH} "C:/.conan/da210a/1/lib")
+#set (ENV{PROTOBUF} "C:/.conan/da210a/1")
+#set (ENV{PROTOBUF_SRC_ROOT_FOLDER} "%PROTOBUF%")
+#set (ENV{CMAKE_INCLUDE_PATH} "C:/.conan/da210a/1/include/google/protobuf")
+#set (ENV{CMAKE_LIBRARY_PATH} "C:/.conan/da210a/1/lib")
 
-add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)# --> Unknown CMake command "protobuf_generate_cpp".
-target_include_directories(CoSimulationManagerLib PUBLIC open-simulation-interface)
-target_link_libraries(CoSimulationManagerLib open-simulation-interface)
+#add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)# --> Unknown CMake command "protobuf_generate_cpp".
+target_include_directories(CoSimulationManagerLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/lib)
+#local build just working with precompiled osi (Bjoern)
+target_link_libraries(CoSimulationManagerLib ${CMAKE_CURRENT_SOURCE_DIR}/lib/open-simulation-interface/build/Debug/open_simulation_interface_static.lib)
 #1. OSI herunterladen - check
 #2. Protobuf kompilieren
 #3. OSI mit Protobuf Libs kombinieren (Umgegungsvariablen)
