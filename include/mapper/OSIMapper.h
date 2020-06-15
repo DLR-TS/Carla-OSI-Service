@@ -23,7 +23,7 @@ public:
 	\param messageType Messge type of message to be created.
 	\return filled OSI message
 	*/
-	int mapFromInternalState(eSupportedMessages messageType);//osiMessages_t
+	osiMessages_t mapFromInternalState(eSupportedMessages messageType);//osiMessages_t
 }; 
 
 #endif // !OSIMAPPER_H

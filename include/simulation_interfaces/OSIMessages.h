@@ -5,9 +5,15 @@
 #include "osi_sensorview.pb.h"
 
 enum eSupportedMessages {
+	//Sensorview
 	SensorViewMessage,
-	GenericSensorViewMessage
-
+	GenericSensorViewMessage,
+	RadarSensorViewMessage,
+	LidarSensorViewMessage,
+	CameraSensorViewMessage,
+	UltrasonicSensorViewMessage
+	
+	//
 };
 struct address {
 	union pointerUnion {
@@ -20,6 +26,12 @@ struct address {
 	int size;
 };
 
-typedef std::variant<osi3::SensorView, osi3::GenericSensorView> osiMessages_t;
+typedef std::variant<osi3::SensorView,
+	osi3::GenericSensorView,
+	osi3::RadarSensorView,
+	osi3::LidarSensorView,
+	osi3::CameraSensorView,
+	osi3::UltrasonicSensorView
+> osiMessages_t;
 
 #endif // !OSIMESSAGES_H

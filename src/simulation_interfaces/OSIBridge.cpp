@@ -1,8 +1,6 @@
 #include <string>
 #include "simulation_interfaces/OSIBridge.h"
 
-//to do reading of lo and hi in addressInformation from fmi
-
 int OSIBridge::init(std::string scenario, float starttime, int mode) {
 	return 0;
 }
@@ -36,6 +34,34 @@ int OSIBridge::writeToInternalState() {
 			}
 			//mapper->mapToInternalState
 			break;
+		case RadarSensorViewMessage:
+			parseSuccess = radarSensorView.ParseFromArray((const void*)info.second.addr.address, info.second.size);
+			if (parseSuccess == false) {
+				return 1;
+			}
+			//mapper->mapToInternalState
+			break;
+		case LidarSensorViewMessage:
+			parseSuccess = lidarSensorView.ParseFromArray((const void*)info.second.addr.address, info.second.size);
+			if (parseSuccess == false) {
+				return 1;
+			}
+			//mapper->mapToInternalState
+			break;
+		case CameraSensorViewMessage:
+			parseSuccess = cameraSensorView.ParseFromArray((const void*)info.second.addr.address, info.second.size);
+			if (parseSuccess == false) {
+				return 1;
+			}
+			//mapper->mapToInternalState
+			break;
+		case UltrasonicSensorViewMessage:
+			parseSuccess = ultrasonicSensorView.ParseFromArray((const void*)info.second.addr.address, info.second.size);
+			if (parseSuccess == false) {
+				return 1;
+			}
+			//mapper->mapToInternalState
+			break;
 		}
 	}
 
@@ -58,6 +84,22 @@ int OSIBridge::readFromInternalState() {
 		case GenericSensorViewMessage:
 			//genericSensorView = mapper->mapFromInternalState
 			genericSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			break;
+		case RadarSensorViewMessage:
+			//genericSensorView = mapper->mapFromInternalState
+			radarSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			break;
+		case LidarSensorViewMessage:
+			//genericSensorView = mapper->mapFromInternalState
+			lidarSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			break;
+		case CameraSensorViewMessage:
+			//genericSensorView = mapper->mapFromInternalState
+			cameraSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			break;
+		case UltrasonicSensorViewMessage:
+			//genericSensorView = mapper->mapFromInternalState
+			ultrasonicSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		}
 	}
