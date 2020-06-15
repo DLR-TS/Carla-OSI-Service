@@ -8,7 +8,7 @@ int OSIMapper::readConfiguration(configVariants_t config) {
 }
 
 
-void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages messageType) {
+void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages messageType, int index) {
 	switch (messageType) {
 	case SensorViewMessage:
 	{

@@ -9,6 +9,7 @@
 enum eSupportedMessages {
 	//Sensorview
 	SensorViewMessage,
+
 	GenericSensorViewMessage,
 	RadarSensorViewMessage,
 	LidarSensorViewMessage,
@@ -17,6 +18,7 @@ enum eSupportedMessages {
 	
 	//SensorViewConfiguration
 	SensorViewConfigurationMessage,
+
 	GenericSensorViewConfigurationMessage,
 	RadarSensorViewConfigurationMessage,
 	LidarSensorViewConfigurationMessage,
@@ -24,7 +26,17 @@ enum eSupportedMessages {
 	UltrasonicSensorViewConfigurationMessage,
 
 	//GroundTruth
-	GroundTruthMessage
+	GroundTruthMessage,
+
+	StationaryObjectMessage,
+	MovingObjectMessage,
+	TrafficSignMessage,
+	TrafficLigthMessage,
+	RoadMarkingMessage,
+	LaneBoundaryMessage,
+	LaneMessage,
+	OccupantMessage,
+
 };
 
 struct address {

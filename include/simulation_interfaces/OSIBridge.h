@@ -24,11 +24,8 @@ public:
 
 private:
 	osi3::SensorView sensorView;
-	osi3::GenericSensorView genericSensorView;
-	osi3::RadarSensorView radarSensorView;
-	osi3::LidarSensorView lidarSensorView;
-	osi3::CameraSensorView cameraSensorView;
-	osi3::UltrasonicSensorView ultrasonicSensorView;
+	osi3::SensorViewConfiguration sensorViewConfiguration;
+	osi3::GroundTruth groundTruth;
 
 	std::map<eSupportedMessages, address> addressInformation;
 };
