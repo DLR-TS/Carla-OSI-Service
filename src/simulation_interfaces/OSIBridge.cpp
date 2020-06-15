@@ -151,26 +151,26 @@ int OSIBridge::readFromInternalState() {
 			//sensorView = mapper->mapFromInternalState
 			sensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
-		/*case GenericSensorViewMessage:
+		case GenericSensorViewMessage:
 			//genericSensorView = mapper->mapFromInternalState
-			genericSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			//genericSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case RadarSensorViewMessage:
 			//genericSensorView = mapper->mapFromInternalState
-			radarSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			//radarSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case LidarSensorViewMessage:
 			//genericSensorView = mapper->mapFromInternalState
-			lidarSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			//lidarSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case CameraSensorViewMessage:
 			//genericSensorView = mapper->mapFromInternalState
-			cameraSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			//cameraSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case UltrasonicSensorViewMessage:
 			//genericSensorView = mapper->mapFromInternalState
-			ultrasonicSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
-			break;*/
+			//ultrasonicSensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
+			break;
 		}
 	}
 
