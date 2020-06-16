@@ -18,7 +18,7 @@ int OSIBridge::writeToInternalState() {
 	for (auto info : addressInformation) {
 		//parse osi message from string/array to object
 
-		bool parseSuccess = true;
+		bool parseSuccess = false;
 		switch (info.first) {
 		case SensorViewMessage:
 			parseSuccess = sensorView.ParseFromArray((const void*)info.second.addr.address, info.second.size);
@@ -40,6 +40,20 @@ int OSIBridge::writeToInternalState() {
 				return 1;
 			}
 			//mapper->mapToInternalState(sensorView, SensorViewConfigurationMessage);
+			break;
+		case SL45TrafficCommandMessage:
+			//parseSuccess = trafficCommand.ParseFromArray((const void*)info.second.addr.address, info.second.size);
+			if (parseSuccess == false) {
+				return 1;
+			}
+			//mapper->mapToInternalState(trafficCommand, SL45TrafficCommandMessage);
+			break;
+		case SL45InVehicleSensorDataMessage:
+			//parseSuccess = inVehicleSensorData.ParseFromArray((const void*)info.second.addr.address, info.second.size);
+			if (parseSuccess == false) {
+				return 1;
+			}
+			//mapper->mapToInternalState(inVehicleSensorData, SL45InVehicleSensorDataMessage);
 			break;
 		}
 	}

@@ -37,6 +37,10 @@ enum eSupportedMessages {
 	LaneMessage,
 	OccupantMessage,
 
+	//TrafficCommand (SL45)
+	SL45TrafficCommandMessage,
+	//InVehicleSensorData (SL45?)
+	SL45InVehicleSensorDataMessage,
 };
 
 struct address {
@@ -76,6 +80,10 @@ typedef std::variant<osi3::SensorView,
 	osi3::LaneBoundary,
 	osi3::Lane,
 	osi3::Occupant
+
+	//TrafficCommand (SL45)
+
+	//InVehicleSensorData (SL45?)
 
 > osiMessages_t;
 
