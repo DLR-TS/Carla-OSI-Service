@@ -6,7 +6,10 @@
 #include "osi_sensorviewconfiguration.pb.h"
 #include "osi_groundtruth.pb.h"
 
-enum eSupportedMessages {
+/**
+* Implemented OSI Messages
+*/
+enum eOSIMessage {
 	//Sensorview
 	SensorViewMessage,
 
@@ -39,10 +42,14 @@ enum eSupportedMessages {
 
 	//TrafficCommand (SL45)
 	SL45TrafficCommandMessage,
+
 	//InVehicleSensorData (SL45?)
 	SL45InVehicleSensorDataMessage,
 };
 
+/**
+* Address struct and union to convert integer in pointer and vice versa. See OSI Sensor Model Packaging Specification 
+*/
 struct address {
 	union pointerUnion {
 		struct {
@@ -54,8 +61,12 @@ struct address {
 	int size;
 };
 
-typedef std::variant<osi3::SensorView,
+/**
+* Type definition of std::variant collection of all implemented OSI messages.
+*/
+typedef std::variant<
 	//SensorView
+	osi3::SensorView,
 	osi3::GenericSensorView,
 	osi3::RadarSensorView,
 	osi3::LidarSensorView,
@@ -85,6 +96,6 @@ typedef std::variant<osi3::SensorView,
 
 	//InVehicleSensorData (SL45?)
 
-> osiMessages_t;
+> osiMessage_t;
 
 #endif // !OSIMESSAGES_H

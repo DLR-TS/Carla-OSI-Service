@@ -17,14 +17,14 @@ public:
 	\param messageType messge type of variant message.
 	\param index of list
 	*/
-	void mapToInternalState(osiMessages_t message, eSupportedMessages messageType, int index = 0);
+	void mapToInternalState(osiMessage_t message, eOSIMessage messageType, int index = 0);
 	
 	/**
 	Map information form internalState to OSI message.
 	\param messageType Messge type of message to be created.
 	\return filled OSI message
 	*/
-	osiMessages_t mapFromInternalState(eSupportedMessages messageType);//osiMessages_t
+	osiMessage_t mapFromInternalState(eOSIMessage messageType);//osiMessage_t
 }; 
 
 #endif // !OSIMAPPER_H

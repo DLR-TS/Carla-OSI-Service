@@ -27,8 +27,10 @@ private:
 	osi3::SensorView sensorView;
 	osi3::SensorViewConfiguration sensorViewConfiguration;
 	osi3::GroundTruth groundTruth;
-
-	std::map<eSupportedMessages, address> addressInformation;
+	/**
+	* OSI message type and its location
+	*/
+	std::map<eOSIMessage, address> addressInformation;
 };
 
 #endif // !OSIBRIDGE_H
