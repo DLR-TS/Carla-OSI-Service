@@ -2,6 +2,7 @@
 #define OSIBRIDGE_H
 
 #include <map>
+#include <string>
 #include "iSimulationData.h"
 #include "../Mapper/Mapper.h"
 #include "../mapper/OSIMapper.h"
