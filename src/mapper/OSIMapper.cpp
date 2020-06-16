@@ -3,13 +3,13 @@
 int OSIMapper::readConfiguration(configVariants_t config) {
 
 	//todo reading of lo and hi in addressInformation (currently in OSIBridge) from FMI
-	
+
 	return 0;
 }
 
 
 void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages messageType, int index) {
-	osi3::Timestamp a;
+	int size;
 	switch (messageType) {
 	case SensorViewMessage:
 	{
@@ -18,9 +18,44 @@ void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages mes
 			return;
 		}
 		osi3::SensorView sensorView = std::get<osi3::SensorView>(message);
+		//int index not used here
+		osi3::InterfaceVersion *version = sensorView.mutable_version();
+		osi3::Timestamp *timestamp = sensorView.mutable_timestamp();
+		osi3::Identifier *id = sensorView.mutable_sensor_id();
+		osi3::MountingPosition *mountingPosition = sensorView.mutable_mounting_position();
+		osi3::MountingPosition *mountingPositionRmse = sensorView.mutable_mounting_position_rmse();
+		osi3::HostVehicleData *hostVehicleData = sensorView.mutable_host_vehicle_data();
+		osi3::GroundTruth *globalGroundTruth = sensorView.mutable_global_ground_truth();
+		osi3::Identifier *hostVehicleId = sensorView.mutable_host_vehicle_id();
 
 		//todo
-		//read version, timestamp, sensor_id, mounting_position, mounting_position_rmse, host_vehicle_data, global_ground_truth, host_vehicle_id
+		//write into internalstate: version, timestamp, sensor_id, mounting_position, mounting_position_rmse, host_vehicle_data, global_ground_truth, host_vehicle_id
+
+		size = sensorView.generic_sensor_view_size();
+		for (int index = 0; index < size; index++) {
+			osi3::GenericSensorView genericSensorView = sensorView.generic_sensor_view(index);
+			mapToInternalState(genericSensorView, GenericSensorViewMessage, index);
+		}
+		size = sensorView.radar_sensor_view_size();
+		for (int index = 0; index < size; index++) {
+			osi3::RadarSensorView radarSensorView = sensorView.radar_sensor_view(index);
+			mapToInternalState(radarSensorView, RadarSensorViewMessage, index);
+		}
+		size = sensorView.lidar_sensor_view_size();
+		for (int index = 0; index < size; index++) {
+			osi3::LidarSensorView lidarSensorView = sensorView.lidar_sensor_view(index);
+			mapToInternalState(lidarSensorView, LidarSensorViewMessage, index);
+		}
+		size = sensorView.camera_sensor_view_size();
+		for (int index = 0; index < size; index++) {
+			osi3::CameraSensorView cameraSensorView = sensorView.camera_sensor_view(index);
+			mapToInternalState(cameraSensorView, CameraSensorViewMessage, index);
+		}
+		size = sensorView.ultrasonic_sensor_view_size();
+		for (int index = 0; index < size; index++) {
+			osi3::UltrasonicSensorView ultrasonicSensorView = sensorView.ultrasonic_sensor_view(index);
+			mapToInternalState(ultrasonicSensorView, UltrasonicSensorViewMessage, index);
+		}
 	}
 	break;
 	case GenericSensorViewMessage:
@@ -35,7 +70,6 @@ void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages mes
 		//read view_configuration
 	}
 	break;
-	case RadarSensorViewMessage:
 	{
 		if (std::get_if<osi3::RadarSensorView>(&message) == nullptr) {
 			std::cout << "Called with wrong osi variant!" << std::endl;
@@ -101,9 +135,46 @@ void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages mes
 			return;
 		}
 		osi3::SensorViewConfiguration sensorViewConfiguration = std::get<osi3::SensorViewConfiguration>(message);
+		//int index not used here
+		osi3::InterfaceVersion *version = sensorViewConfiguration.mutable_version();
+		osi3::Identifier *id = sensorViewConfiguration.mutable_sensor_id();
+		osi3::MountingPosition *mountingPosition = sensorViewConfiguration.mutable_mounting_position();
+		osi3::MountingPosition *mountingPositionRmse = sensorViewConfiguration.mutable_mounting_position_rmse();
+		double fieldOfViewHorizontal = sensorViewConfiguration.field_of_view_horizontal();
+		double fieldOfViewVertical = sensorViewConfiguration.field_of_view_vertical();
+		double range = sensorViewConfiguration.range();
+		osi3::Timestamp *updateCycleTime = sensorViewConfiguration.mutable_update_cycle_time();
+		osi3::Timestamp *updateCycleOffset = sensorViewConfiguration.mutable_update_cycle_offset();
+		osi3::Timestamp *simulationStartTime = sensorViewConfiguration.mutable_simulation_start_time();
 
 		//todo
-		//read version, sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical, range, update_cycle_time, update_cycle_offset, simulation_start_time
+		//write into internalstate: version, sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical, range, update_cycle_time, update_cycle_offset, simulation_start_time
+
+		size = sensorViewConfiguration.generic_sensor_view_configuration_size();
+		for (int index = 0; index < size; index++) {
+			osi3::GenericSensorViewConfiguration genericSensorViewConfiguration = sensorViewConfiguration.generic_sensor_view_configuration(index);
+			mapToInternalState(genericSensorViewConfiguration, GenericSensorViewConfigurationMessage, index);
+		}
+		size = sensorViewConfiguration.radar_sensor_view_configuration_size();
+		for (int index = 0; index < size; index++) {
+			osi3::RadarSensorViewConfiguration radarSensorViewConfiguration = sensorViewConfiguration.radar_sensor_view_configuration(index);
+			mapToInternalState(radarSensorViewConfiguration, RadarSensorViewConfigurationMessage, index);
+		}
+		size = sensorViewConfiguration.lidar_sensor_view_configuration_size();
+		for (int index = 0; index < size; index++) {
+			osi3::LidarSensorViewConfiguration lidarSensorConfiguration = sensorViewConfiguration.lidar_sensor_view_configuration(index);
+			mapToInternalState(lidarSensorConfiguration, LidarSensorViewConfigurationMessage, index);
+		}
+		size = sensorViewConfiguration.camera_sensor_view_configuration_size();
+		for (int index = 0; index < size; index++) {
+			osi3::CameraSensorViewConfiguration cameraSensorConfiguration = sensorViewConfiguration.camera_sensor_view_configuration(index);
+			mapToInternalState(cameraSensorConfiguration, CameraSensorViewConfigurationMessage, index);
+		}
+		size = sensorViewConfiguration.ultrasonic_sensor_view_configuration_size();
+		for (int index = 0; index < size; index++) {
+			osi3::UltrasonicSensorViewConfiguration ultrasonicSensorConfiguration = sensorViewConfiguration.ultrasonic_sensor_view_configuration(index);
+			mapToInternalState(ultrasonicSensorConfiguration, UltrasonicSensorViewConfigurationMessage, index);
+		}
 	}
 	break;
 	case GenericSensorViewConfigurationMessage:
@@ -196,43 +267,136 @@ void OSIMapper::mapToInternalState(osiMessages_t message, eSupportedMessages mes
 			return;
 		}
 		osi3::GroundTruth groundTruth = std::get<osi3::GroundTruth>(message);
+		//int index not used here
+		osi3::InterfaceVersion *version = groundTruth.mutable_version();
+		osi3::Timestamp *timestamp = groundTruth.mutable_timestamp();
+		osi3::Identifier *hostVehicleId = groundTruth.mutable_host_vehicle_id();
+		osi3::EnvironmentalConditions *environmentConditions = groundTruth.mutable_environmental_conditions();
+		//uint32
+		int countryCode = groundTruth.country_code();
+		std::string projString = groundTruth.proj_string();
+		std::string mapReference = groundTruth.map_reference();
 
 		//todo
-		//read version, timestamp, host_vehicle_id
-		for (int index = 0; index < groundTruth.stationary_object_size(); index++) {
+		//write into internalstate: version, timestamp, host_vehicle_id, environmental_conditions, country_code, proj_string, map_reference
+
+		size = groundTruth.stationary_object_size();
+		for (int index = 0; index < size; index++) {
 			osi3::StationaryObject stationaryObject = groundTruth.stationary_object(index);
-			//todo
+			mapToInternalState(stationaryObject, StationaryObjectMessage, index);
 		}
-		for (int index = 0; index < groundTruth.moving_object_size(); index++) {
+		size = groundTruth.moving_object_size();
+		for (int index = 0; index < size; index++) {
 			osi3::MovingObject movingObject = groundTruth.moving_object(index);
-			//todo
+			mapToInternalState(movingObject, MovingObjectMessage, index);
 		}
-		for (int index = 0; index < groundTruth.traffic_sign_size(); index++) {
+		size = groundTruth.traffic_sign_size();
+		for (int index = 0; index < size; index++) {
 			osi3::TrafficSign trafficSign = groundTruth.traffic_sign(index);
-			//todo
+			mapToInternalState(trafficSign, TrafficSignMessage, index);
 		}
-		for (int index = 0; index < groundTruth.traffic_light_size(); index++) {
+		size = groundTruth.traffic_light_size();
+		for (int index = 0; index < size; index++) {
 			osi3::TrafficLight trafficLight = groundTruth.traffic_light(index);
-			//todo
+			mapToInternalState(trafficLight, TrafficLightMessage, index);
 		}
-		for (int index = 0; index < groundTruth.road_marking_size(); index++) {
+		size = groundTruth.road_marking_size();
+		for (int index = 0; index < size; index++) {
 			osi3::RoadMarking roadMarking = groundTruth.road_marking(index);
-			//todo
+			mapToInternalState(roadMarking, RoadMarkingMessage, index);
 		}
-		for (int index = 0; index < groundTruth.lane_boundary_size(); index++) {
+		size = groundTruth.lane_boundary_size();
+		for (int index = 0; index < size; index++) {
 			osi3::LaneBoundary laneBoundary = groundTruth.lane_boundary(index);
-			//todo
+			mapToInternalState(laneBoundary, LaneBoundaryMessage, index);
 		}
-		for (int index = 0; index < groundTruth.lane_size(); index++) {
+		size = groundTruth.lane_size();
+		for (int index = 0; index < size; index++) {
 			osi3::Lane lane = groundTruth.lane(index);
-			//todo
+			mapToInternalState(lane, LaneMessage, index);
 		}
-		for (int index = 0; index < groundTruth.occupant_size(); index++) {
+		size = groundTruth.occupant_size();
+		for (int index = 0; index < size; index++) {
 			osi3::Occupant occupant = groundTruth.occupant(index);
-			//todo
+			mapToInternalState(occupant, OccupantMessage, index);
 		}
+	}
+	break;
+	case MovingObjectMessage:
+	{
+		if (std::get_if<osi3::MovingObject>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::MovingObject movingObject = std::get<osi3::MovingObject>(message);
+
 		//todo
-		//read country_code, proj_string, map_reference
+	}
+	break;
+	case TrafficSignMessage:
+	{
+		if (std::get_if<osi3::TrafficSign>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::TrafficSign trafficSign = std::get<osi3::TrafficSign>(message);
+
+		//todo
+	}
+	break;
+	case TrafficLightMessage:
+	{
+		if (std::get_if<osi3::TrafficLight>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::TrafficLight trafficLight = std::get<osi3::TrafficLight>(message);
+
+		//todo
+	}
+	break;
+	case RoadMarkingMessage:
+	{
+		if (std::get_if<osi3::RoadMarking>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::RoadMarking roadMarking = std::get<osi3::RoadMarking>(message);
+
+		//todo
+	}
+	break;
+	case LaneBoundaryMessage:
+	{
+		if (std::get_if<osi3::LaneBoundary>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::LaneBoundary laneBoundary = std::get<osi3::LaneBoundary>(message);
+
+		//todo
+	}
+	break;
+	case LaneMessage:
+	{
+		if (std::get_if<osi3::Lane>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::Lane land = std::get<osi3::Lane>(message);
+
+		//todo
+	}
+	break;
+	case OccupantMessage:
+	{
+		if (std::get_if<osi3::Occupant>(&message) == nullptr) {
+			std::cout << "Called with wrong osi variant!" << std::endl;
+			return;
+		}
+		osi3::Occupant occupant = std::get<osi3::Occupant>(message);
+
+		//todo
 	}
 	break;
 	}

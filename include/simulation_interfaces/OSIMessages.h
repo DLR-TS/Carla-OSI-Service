@@ -31,7 +31,7 @@ enum eSupportedMessages {
 	StationaryObjectMessage,
 	MovingObjectMessage,
 	TrafficSignMessage,
-	TrafficLigthMessage,
+	TrafficLightMessage,
 	RoadMarkingMessage,
 	LaneBoundaryMessage,
 	LaneMessage,
@@ -67,7 +67,16 @@ typedef std::variant<osi3::SensorView,
 	osi3::UltrasonicSensorViewConfiguration,
 
 	//GroundTruth
-	osi3::GroundTruth
+	osi3::GroundTruth,
+	osi3::StationaryObject,
+	osi3::MovingObject,
+	osi3::TrafficSign,
+	osi3::TrafficLight,
+	osi3::RoadMarking,
+	osi3::LaneBoundary,
+	osi3::Lane,
+	osi3::Occupant
+
 > osiMessages_t;
 
 #endif // !OSIMESSAGES_H

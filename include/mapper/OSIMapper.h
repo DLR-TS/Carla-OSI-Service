@@ -17,7 +17,7 @@ public:
 	\param messageType messge type of variant message.
 	\param index of list
 	*/
-	void mapToInternalState(osiMessages_t message, eSupportedMessages messageType, int index);
+	void mapToInternalState(osiMessages_t message, eSupportedMessages messageType, int index = 0);
 	
 	/**
 	Map information form internalState to OSI message.
