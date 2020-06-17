@@ -8,7 +8,7 @@ int OSIMapper::readConfiguration(configVariants_t config) {
 }
 
 
-void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType, int index) {
+void OSIMapper::mapOSIToInternalState(osiMessage_t message, eOSIMessage messageType, int messageIndex) {
 	switch (messageType) {
 	case SensorViewMessage:
 	{
@@ -47,23 +47,23 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 
 		for (int index = 0; index < sensorView.generic_sensor_view_size(); index++) {
 			osi3::GenericSensorView genericSensorView = sensorView.generic_sensor_view(index);
-			mapToInternalState(genericSensorView, GenericSensorViewMessage, index);
+			mapOSIToInternalState(genericSensorView, GenericSensorViewMessage, index);
 		}
 		for (int index = 0; index < sensorView.radar_sensor_view_size(); index++) {
 			osi3::RadarSensorView radarSensorView = sensorView.radar_sensor_view(index);
-			mapToInternalState(radarSensorView, RadarSensorViewMessage, index);
+			mapOSIToInternalState(radarSensorView, RadarSensorViewMessage, index);
 		}
 		for (int index = 0; index < sensorView.lidar_sensor_view_size(); index++) {
 			osi3::LidarSensorView lidarSensorView = sensorView.lidar_sensor_view(index);
-			mapToInternalState(lidarSensorView, LidarSensorViewMessage, index);
+			mapOSIToInternalState(lidarSensorView, LidarSensorViewMessage, index);
 		}
 		for (int index = 0; index < sensorView.camera_sensor_view_size(); index++) {
 			osi3::CameraSensorView cameraSensorView = sensorView.camera_sensor_view(index);
-			mapToInternalState(cameraSensorView, CameraSensorViewMessage, index);
+			mapOSIToInternalState(cameraSensorView, CameraSensorViewMessage, index);
 		}
 		for (int index = 0; index < sensorView.ultrasonic_sensor_view_size(); index++) {
 			osi3::UltrasonicSensorView ultrasonicSensorView = sensorView.ultrasonic_sensor_view(index);
-			mapToInternalState(ultrasonicSensorView, UltrasonicSensorViewMessage, index);
+			mapOSIToInternalState(ultrasonicSensorView, UltrasonicSensorViewMessage, index);
 		}
 	}
 	break;
@@ -74,6 +74,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::GenericSensorView genericSensorView = std::get<osi3::GenericSensorView>(message);
+
+		std::string interfaceName = "GenericSensorView_";
+		interfaceName.append(std::to_string(messageIndex));
+		mapToInternalState(genericSensorView.SerializeAsString(), interfaceName, STRINGCOSIMA);
 
 		//todo
 		//read view_configuration
@@ -90,6 +94,12 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		//read view_configuration
 		for (int index = 0; index < radarSensorView.reflection_size(); index++) {
 			osi3::RadarSensorView_Reflection reflection = radarSensorView.reflection(index);
+			std::string interfaceName = "RadarSensorView_Reflection_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
+
+			mapToInternalState(reflection.SerializeAsString(), interfaceName, STRINGCOSIMA);
 			//todo
 			//read signal_strenght, time_of_flight, doppler_shift, source_horizontal_angle, source_vertical_angle
 		}
@@ -107,7 +117,13 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		//read view_configuration
 		for (int index = 0; index < lidarSensorView.reflection_size(); index++) {
 			osi3::LidarSensorView_Reflection reflection = lidarSensorView.reflection(index);
-			//todo
+			std::string interfaceName = "LidarSensorView_Reflection_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
+
+			mapToInternalState(reflection.SerializeAsString(), interfaceName, STRINGCOSIMA);
+
 			//read signal_strenght, time_of_flight, doppler_shift, source_horizontal_angle, source_vertical_angle
 		}
 	}
@@ -119,8 +135,11 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::CameraSensorView cameraSensorView = std::get<osi3::CameraSensorView>(message);
+		std::string interfaceName = "CameraSensorView_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(cameraSensorView.SerializeAsString(), interfaceName, STRINGCOSIMA);
+
 		//read view_configuration
 		//read image_data
 	}
@@ -132,8 +151,11 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::UltrasonicSensorView ultrasonicSensorView = std::get<osi3::UltrasonicSensorView>(message);
+		std::string interfaceName = "UltrasonicSensorView_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(ultrasonicSensorView.SerializeAsString(), interfaceName, STRINGCOSIMA);
+
 		//read view_configuration
 	}
 	break;
@@ -180,23 +202,23 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 
 		for (int index = 0; index < sensorViewConfiguration.generic_sensor_view_configuration_size(); index++) {
 			osi3::GenericSensorViewConfiguration genericSensorViewConfiguration = sensorViewConfiguration.generic_sensor_view_configuration(index);
-			mapToInternalState(genericSensorViewConfiguration, GenericSensorViewConfigurationMessage, index);
+			mapOSIToInternalState(genericSensorViewConfiguration, GenericSensorViewConfigurationMessage, index);
 		}
 		for (int index = 0; index < sensorViewConfiguration.radar_sensor_view_configuration_size(); index++) {
 			osi3::RadarSensorViewConfiguration radarSensorViewConfiguration = sensorViewConfiguration.radar_sensor_view_configuration(index);
-			mapToInternalState(radarSensorViewConfiguration, RadarSensorViewConfigurationMessage, index);
+			mapOSIToInternalState(radarSensorViewConfiguration, RadarSensorViewConfigurationMessage, index);
 		}
 		for (int index = 0; index < sensorViewConfiguration.lidar_sensor_view_configuration_size(); index++) {
 			osi3::LidarSensorViewConfiguration lidarSensorConfiguration = sensorViewConfiguration.lidar_sensor_view_configuration(index);
-			mapToInternalState(lidarSensorConfiguration, LidarSensorViewConfigurationMessage, index);
+			mapOSIToInternalState(lidarSensorConfiguration, LidarSensorViewConfigurationMessage, index);
 		}
 		for (int index = 0; index < sensorViewConfiguration.camera_sensor_view_configuration_size(); index++) {
 			osi3::CameraSensorViewConfiguration cameraSensorConfiguration = sensorViewConfiguration.camera_sensor_view_configuration(index);
-			mapToInternalState(cameraSensorConfiguration, CameraSensorViewConfigurationMessage, index);
+			mapOSIToInternalState(cameraSensorConfiguration, CameraSensorViewConfigurationMessage, index);
 		}
 		for (int index = 0; index < sensorViewConfiguration.ultrasonic_sensor_view_configuration_size(); index++) {
 			osi3::UltrasonicSensorViewConfiguration ultrasonicSensorConfiguration = sensorViewConfiguration.ultrasonic_sensor_view_configuration(index);
-			mapToInternalState(ultrasonicSensorConfiguration, UltrasonicSensorViewConfigurationMessage, index);
+			mapOSIToInternalState(ultrasonicSensorConfiguration, UltrasonicSensorViewConfigurationMessage, index);
 		}
 	}
 	break;
@@ -208,7 +230,11 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		}
 		osi3::GenericSensorViewConfiguration genericSensorViewConfiguration = std::get<osi3::GenericSensorViewConfiguration>(message);
 
-		//todo
+		std::string interfaceName = "GenericSensorViewConfiguration_";
+		interfaceName.append(std::to_string(messageIndex));
+
+		mapToInternalState(genericSensorViewConfiguration.SerializeAsString(), interfaceName, STRINGCOSIMA);
+
 		//read sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical
 	}
 	break;
@@ -224,12 +250,25 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		//read sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical, number_of_rays_horizontal, number_of_rays_vertical, max_number_of_interactions, emitter_frequency
 		for (int index = 0; index < radarSensorViewConfiguration.tx_antenna_diagram_size(); index++) {
 			osi3::RadarSensorViewConfiguration_AntennaDiagramEntry txAntennaDiagram = radarSensorViewConfiguration.tx_antenna_diagram(index);
-			//todo
+
+			std::string interfaceName = "RadarSensorViewConfiguration_TxAntennaDiagram_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
+
+			mapToInternalState(txAntennaDiagram.SerializeAsString(), interfaceName, STRINGCOSIMA);
+
 			//read horizontal_angle, vertical_angle, response
 		}
 		for (int index = 0; index < radarSensorViewConfiguration.rx_antenna_diagram_size(); index++) {
 			osi3::RadarSensorViewConfiguration_AntennaDiagramEntry rxAntennaDiagram = radarSensorViewConfiguration.rx_antenna_diagram(index);
-			//todo
+			std::string interfaceName = "RadarSensorViewConfiguration_RxAntennaDiagram_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
+
+			mapToInternalState(rxAntennaDiagram.SerializeAsString(), interfaceName, STRINGCOSIMA);
+
 			//read horizontal_angle, vertical_angle, response
 		}
 	}
@@ -246,11 +285,21 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		//read sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical, number_of_rays_horizontal, number_of_rays_vertical, max_number_of_interactions, emitter_frequency, num_of_pixels
 		for (int index = 0; index < lidarSensorViewConfiguration.directions_size(); index++) {
 			osi3::Vector3d directions = lidarSensorViewConfiguration.directions(index);
-			//todo
+			std::string interfaceName = "LidarSensorViewConfiguration_Directions_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
+
+			mapToInternalState(directions.SerializeAsString(), interfaceName, STRINGCOSIMA);
 		}
 		for (int index = 0; index < lidarSensorViewConfiguration.timings_size(); index++) {
 			uint32_t timings = lidarSensorViewConfiguration.timings(index);
-			//todo
+			std::string interfaceName = "LidarSensorViewConfiguration_Timings_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
+			//todo check if cast from uint to int is ok
+			mapToInternalState((int)timings, interfaceName, INTEGERCOSIMA);
 		}
 	}
 	break;
@@ -266,8 +315,12 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		//read sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical, number_of_pixels_horizontal, number_of_pixels_vertical
 		for (int index = 0; index < cameraSensorViewConfiguration.channel_format_size(); index++) {
 			osi3::CameraSensorViewConfiguration_ChannelFormat channelFormat = cameraSensorViewConfiguration.channel_format(index);
-			//todo
+			std::string interfaceName = "CameraSensorViewConfiguration_ChannelFormat_";
+			interfaceName.append(std::to_string(messageIndex));
+			interfaceName.append("_");
+			interfaceName.append(std::to_string(index));
 			//map enum value
+			mapToInternalState(channelFormat, interfaceName, STRINGCOSIMA);
 		}
 	}
 	break;
@@ -278,8 +331,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::UltrasonicSensorViewConfiguration ultrasonicSensorViewConfiguration = std::get<osi3::UltrasonicSensorViewConfiguration>(message);
+		std::string interfaceName = "UltrasonicSensorViewConfiguration_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(ultrasonicSensorViewConfiguration.SerializeAsString(), interfaceName, STRINGCOSIMA);
 		//read sensor_id, mounting_position, mounting_position_rmse, field_of_view_horizontal, field_of_view_vertical
 	}
 	break;
@@ -317,35 +372,35 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 
 		for (int index = 0; index < groundTruth.stationary_object_size(); index++) {
 			osi3::StationaryObject stationaryObject = groundTruth.stationary_object(index);
-			mapToInternalState(stationaryObject, StationaryObjectMessage, index);
+			mapOSIToInternalState(stationaryObject, StationaryObjectMessage, index);
 		}
 		for (int index = 0; index < groundTruth.moving_object_size(); index++) {
 			osi3::MovingObject movingObject = groundTruth.moving_object(index);
-			mapToInternalState(movingObject, MovingObjectMessage, index);
+			mapOSIToInternalState(movingObject, MovingObjectMessage, index);
 		}
 		for (int index = 0; index < groundTruth.traffic_sign_size(); index++) {
 			osi3::TrafficSign trafficSign = groundTruth.traffic_sign(index);
-			mapToInternalState(trafficSign, TrafficSignMessage, index);
+			mapOSIToInternalState(trafficSign, TrafficSignMessage, index);
 		}
 		for (int index = 0; index < groundTruth.traffic_light_size(); index++) {
 			osi3::TrafficLight trafficLight = groundTruth.traffic_light(index);
-			mapToInternalState(trafficLight, TrafficLightMessage, index);
+			mapOSIToInternalState(trafficLight, TrafficLightMessage, index);
 		}
 		for (int index = 0; index < groundTruth.road_marking_size(); index++) {
 			osi3::RoadMarking roadMarking = groundTruth.road_marking(index);
-			mapToInternalState(roadMarking, RoadMarkingMessage, index);
+			mapOSIToInternalState(roadMarking, RoadMarkingMessage, index);
 		}
 		for (int index = 0; index < groundTruth.lane_boundary_size(); index++) {
 			osi3::LaneBoundary laneBoundary = groundTruth.lane_boundary(index);
-			mapToInternalState(laneBoundary, LaneBoundaryMessage, index);
+			mapOSIToInternalState(laneBoundary, LaneBoundaryMessage, index);
 		}
 		for (int index = 0; index < groundTruth.lane_size(); index++) {
 			osi3::Lane lane = groundTruth.lane(index);
-			mapToInternalState(lane, LaneMessage, index);
+			mapOSIToInternalState(lane, LaneMessage, index);
 		}
 		for (int index = 0; index < groundTruth.occupant_size(); index++) {
 			osi3::Occupant occupant = groundTruth.occupant(index);
-			mapToInternalState(occupant, OccupantMessage, index);
+			mapOSIToInternalState(occupant, OccupantMessage, index);
 		}
 	}
 	break;
@@ -356,8 +411,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::MovingObject movingObject = std::get<osi3::MovingObject>(message);
+		std::string interfaceName = "MovingObject_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(movingObject.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	case TrafficSignMessage:
@@ -367,8 +424,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::TrafficSign trafficSign = std::get<osi3::TrafficSign>(message);
+		std::string interfaceName = "TrafficSign_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(trafficSign.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	case TrafficLightMessage:
@@ -378,8 +437,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::TrafficLight trafficLight = std::get<osi3::TrafficLight>(message);
+		std::string interfaceName = "TrafficLight_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(trafficLight.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	case RoadMarkingMessage:
@@ -389,8 +450,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::RoadMarking roadMarking = std::get<osi3::RoadMarking>(message);
+		std::string interfaceName = "RoadMarking_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(roadMarking.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	case LaneBoundaryMessage:
@@ -400,8 +463,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::LaneBoundary laneBoundary = std::get<osi3::LaneBoundary>(message);
+		std::string interfaceName = "LaneBoundary_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(laneBoundary.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	case LaneMessage:
@@ -410,9 +475,11 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			std::cout << "Called with wrong osi variant!" << std::endl;
 			return;
 		}
-		osi3::Lane land = std::get<osi3::Lane>(message);
+		osi3::Lane lane = std::get<osi3::Lane>(message);
+		std::string interfaceName = "Lane_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(lane.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	case OccupantMessage:
@@ -422,8 +489,10 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 			return;
 		}
 		osi3::Occupant occupant = std::get<osi3::Occupant>(message);
+		std::string interfaceName = "Occupant_";
+		interfaceName.append(std::to_string(messageIndex));
 
-		//todo
+		mapToInternalState(occupant.SerializeAsString(), interfaceName, STRINGCOSIMA);
 	}
 	break;
 	}

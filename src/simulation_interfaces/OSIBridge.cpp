@@ -24,35 +24,35 @@ int OSIBridge::writeToInternalState() {
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapToInternalState(sensorView, SensorViewMessage);
+			//mapper->mapOSIToInternalState(sensorView, SensorViewMessage);
 			break;
 		case SensorViewConfigurationMessage:
 			parseSuccess = sensorViewConfiguration.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapToInternalState(sensorView, SensorViewConfigurationMessage);
+			//mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
 			break;
 		case GroundTruthMessage:
 			parseSuccess = groundTruth.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapToInternalState(sensorView, SensorViewConfigurationMessage);
+			//mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
 			break;
 		case SL45TrafficCommandMessage:
 			//parseSuccess = trafficCommand.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapToInternalState(trafficCommand, SL45TrafficCommandMessage);
+			//mapper->mapOSIToInternalState(trafficCommand, SL45TrafficCommandMessage);
 			break;
 		case SL45InVehicleSensorDataMessage:
 			//parseSuccess = inVehicleSensorData.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapToInternalState(inVehicleSensorData, SL45InVehicleSensorDataMessage);
+			//mapper->mapOSIToInternalState(inVehicleSensorData, SL45InVehicleSensorDataMessage);
 			break;
 		}
 	}
