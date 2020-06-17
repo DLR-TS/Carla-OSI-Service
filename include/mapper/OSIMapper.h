@@ -13,6 +13,7 @@ public:
 
 	/**
 	Map an OSI message in to internalState.
+	The messages are stored as serialized strings with the interfacename pattern: <message>_<sub_message>_<messageindex>_<submessageindex>
 	\param message The message to be stored.
 	\param messageType messge type of variant message.
 	\param index of list

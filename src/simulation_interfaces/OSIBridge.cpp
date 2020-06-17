@@ -24,35 +24,35 @@ int OSIBridge::writeToInternalState() {
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapOSIToInternalState(sensorView, SensorViewMessage);
+			//(OSIMapper)mapper->mapOSIToInternalState(sensorView, SensorViewMessage);
 			break;
 		case SensorViewConfigurationMessage:
 			parseSuccess = sensorViewConfiguration.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
+			//(OSIMapper)mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
 			break;
 		case GroundTruthMessage:
 			parseSuccess = groundTruth.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
+			//(OSIMapper)mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
 			break;
 		case SL45TrafficCommandMessage:
 			//parseSuccess = trafficCommand.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapOSIToInternalState(trafficCommand, SL45TrafficCommandMessage);
+			//(OSIMapper)mapper->mapOSIToInternalState(trafficCommand, SL45TrafficCommandMessage);
 			break;
 		case SL45InVehicleSensorDataMessage:
 			//parseSuccess = inVehicleSensorData.ParseFromArray((const void*)info.second.addr.address, info.second.size);
 			if (parseSuccess == false) {
 				return 1;
 			}
-			//mapper->mapOSIToInternalState(inVehicleSensorData, SL45InVehicleSensorDataMessage);
+			//(OSIMapper)mapper->mapOSIToInternalState(inVehicleSensorData, SL45InVehicleSensorDataMessage);
 			break;
 		}
 	}
@@ -68,23 +68,23 @@ int OSIBridge::readFromInternalState() {
 	for (auto info : addressInformation) {
 		switch (info.first) {
 		case SensorViewMessage:
-			//sensorView = mapper->mapFromInternalState
+			//sensorView = (OSIMapper)mapper->mapFromInternalState(SensorViewMessage);
 			sensorView.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case SensorViewConfigurationMessage:
-			//sensorViewConfiguration = mapper->mapFromInternalState
+			//sensorViewConfiguration = (OSIMapper)mapper->mapFromInternalState(SensorViewConfigurationMessage);
 			sensorViewConfiguration.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case GroundTruthMessage:
-			//groundTruth = mapper->mapFromInternalState
+			//groundTruth = (OSIMapper)mapper->mapFromInternalState(GroundTruthMessage);
 			groundTruth.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case SL45TrafficCommandMessage:
-			//trafficCommand = mapper->mapFromInternalState
+			//trafficCommand = (OSIMapper)mapper->mapFromInternalState(SL45TrafficCommandMessage);
 			//trafficCommand.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		case SL45InVehicleSensorDataMessage:
-			//inVehicleSensorData = mapper->mapFromInternalState
+			//inVehicleSensorData = (OSIMapper)mapper->mapFromInternalState(SL45InVehicleSensorDataMessage);
 			//inVehicleSensorData.SerializeToArray((void*)info.second.addr.address, info.second.size);
 			break;
 		}
