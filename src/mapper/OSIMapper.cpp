@@ -147,7 +147,7 @@ void OSIMapper::mapToInternalState(osiMessage_t message, eOSIMessage messageType
 		if (sensorViewConfiguration.has_version()) {
 			osi3::InterfaceVersion *version = sensorViewConfiguration.mutable_version();
 		}
-		if (sensorViewConfiguration.has_sensor_id) {
+		if (sensorViewConfiguration.has_sensor_id()) {
 			osi3::Identifier *sensorId = sensorViewConfiguration.mutable_sensor_id();
 		}
 		if (sensorViewConfiguration.has_mounting_position()) {
