@@ -4,6 +4,11 @@
   input: 
       - {interface_name: a, base_name: b, type: bool} # name and type of VTD variables
       - {interface_name: b, base_name: a, type: double} 
-  output: [] #emtpy list
+  output: [] #empty list
 - simulator: FMI
   models: PATH_TO_.ssp # path to model.xml files
+- simulator: OSI #needs to be talked about
+  input:
+      - {interface_name: SensorView, base_name: sensors}
+  output:
+      - {interface_name: SensorViewConfiguration, base_name: sensorconf}

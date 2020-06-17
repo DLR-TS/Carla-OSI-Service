@@ -3,7 +3,6 @@
 
 #include "Mapper.h"
 #include "simulation_interfaces/OSIMessages.h"
-#include "osi_sensorview.pb.h"
 
 class OSIMapper : Mapper {
 
@@ -25,7 +24,8 @@ public:
 	\param messageType Messge type of message to be created.
 	\return filled OSI message
 	*/
-	osiMessage_t mapFromInternalState(eOSIMessage messageType);//osiMessage_t
+	osiMessage_t mapOSIFromInternalState(eOSIMessage messageType);
+
 }; 
 
 #endif // !OSIMAPPER_H
