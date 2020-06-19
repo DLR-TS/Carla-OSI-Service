@@ -18,8 +18,7 @@ std::shared_ptr<iSimulationData> SimulationInterfaceFactory::createInterface(eSi
 	case SUMO:
 		return std::shared_ptr<iSimulationData>((iSimulationData*)(new SUMOBridge(std::shared_ptr<Mapper>((Mapper*)new SUMOMapper()))));
 	case OSI:
-		//return std::shared_ptr<iSimulationData>((iSimulationData*)(new OSIBridge(std::shard_ptr<Mapper>((Mapper*)new OSIMapper()))));
-		break;
+		return std::shared_ptr<iSimulationData>((iSimulationData*)(new OSIBridge(std::shared_ptr<Mapper>((Mapper*)new OSIMapper()))));
 	case UNREAL:
 		return std::shared_ptr<iSimulationData>((iSimulationData*)(new UnrealBridge(std::shared_ptr<Mapper>((Mapper*)new UnrealMapper()))));
 	case ROS:

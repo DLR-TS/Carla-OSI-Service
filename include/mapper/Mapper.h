@@ -22,7 +22,7 @@ typedef std::variant<int, float, double, bool, std::string> values_t;
 /**
 * YAML configuration structs
 */
-typedef std::variant<InterfaceYAMLConfig, FMIInterfaceConfig> configVariants_t;
+typedef std::variant<InterfaceYAMLConfig, FMIInterfaceConfig, OSIInterfaceConfig> configVariants_t;
 
 /**
 * Basic data types enum

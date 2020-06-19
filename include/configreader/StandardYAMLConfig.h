@@ -71,6 +71,31 @@ public:
 	std::string models;
 };
 
+
+/**
+* \var std::string interface_name
+* holds name of the variable in the interface system
+* \var std::string base_name
+* holds name of the variable in the base system
+*/
+struct OSIMessageConfig {
+public:
+	std::string interface_name;
+	std::string base_name;
+};
+
+/**
+* \var std::vector<OSIMessageConfig> inputs
+* holds the input osi messages
+* \var std::vector<OSIMessageConfig> outputs
+* holds the output osi messages
+*/
+struct OSIInterfaceConfig {
+public:
+	std::vector<OSIMessageConfig> inputs;
+	std::vector<OSIMessageConfig> outputs;
+};
+
 /**
  * YAML-cpp converter for the above defined structs. Designed according to yaml-cpp tutorial: https://github.com/jbeder/yaml-cpp/wiki/Tutorial 
 
@@ -137,6 +162,36 @@ namespace YAML {
 		{
 			fmiInterface.simulator = node["simulator"].as<std::string>();
 			fmiInterface.models = node["models"].as<std::string>();
+			return true;
+		}
+	};
+
+	template<>
+	struct convert<OSIMessageConfig> {
+		static Node encode(const OSIMessageConfig& config) {
+			Node node;
+			return node;
+		}
+
+		static bool decode(const Node& node, OSIMessageConfig& osiMessage)
+		{
+			osiMessage.interface_name = node["interface_name"].as<std::string>();
+			osiMessage.base_name = node["base_name"].as<std::string>();
+			return true;
+		}
+	};
+
+	template<>
+	struct convert<OSIInterfaceConfig> {
+		static Node encode(const OSIInterfaceConfig& config) {
+			Node node;
+			return node;
+		}
+
+		static bool decode(const Node& node, OSIInterfaceConfig& osiinterface)
+		{
+			osiinterface.inputs = node["input"].as<std::vector<OSIMessageConfig>>();
+			osiinterface.outputs = node["output"].as<std::vector<OSIMessageConfig>>();
 			return true;
 		}
 	};

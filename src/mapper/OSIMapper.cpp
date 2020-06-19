@@ -2,20 +2,25 @@
 
 #define ONLYCOMPLETEMESSAGES 1
 
-int OSIMapper::readConfiguration(configVariants_t yamlconfig) {
+int OSIMapper::readConfiguration(configVariants_t configVariants) {
 
-	//todo reading of lo and hi in addressInformation (currently in OSIBridge) from FMI
-	
-	//todo config file and its description need to be finalized
+	std::cout << "Read Configuration of OSI Mapper" << std::endl;
 
-	//exmaple code
-	//for loop
-	std::string base_name = "a";
-	std::string interface_name = "b";
+	if (std::get_if<OSIInterfaceConfig>(&configVariants) == nullptr) {
+		std::cout << "Called with wrong configuration variant!" << std::endl;
+		return 1;
+	}
 
-	config.stringInputList.push_back(NamesAndIndex(base_name, interface_name, (int)state->strings.size()));
-	state->strings.push_back(std::string());
-	//end for loop
+	OSIInterfaceConfig interfaceConfig = std::get<OSIInterfaceConfig>(configVariants);
+
+	for (auto input : interfaceConfig.inputs) {
+		config.stringInputList.push_back(NamesAndIndex(input.base_name, input.interface_name, (int)state->strings.size()));
+		state->strings.push_back(std::string());
+	}
+	for (auto output : interfaceConfig.outputs) {
+		config.stringOutputList.push_back(NamesAndIndex(output.base_name, output.interface_name, (int)state->strings.size()));
+		state->strings.push_back(std::string());
+	}
 	return 0;
 }
 

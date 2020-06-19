@@ -6,6 +6,7 @@
 #include "simulation_interfaces/iSimulationData.h"
 #include "simulation_interfaces/DCPBridge.h"
 #include "simulation_interfaces/FMIBridge.h"
+#include "simulation_interfaces/OSIBridge.h"
 #include "simulation_interfaces/ROSBridge.h"
 #include "simulation_interfaces/SUMOBridge.h"
 #include "simulation_interfaces/UnrealBridge.h"
