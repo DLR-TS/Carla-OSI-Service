@@ -10,7 +10,7 @@
 #include "osi_sensorview.pb.h"
 
 
-class OSIBridge : iSimulationData
+class OSIBridge : public iSimulationData
 {
 public:
 	OSIBridge(std::shared_ptr<Mapper> mapper) : iSimulationData(mapper) {};
@@ -20,10 +20,12 @@ public:
 	int disconnect() override;
 
 	int writeToInternalState() override;
+	int writeToInternalState(address address, eOSIMessage messageType);
 	int readFromInternalState() override;
+	int readFromInternalState(address& address, eOSIMessage messageType);
 	int doStep(double stepSize = 1) override;
 
-private:
+protected:
 	osi3::SensorView sensorView;
 	osi3::SensorViewConfiguration sensorViewConfiguration;
 	osi3::GroundTruth groundTruth;
