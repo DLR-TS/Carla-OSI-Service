@@ -24,4 +24,7 @@ eOSIMessage OSMPBridge::getMessageType(std::string messageType) {
 	else if (messageType == "GroundTruth") { return GroundTruthMessage; }
 	else if (messageType == "TrafficCommand") { return SL45TrafficCommandMessage; } //todo check if name is correct
 	else if (messageType == "InVehicleSensorData") { return SL45InVehicleSensorDataMessage; } //todo check if name is correct
+	else {
+		std::cout << "Error: Can not find message " << messageType << std::endl;
+	}
 }
