@@ -8,3 +8,12 @@ int OSMPBridge::readOSMP(int hi, int lo, int size, eOSIMessage messageType) {
 	writeToInternalState(address, messageType);
 	return 0;
 }
+
+int OSMPBridge::writeOSMP(int& hi, int& lo, int& size, eOSIMessage messageType) {
+	address address;
+	readFromInternalState(address, messageType);
+	hi = address.addr.base.hi;
+	lo = address.addr.base.lo;
+	size = address.size;
+	return 0;
+}

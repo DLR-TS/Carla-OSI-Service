@@ -14,6 +14,7 @@ public:
 	OSMPBridge(std::shared_ptr<Mapper> mapper) : OSIBridge(mapper) {};
 
 	int readOSMP(int hi, int lo, int size, eOSIMessage messageType);
+	int writeOSMP(int& hi, int& lo, int& size, eOSIMessage messageType);
 
 	//int init(std::string scenario, float starttime, int mode) override;
 	//int connect(std::string) override;
