@@ -33,14 +33,21 @@ int OSIBridge::writeToInternalState(address address, eOSIMessage messageType)
 		if (parseSuccess == false) {
 			return 1;
 		}
-		//(OSIMapper)mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
+		//(OSIMapper)mapper->mapOSIToInternalState(sensorViewConfiguration, SensorViewConfigurationMessage);
+		break;
+	case SensorDataMessage:
+		parseSuccess = sensorData.ParseFromArray((const void*)address.addr.address, address.size);
+		if (parseSuccess == false) {
+			return 1;
+		}
+		//(OSIMapper)mapper->mapOSIToInternalState(sensorData, SensorDataMessage);
 		break;
 	case GroundTruthMessage:
 		parseSuccess = groundTruth.ParseFromArray((const void*)address.addr.address, address.size);
 		if (parseSuccess == false) {
 			return 1;
 		}
-		//(OSIMapper)mapper->mapOSIToInternalState(sensorView, SensorViewConfigurationMessage);
+		//(OSIMapper)mapper->mapOSIToInternalState(groundTruth, SensorViewConfigurationMessage);
 		break;
 	case SL45TrafficCommandMessage:
 		//parseSuccess = trafficCommand.ParseFromArray((const void*)address.addr.address, address.size);
@@ -79,6 +86,10 @@ int OSIBridge::readFromInternalState(address& address, eOSIMessage messageType) 
 	case SensorViewConfigurationMessage:
 		//sensorViewConfiguration = (OSIMapper)mapper->mapFromInternalState(SensorViewConfigurationMessage);
 		sensorViewConfiguration.SerializeToArray((void*)address.addr.address, address.size);
+		break;
+	case SensorDataMessage:
+		//sensorData = (OSIMapper)mapper->mapFromInternalState(SensorDataMessage);
+		sensorData.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	case GroundTruthMessage:
 		//groundTruth = (OSIMapper)mapper->mapFromInternalState(GroundTruthMessage);

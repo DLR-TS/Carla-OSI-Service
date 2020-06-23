@@ -3,6 +3,7 @@
 
 #include <variant>
 #include "osi_sensorview.pb.h"
+#include "osi_sensordata.pb.h"
 #include "osi_sensorviewconfiguration.pb.h"
 #include "osi_groundtruth.pb.h"
 
@@ -27,6 +28,9 @@ enum eOSIMessage {
 	LidarSensorViewConfigurationMessage,
 	CameraSensorViewConfigurationMessage,
 	UltrasonicSensorViewConfigurationMessage,
+
+	//SensorData
+	SensorDataMessage,
 
 	//GroundTruth
 	GroundTruthMessage,
@@ -80,6 +84,9 @@ typedef std::variant<
 	osi3::LidarSensorViewConfiguration,
 	osi3::CameraSensorViewConfiguration,
 	osi3::UltrasonicSensorViewConfiguration,
+
+	//SensorData
+	osi3::SensorData,
 
 	//GroundTruth
 	osi3::GroundTruth,

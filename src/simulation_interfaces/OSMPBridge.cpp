@@ -21,6 +21,7 @@ int OSMPBridge::writeOSMP(int& hi, int& lo, int& size, std::string messageType) 
 eOSIMessage OSMPBridge::getMessageType(std::string messageType) {
 	if (messageType == "SensorView") { return SensorViewMessage; }
 	else if (messageType == "SensorViewConfiguration") { return SensorViewConfigurationMessage; }
+	else if (messageType == "SensorData") { return SensorDataMessage; }
 	else if (messageType == "GroundTruth") { return GroundTruthMessage; }
 	else if (messageType == "TrafficCommand") { return SL45TrafficCommandMessage; } //todo check if name is correct
 	else if (messageType == "InVehicleSensorData") { return SL45InVehicleSensorDataMessage; } //todo check if name is correct

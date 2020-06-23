@@ -28,6 +28,7 @@ public:
 protected:
 	osi3::SensorView sensorView;
 	osi3::SensorViewConfiguration sensorViewConfiguration;
+	osi3::SensorData sensorData;
 	osi3::GroundTruth groundTruth;
 	/**
 	* OSI message type and its location
