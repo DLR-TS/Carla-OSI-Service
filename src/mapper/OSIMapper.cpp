@@ -22,7 +22,7 @@ int OSIMapper::readConfiguration(configVariants_t configVariants) {
 	return 0;
 }
 
-void OSIMapper::mapOSIToInternalState(osiMessage_t message, eOSIMessage messageType, int messageIndex) {
+void OSIMapper::mapOSIToInternalState(osiMessage_t message, eOSIMessage messageType) {
 	switch (messageType)
 	{
 	case SensorViewMessage:
