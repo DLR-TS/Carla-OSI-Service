@@ -5,8 +5,6 @@
 #include "../mapper/OSIMapper.h"
 #include "OSIMessages.h"
 #include "OSIBridge.h"
-#include "osi_sensorview.pb.h"
-
 
 class OSMPBridge : public OSIBridge
 {

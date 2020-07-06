@@ -33,7 +33,8 @@ protected:
 	/**
 	* OSI message type and its location
 	*/
-	std::map<eOSIMessage, address> addressInformation;
+	std::map<eOSIMessage, address> writeAddressInformation;
+	std::map<eOSIMessage, address> readAddressInformation;
 };
 
 #endif // !OSIBRIDGE_H

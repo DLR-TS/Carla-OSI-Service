@@ -5,6 +5,7 @@ int OSIBridge::init(std::string scenario, float starttime, int mode) {
 }
 
 int OSIBridge::connect(std::string) {
+	//write osi configuration in writeAddressInformation and readAddressInformation
 	return 0;
 }
 
@@ -13,7 +14,9 @@ int OSIBridge::disconnect() {
 }
 
 int OSIBridge::writeToInternalState() {
-
+	for (auto address : writeAddressInformation) {
+		writeToInternalState(address.second, address.first);
+	}
 	return 0;
 }
 
@@ -72,8 +75,10 @@ int OSIBridge::doStep(double stepSize) {
 	return 0;
 }
 
-int OSIBridge::readFromInternalState()
-{
+int OSIBridge::readFromInternalState(){
+	for (auto address : readAddressInformation) {
+		readFromInternalState(address.second, address.first);
+	}
 	return 0;
 }
 
