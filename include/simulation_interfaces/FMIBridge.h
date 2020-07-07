@@ -12,10 +12,10 @@
 #include <chrono>
 
 
-class FMIBridge : iSimulationData
+class FMIBridge : public iSimulationData
 {
 	friend class FMIMapper;
-private:
+protected:
 	std::unique_ptr<fmi4cpp::fmi2::cs_fmu> coSimFMU;
 	std::shared_ptr<fmi4cpp::fmi2::cs_slave> coSimSlave;
 
