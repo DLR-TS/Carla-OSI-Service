@@ -6,6 +6,7 @@
 #include <string>
 #include "base_interfaces/BaseSystemInterface.h"
 #include "base_interfaces/DominionInterface.h"
+#include "base_interfaces/CARLAInterface.h"
 #include "simulation_interfaces/iSimulationData.h"
 #include "configreader/YAMLConfigReader.h"
 #include "SimulationInterfaceFactory.h"

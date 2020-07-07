@@ -37,14 +37,15 @@ conan_cmake_run(CONANFILE conanfile.txt
                 BASIC_SETUP CMAKE_TARGETS
                 BUILD missing)
 
-# FMI4cpp is not distributed as conan package, but still can use conan for dependency management.
-conan_cmake_run(CONANFILE lib/FMI4cpp/conanfile.txt
-                INSTALL_FOLDER "${CMAKE_BINARY_DIR}/lib/FMI4cpp/"
-                BASIC_SETUP
-                BUILD missing)
-# FMI4CPP_USING_CONAN is faulty because it doesn't use the correct binary dir
-#set(FMI4CPP_USING_CONAN ON CACHE BOOL "Build FMI4cpp using conan" FORCE)
-include(${CMAKE_CURRENT_BINARY_DIR}/lib/FMI4cpp/conanbuildinfo.cmake)
+# Using the conanfile.txt provided by FMI4cpp prevents overriding requirements, but Carla needs a newer boost library
+	# FMI4cpp is not distributed as conan package, but still can use conan for dependency management.
+	#conan_cmake_run(CONANFILE lib/FMI4cpp/conanfile.txt
+	#                INSTALL_FOLDER "${CMAKE_BINARY_DIR}/lib/FMI4cpp/"
+	#                BASIC_SETUP
+	#                BUILD missing)
+	# FMI4CPP_USING_CONAN is faulty because it doesn't use the correct binary dir
+	#set(FMI4CPP_USING_CONAN ON CACHE BOOL "Build FMI4cpp using conan" FORCE)
+	#include(${CMAKE_CURRENT_BINARY_DIR}/lib/FMI4cpp/conanbuildinfo.cmake)
 conan_basic_setup()
 add_subdirectory(lib/FMI4cpp/ EXCLUDE_FROM_ALL)
 
@@ -60,15 +61,22 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
 # OSI is not distributed as conan package, but we already took care of installig its dependency (protobuf), so we can just use it as submodule
 add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)
 
-#main project
+# Set path to CARLA source. If not provided, try environment variable CARLA_SOURCE_DIR.
+set(CARLA_SOURCE_DIR $ENV{CARLA_SOURCE_DIR} CACHE PATH "Carla source directory")
+find_package(LibCarla_client COMPONENTS BOOST_FILESYSTEM PNG)
+if(LibCarla_client_FOUND)
+	set(WITH_CARLA TRUE)
+	message(VERBOSE "Found Carla. Will add Carla base interface to build")
+endif()
+
+##main project
 # set up variables that are used below
 add_subdirectory("src")
 add_subdirectory("include")
 add_subdirectory("test")
-#create library to
 
 
-
+#create library target
 add_library(CoSimulationManagerLib ${COSIMA_SOURCE} ${COSIMA_INCLUDES})
 # CoSimulationManagerLib exports no symbols, thereby preventing linking of its dll on windows. Force export of all global symbols
 set_property(TARGET CoSimulationManagerLib PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
@@ -78,11 +86,17 @@ target_include_directories(CoSimulationManagerLib PUBLIC ${CMAKE_CURRENT_LIST_DI
 target_link_libraries(CoSimulationManagerLib PUBLIC ${CONAN_LIBS})
 
 # FMI4cpp is not managed by conan, thus it is added here
-target_include_directories(CoSimulationManagerLib PUBLIC fmi4cpp)
 target_link_libraries(CoSimulationManagerLib PUBLIC fmi4cpp)
 
+if(WITH_CARLA)
+	# CARLA is not managed by conan, thus it is added here
+	target_link_libraries(CoSimulationManagerLib PUBLIC LibCarla::LibCarla_client)
+
+	get_target_property(_CARLA_INCLUDES LibCarla::LibCarla_client INTERFACE_INCLUDE_DIRECTORIES)
+	message("LibCarla INTERFACE_INCLUDE_DIRECTORIES: ${_CARLA_INCLUDES}")
+endif(WITH_CARLA)
+
 # OSI is not managed by conan, thus it is added here
-target_include_directories(CoSimulationManagerLib PUBLIC open_simulation_interface_obj)#shared base of both static and shared OSI lib targets
 # OSI has differently named targets for static and shared build
 if(BUILD_SHARED_LIBS)
 	# By default, OSI exports no symbols when building a dll, preventing linking to the shared library on windows. Force export of all global symbols
@@ -92,10 +106,14 @@ else()
 	target_link_libraries(CoSimulationManagerLib PUBLIC open_simulation_interface_static)
 endif(BUILD_SHARED_LIBS)
 
+get_target_property(OUT CoSimulationManagerLib INCLUDE_DIRECTORIES)
+message("INCLUDE_DIRECTORIES: ${OUT}")
+get_target_property(OUT CoSimulationManagerLib INTERFACE_INCLUDE_DIRECTORIES)
+message("INTERFACE_INCLUDE_DIRECTORIES: ${OUT}")
 
 find_package(Catch2 REQUIRED)
 add_executable(test_CoSiMa ${TESTFILES})
-target_include_directories(test_CoSiMa PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
+target_include_directories(test_CoSiMa PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 target_link_libraries(test_CoSiMa CoSimulationManagerLib ${CONAN_LIBS} Catch2::Catch2)
 
 #copy test resources to build folder

@@ -4,9 +4,20 @@ protobuf/3.9.1@bincrafters/stable
 yaml-cpp/0.6.3
 catch2/2.12.1
 FakeIt/2.0.5@gasuketsu/stable
+# requirements of FMI4cpp and Carla
+boost/1.72.0
+libzip/1.5.2@bincrafters/stable
+bzip2/1.0.8
+zlib/1.2.11
 
 [generators]
 cmake
 # cmake_find_package generates an incompatible Findprotobuf.cmake 
 #cmake_paths
 #cmake_find_package
+
+[options]
+boost:shared=True
+
+[imports]
+bin, *.dll -> ./bin

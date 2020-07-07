@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
 
 	//choose protocol
 	//TODO
-	std::shared_ptr<BaseSystemInterface> baseSystem = std::shared_ptr<BaseSystemInterface>((BaseSystemInterface*) new DominionInterface());
+	//std::shared_ptr<BaseSystemInterface> baseSystem = std::make_shared<DominionInterface>();
+	std::shared_ptr<BaseSystemInterface> baseSystem = std::make_shared<CARLAInterface>();
 
 
 	//init interfaces

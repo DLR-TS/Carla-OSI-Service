@@ -2,7 +2,7 @@
 
 #include "base_interfaces/BaseSystemInterface.h"
 
-class MockBaseSimulator : BaseSystemInterface {
+class MockBaseSimulator : public BaseSystemInterface {
 
 public:
 	int intvalue;
@@ -60,6 +60,18 @@ public:
 
 	int setStringValue(std::string base_name, std::string value) {
 		stringvalue = value;
+		return 0;
+	};
+
+	virtual int readConfiguration(baseConfigVariants_t config) override {
+		return 0;
+	};
+
+	virtual int connect() override {
+		return 0;
+	};
+
+	virtual int disconnect() override {
 		return 0;
 	};
 };

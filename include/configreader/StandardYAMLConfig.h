@@ -12,6 +12,18 @@ public:
 };
 
 /**
+* \var host
+* host name or ip
+* \var port
+* port
+*/
+struct CARLAInterfaceConfig {
+public:
+	std::string host;
+	uint16_t port;
+};
+
+/**
  *\paragraph Naming definitions
  * Within the CoSiMa we are using the following definitions for our host and the system we are interfacing with:
 

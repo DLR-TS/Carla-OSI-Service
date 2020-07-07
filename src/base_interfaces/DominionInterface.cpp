@@ -1,5 +1,17 @@
 #include "base_interfaces\DominionInterface.h"
 
+int DominionInterface::readConfiguration(baseConfigVariants_t variant) {
+	return 0;
+}
+
+int DominionInterface::connect() {
+	return 0;
+}
+
+int DominionInterface::disconnect() {
+	return 0;
+}
+
 int DominionInterface::getIntValue(std::string base_name) {
 	return 0;
 };
