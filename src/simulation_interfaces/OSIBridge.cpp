@@ -85,27 +85,27 @@ int OSIBridge::readFromInternalState(){
 int OSIBridge::readFromInternalState(address& address, eOSIMessage messageType) {
 	switch (messageType) {
 	case SensorViewMessage:
-		//sensorView = (OSIMapper)mapper->mapFromInternalState(SensorViewMessage);
+		sensorView.ParseFromString(std::get<std::string>(mapper->mapFromInternalState("SensorView", STRINGCOSIMA)));
 		sensorView.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	case SensorViewConfigurationMessage:
-		//sensorViewConfiguration = (OSIMapper)mapper->mapFromInternalState(SensorViewConfigurationMessage);
+		sensorViewConfiguration.ParseFromString(std::get<std::string>(mapper->mapFromInternalState("SensorViewConfiguration", STRINGCOSIMA)));
 		sensorViewConfiguration.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	case SensorDataMessage:
-		//sensorData = (OSIMapper)mapper->mapFromInternalState(SensorDataMessage);
+		sensorData.ParseFromString(std::get<std::string>(mapper->mapFromInternalState("SensorData", STRINGCOSIMA)));
 		sensorData.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	case GroundTruthMessage:
-		//groundTruth = (OSIMapper)mapper->mapFromInternalState(GroundTruthMessage);
+		groundTruth.ParseFromString(std::get<std::string>(mapper->mapFromInternalState("GroundTruth", STRINGCOSIMA)));
 		groundTruth.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	case SL45TrafficCommandMessage:
-		//trafficCommand = (OSIMapper)mapper->mapFromInternalState(SL45TrafficCommandMessage);
+		//trafficCommand.ParseFromString(std::get<std::string>(mapper->mapFromInternalState("TrafficCommand", STRINGCOSIMA)));
 		//trafficCommand.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	case SL45InVehicleSensorDataMessage:
-		//inVehicleSensorData = (OSIMapper)mapper->mapFromInternalState(SL45InVehicleSensorDataMessage);
+		//inVehicleSensorData.ParseFromString(std::get<std::string>(mapper->mapFromInternalState("InVehicleSensorData", STRINGCOSIMA)));
 		//inVehicleSensorData.SerializeToArray((void*)address.addr.address, address.size);
 		break;
 	}
