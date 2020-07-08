@@ -3,9 +3,6 @@
 #include "mapper/Mapper.h"
 #include "mapper/FMIMapper.h"
 #include "simulation_interfaces/FMIBridge.h"
-#include "configreader/StandardYAMLConfig.h"
-#include "MockBaseSimulator.cpp"
-#include "MockInterfaceSimulator.cpp"
 #include "simulation_interfaces/OSMPBridge.h"
 
 

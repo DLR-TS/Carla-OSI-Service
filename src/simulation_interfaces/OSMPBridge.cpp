@@ -22,9 +22,8 @@ int OSMPBridge::init(std::string scenario, float starttime, int mode) {
 }
 
 int OSMPBridge::connect(std::string config) {
-	int returnValue = FMIBridge::connect(config);
-	returnValue += OSIBridge::connect(config);
-	return returnValue;
+	//OSIBridge::connect(config) not needed
+	return FMIBridge::connect(config);
 }
 
 int OSMPBridge::disconnect() {
