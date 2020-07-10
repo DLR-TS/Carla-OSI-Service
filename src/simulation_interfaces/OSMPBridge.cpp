@@ -16,20 +16,21 @@ eOSIMessage OSMPBridge::getMessageType(std::string messageType) {
 
 
 int OSMPBridge::init(std::string scenario, float starttime, int mode) {
-	int returnValue = FMIBridge::init(scenario, starttime, mode);
-	returnValue += OSIBridge::init(scenario, starttime, mode);
-	return returnValue;
+	//Instance name cannot be set with FMU4cpp. The model identifier is used automatically instead
+	coSimSlave = coSimFMU->new_instance();
+
+	coSimSlave->setup_experiment((fmi2Real)starttime);
+	coSimSlave->enter_initialization_mode();
+	coSimSlave->exit_initialization_mode();
+	return 0;
 }
 
 int OSMPBridge::connect(std::string config) {
-	//OSIBridge::connect(config) not needed
-	return FMIBridge::connect(config);
+	return 0;
 }
 
 int OSMPBridge::disconnect() {
-	int returnValue = FMIBridge::disconnect();
-	returnValue += OSIBridge::disconnect();
-	return returnValue;
+	return OSIBridge::disconnect();
 }
 
 int OSMPBridge::writeToInternalState() {
@@ -53,26 +54,28 @@ int OSMPBridge::writeToInternalState() {
 int OSMPBridge::readFromInternalState() {
 	addresses.clear();
 	auto const model_description = coSimFMU->get_model_description();
-	//iterate over unknowns declared as output
+	//iterate over unknowns declared as output and create AddressMap
 	for (auto const& inputVar : *(model_description->model_variables)) {
-		if (inputVar.is_integer()) {
+		if (inputVar.causality == fmi4cpp::fmi2::causality::output && inputVar.is_integer()) {
 			fmi2Integer integer;
 			coSimSlave->read_integer(inputVar.value_reference, integer);
 			saveToAddressMap(inputVar.name, integer);
 		}
 	}
+	//write message
+	for (auto address : addresses) {
+		OSIBridge::readFromInternalState(address.second, getMessageType(address.first));
+	}
+	//set pointers of messages
 	for (auto const& inputVar : *(model_description->model_variables)) {
-		if (inputVar.is_integer()) {
+		if (inputVar.causality == fmi4cpp::fmi2::causality::output && inputVar.is_integer()) {
 			for (auto address : addresses) {
 				if (inputVar.name.find(address.first) != std::string::npos) {
 					if (inputVar.name.find(".hi") != std::string::npos) {
-						OSIBridge::readFromInternalState(address.second, getMessageType(address.first));
 						coSimSlave->write_integer(inputVar.value_reference, address.second.addr.base.hi);
 					}else if (inputVar.name.find(".lo") != std::string::npos) {
-						OSIBridge::readFromInternalState(address.second, getMessageType(address.first));
 						coSimSlave->write_integer(inputVar.value_reference, address.second.addr.base.lo);
 					}else if (inputVar.name.find(".size") != std::string::npos) {
-						OSIBridge::readFromInternalState(address.second, getMessageType(address.first));
 						coSimSlave->write_integer(inputVar.value_reference, address.second.size);
 					}
 				}
@@ -83,8 +86,9 @@ int OSMPBridge::readFromInternalState() {
 	return 0;
 }
 int OSMPBridge::doStep(double stepSize) {
-	//OSIBridge::dostep() not needed
-	return FMIBridge::doStep(stepSize);
+	//TODO
+	//which parts of FMIBridge::doStep are needed?
+	return OSIBridge::doStep(stepSize);
 }
 
 void OSMPBridge::saveToAddressMap(std::string name, int value) {
