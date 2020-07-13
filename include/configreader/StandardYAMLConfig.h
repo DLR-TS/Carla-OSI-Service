@@ -203,6 +203,7 @@ namespace YAML {
 
 		static bool decode(const Node& node, OSIInterfaceConfig& osiinterface)
 		{
+			osiinterface.prefix = node["prefix"].as<std::string>();
 			osiinterface.inputs = node["input"].as<std::vector<OSIMessageConfig>>();
 			osiinterface.outputs = node["output"].as<std::vector<OSIMessageConfig>>();
 			return true;
