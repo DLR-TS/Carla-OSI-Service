@@ -33,6 +33,7 @@ TEST_CASE("OSIBridge Test") {
 
 		//YAML Config
 		OSIInterfaceConfig config;
+		config.prefix = "#";
 		OSIMessageConfig varDef;
 		varDef.base_name = "SensorViewBaseName";
 		varDef.interface_name = "SensorView";

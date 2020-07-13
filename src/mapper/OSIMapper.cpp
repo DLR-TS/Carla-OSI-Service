@@ -11,85 +11,44 @@ int OSIMapper::readConfiguration(configVariants_t configVariants) {
 
 	OSIInterfaceConfig interfaceConfig = std::get<OSIInterfaceConfig>(configVariants);
 
+	this->prefix = prefix;
 	for (auto input : interfaceConfig.inputs) {
-		config.stringInputList.push_back(NamesAndIndex(input.base_name, input.interface_name, (int)state->strings.size()));
+		config.stringInputList.push_back(NamesAndIndex(prefix + input.base_name, input.interface_name, (int)state->strings.size()));
 		state->strings.push_back(std::string());
 	}
 	for (auto output : interfaceConfig.outputs) {
-		config.stringOutputList.push_back(NamesAndIndex(output.base_name, output.interface_name, (int)state->strings.size()));
+		config.stringOutputList.push_back(NamesAndIndex(prefix + output.base_name, output.interface_name, (int)state->strings.size()));
 		state->strings.push_back(std::string());
 	}
 	return 0;
 }
 
-void OSIMapper::mapOSIToInternalState(osiMessage_t message, eOSIMessage messageType) {
+void OSIMapper::mapOSIToInternalState(std::string message, eOSIMessage messageType) {
 	switch (messageType)
 	{
 	case SensorViewMessage:
-	{
-		if (std::get_if<osi3::SensorView>(&message) == nullptr) {
-			std::cout << "Called SensorView with wrong osi variant!" << std::endl;
-			return;
-		}
-		osi3::SensorView sensorView = std::get<osi3::SensorView>(message);
-		mapToInternalState(sensorView.SerializeAsString(), "SensorView", STRINGCOSIMA);
-	}
-	break;
+		mapToInternalState(message, "SensorView", STRINGCOSIMA);
+		break;
 	case SensorViewConfigurationMessage:
-	{
-		if (std::get_if<osi3::SensorViewConfiguration>(&message) == nullptr) {
-			std::cout << "Called SensorViewConfiguration with wrong osi variant!" << std::endl;
-			return;
-		}
-		osi3::SensorViewConfiguration sensorViewConfiguration = std::get<osi3::SensorViewConfiguration>(message);
-		mapToInternalState(sensorViewConfiguration.SerializeAsString(), "SensorViewConfiguration", STRINGCOSIMA);
-	}
-	break;
+		mapToInternalState(message, "SensorViewConfiguration", STRINGCOSIMA);
+		break;
 	case SensorDataMessage:
-	{
-		if (std::get_if<osi3::SensorData>(&message) == nullptr) {
-			std::cout << "Called SensorData with wrong osi variant!" << std::endl;
-			return;
-		}
-		osi3::SensorData groundTruth = std::get<osi3::SensorData>(message);
-		mapToInternalState(groundTruth.SerializeAsString(), "SensorData", STRINGCOSIMA);
-	}
-	break;
+		mapToInternalState(message, "SensorData", STRINGCOSIMA);
+		break;
 	case GroundTruthMessage:
-	{
-		if (std::get_if<osi3::GroundTruth>(&message) == nullptr) {
-			std::cout << "Called SensorViewConfiguration with wrong osi variant!" << std::endl;
-			return;
-		}
-		osi3::GroundTruth groundTruth = std::get<osi3::GroundTruth>(message);
-		mapToInternalState(groundTruth.SerializeAsString(), "GroundTruth", STRINGCOSIMA);
-	}
-	break;
+		mapToInternalState(message, "GroundTruth", STRINGCOSIMA);
+		break;
 	case SL45TrafficCommandMessage:
-	{
-		//if (std::get_if<osi3::SensorViewConfiguration>(&message) == nullptr) {
-		//	std::cout << "Called SensorViewConfiguration with wrong osi variant!" << std::endl;
-		//	return;
-		//}
-		//osi3::SensorViewConfiguration sensorViewConfiguration = std::get<osi3::SensorViewConfiguration>(message);
-		//mapToInternalState(sensorViewConfiguration.SerializeAsString(), "SensorViewConfiguration", STRINGCOSIMA);
-	}
-	break;
+		//mapToInternalState(message, "SensorViewConfiguration", STRINGCOSIMA);
+		break;
 	case SL45InVehicleSensorDataMessage:
-	{
-		//if (std::get_if<osi3::SensorViewConfiguration>(&message) == nullptr) {
-		//	std::cout << "Called SensorViewConfiguration with wrong osi variant!" << std::endl;
-		//	return;
-		//}
-		//osi3::SensorViewConfiguration sensorViewConfiguration = std::get<osi3::SensorViewConfiguration>(message);
-		//mapToInternalState(sensorViewConfiguration.SerializeAsString(), "SensorViewConfiguration", STRINGCOSIMA);
-	}
-	break;
+		//mapToInternalState(message, "SensorViewConfiguration", STRINGCOSIMA);
+		break;
 	}
 }
 
 //osiMessage_t
-osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
+std::string OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 	switch (messageType)
 	{
 	case SensorViewMessage:
@@ -97,7 +56,7 @@ osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 		values_t sensorViewVariant = mapFromInternalState("SensorView", STRINGCOSIMA);
 		osi3::SensorView sensorView;
 		sensorView.ParseFromString(std::get<std::string>(sensorViewVariant));
-		return (const osiMessage_t)sensorView;
+		return sensorView.SerializeAsString();
 	}
 	break;
 	case SensorViewConfigurationMessage:
@@ -105,7 +64,7 @@ osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 		values_t sensorViewConfigurationVariant = mapFromInternalState("SensorViewConfiguration", STRINGCOSIMA);
 		osi3::SensorViewConfiguration sensorViewConfiguration;
 		sensorViewConfiguration.ParseFromString(std::get<std::string>(sensorViewConfigurationVariant));
-		return (const osiMessage_t)sensorViewConfiguration;
+		return sensorViewConfiguration.SerializeAsString();
 	}
 	break;
 	case SensorDataMessage:
@@ -113,7 +72,7 @@ osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 		values_t sensorDataVariant = mapFromInternalState("SensorData", STRINGCOSIMA);
 		osi3::SensorData sensorData;
 		sensorData.ParseFromString(std::get<std::string>(sensorDataVariant));
-		return (const osiMessage_t)sensorData;
+		return sensorData.SerializeAsString();
 	}
 	break;
 	case GroundTruthMessage:
@@ -121,7 +80,7 @@ osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 		values_t groundTruthVariant = mapFromInternalState("GroundTruth", STRINGCOSIMA);
 		osi3::GroundTruth groundTruth;
 		groundTruth.ParseFromString(std::get<std::string>(groundTruthVariant));
-		return (const osiMessage_t)groundTruth;
+		return groundTruth.SerializeAsString();
 	}
 	break;
 	case SL45TrafficCommandMessage:
@@ -129,7 +88,7 @@ osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 		//values_t SL45TrafficCommandVariant = mapFromInternalState("SL45TrafficCommand", STRINGCOSIMA);
 		//osi3::??? SL45TrafficCommand;
 		//SL45TrafficCommand.ParseFromString(std::get<std::string>(SL45TrafficCommandVariant));
-		//return SL45TrafficCommand;
+		//return SL45TrafficCommand.SerializeAsString();
 	}
 	break;
 	case SL45InVehicleSensorDataMessage:
@@ -137,7 +96,7 @@ osiMessage_t OSIMapper::mapOSIFromInternalState(eOSIMessage messageType) {
 		//values_t SL45InVehicleSensorDataVariant = mapFromInternalState("SL45InVehicleSensorDat", STRINGCOSIMA);
 		//osi3::??? SL45InVehicleSensorDat;
 		//SL45InVehicleSensorDat.ParseFromString(std::get<std::string>(SL45InVehicleSensorDataVariant));
-		//return SL45InVehicleSensorDat;
+		//return SL45InVehicleSensorDat.SerializeAsString();
 	}
 	break;
 	}

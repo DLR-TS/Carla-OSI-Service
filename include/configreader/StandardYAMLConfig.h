@@ -104,6 +104,7 @@ public:
 */
 struct OSIInterfaceConfig {
 public:
+	std::string prefix;
 	std::vector<OSIMessageConfig> inputs;
 	std::vector<OSIMessageConfig> outputs;
 };

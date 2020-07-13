@@ -8,6 +8,7 @@
 - simulator: FMI
   models: PATH_TO_.ssp # path to model.xml files
 - simulator: OSI #needs to be talked about
+  prefix: /#
   input:
       - {interface_name: SensorView, base_name: sensors}
   output:
