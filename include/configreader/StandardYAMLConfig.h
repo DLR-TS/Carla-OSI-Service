@@ -1,6 +1,7 @@
 #ifndef STANDARDYAMLCONGIF_H
 #define STANDARDYAMLCONGIF_H
 #include "yaml-cpp/yaml.h"
+#include <iostream>
 
 /**
  * \var std::string simulator
