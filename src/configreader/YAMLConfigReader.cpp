@@ -44,8 +44,8 @@ int YAMLConfigReader::setConfig(std::shared_ptr<iSimulationData> simulator, Sing
 					return simulator->getMapper()->readConfiguration(simulators[i].as<InterfaceYAMLConfig>());
 				case FMI:
 					return simulator->getMapper()->readConfiguration(simulators[i].as<FMIInterfaceConfig>());
-					//case OSI:
-						//TODO
+				case OSI:
+					return simulator->getMapper()->readConfiguration(simulators[i].as<OSIInterfaceConfig>());
 				}
 			}
 			else {

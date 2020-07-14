@@ -140,10 +140,15 @@ namespace YAML {
 		static bool decode(const Node& node, InterfaceYAMLConfig& config)
 		{
 			config.simulator = node["simulator"].as<std::string>();
-			config.ip = node["ip"].as<std::string>();
-			config.port = node["port"].as<int>();
-			config.inputs = node["input"].as<std::vector<VariableDefinition>>();
-			config.outputs = node["output"].as<std::vector<VariableDefinition>>();
+			config.ip = node["ip"].IsDefined() ? node["ip"].as<std::string>() : std::string();
+			if (node["port"].IsDefined()) {
+				config.port = node["port"].as<int>();
+			} else {
+				std::cout << "No port for " << config.simulator << " is set. Default value 0 is used. May not be a problem since not every interface needs a defined port.";
+				config.port = 0;
+			}
+			config.inputs = node["input"].IsDefined() ? node["input"].as<std::vector<VariableDefinition>>() : std::vector<VariableDefinition>();
+			config.outputs = node["output"].IsDefined() ? node["output"].as<std::vector<VariableDefinition>>() : std::vector<VariableDefinition>();
 			return true;
 		}
 	};
@@ -203,9 +208,9 @@ namespace YAML {
 
 		static bool decode(const Node& node, OSIInterfaceConfig& osiinterface)
 		{
-			osiinterface.prefix = node["prefix"].as<std::string>();
-			osiinterface.inputs = node["input"].as<std::vector<OSIMessageConfig>>();
-			osiinterface.outputs = node["output"].as<std::vector<OSIMessageConfig>>();
+			osiinterface.prefix = node["prefix"].IsDefined() ? node["prefix"].as<std::string>() : "";
+			osiinterface.inputs = node["input"].IsDefined() ? node["input"].as<std::vector<OSIMessageConfig>>() : std::vector<OSIMessageConfig>();
+			osiinterface.outputs = node["output"].IsDefined() ? node["output"].as<std::vector<OSIMessageConfig>>() : std::vector<OSIMessageConfig>();
 			return true;
 		}
 	};

@@ -10,8 +10,10 @@ int OSIMapper::readConfiguration(configVariants_t configVariants) {
 	}
 
 	OSIInterfaceConfig interfaceConfig = std::get<OSIInterfaceConfig>(configVariants);
-
-	this->prefix = prefix;
+	//overwrite prefix default value if setin configuration
+	if (interfaceConfig.prefix.length() != 0) {
+		this->prefix = interfaceConfig.prefix;
+	}
 	for (auto input : interfaceConfig.inputs) {
 		config.stringInputList.push_back(NamesAndIndex(prefix + input.base_name, input.interface_name, (int)state->strings.size()));
 		state->strings.push_back(std::string());
