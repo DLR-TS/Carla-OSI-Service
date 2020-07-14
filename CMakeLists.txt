@@ -1,6 +1,6 @@
 ﻿# CMakeList.txt: CMake-Projektdatei der obersten Ebene.
 #
-cmake_minimum_required (VERSION 3.8)
+cmake_minimum_required (VERSION 3.12)
 message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 
 project ("CoSimulationManager" CXX)
@@ -61,13 +61,25 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
 # OSI is not distributed as conan package, but we already took care of installig its dependency (protobuf), so we can just use it as submodule
 add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)
 
-# Set path to CARLA source. If not provided, try environment variable CARLA_SOURCE_DIR.
-set(CARLA_SOURCE_DIR $ENV{CARLA_SOURCE_DIR} CACHE PATH "Carla source directory")
-find_package(LibCarla_client COMPONENTS BOOST_FILESYSTEM PNG)
-if(LibCarla_client_FOUND)
-	set(WITH_CARLA TRUE)
-	message(VERBOSE "Found Carla. Will add Carla base interface to build")
+# # Set path to CARLA source. If not provided, try environment variable CARLA_SOURCE_DIR.
+#set(CARLA_SOURCE_DIR $ENV{CARLA_SOURCE_DIR} CACHE PATH "Carla source directory")
+#find_package(LibCarla_client COMPONENTS BOOST_FILESYSTEM PNG)
+#if(LibCarla_client_FOUND)
+#	set(WITH_CARLA TRUE)
+#	message(VERBOSE "Found Carla. Will add Carla base interface to build")
+#endif()
+
+option(WITH_CARLA "Fetch Carla and non-conan dependencies and build base simulator interface based on LibCarla_client" ON)
+if(WITH_CARLA)
+	message(VERBOSE "Will add Carla base interface to build")
+	message("CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
+	message("CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
+	include(FetchLibCarla_client)
+	
+	#fetch_carla_and_non_conan_dependencies($<CONFIG:Debug>)
+	fetch_carla_and_non_conan_dependencies(FALSE)# always use release build of carla client
 endif()
+
 
 ##main project
 # set up variables that are used below
