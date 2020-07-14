@@ -138,6 +138,8 @@ include(CTest)
 include(Catch)
 catch_discover_tests(test_CoSiMa)
 
-
-add_executable (CoSimulationManager "${CMAKE_CURRENT_LIST_DIR}/src/CoSiMa.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CoSiMa.h")
+configure_file(${CMAKE_CURRENT_LIST_DIR}/include/CoSiMa.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/CoSiMa.h)
+#configure_file(${CMAKE_CURRENT_LIST_DIR}/src/CoSiMa.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/src/CoSiMa.cpp)
+add_executable (CoSimulationManager "${CMAKE_CURRENT_LIST_DIR}/src/CoSiMa.cpp" "${CMAKE_CURRENT_BINARY_DIR}/include/CoSiMa.h")
 target_link_libraries(CoSimulationManager CoSimulationManagerLib)
+target_include_directories(CoSimulationManager PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)

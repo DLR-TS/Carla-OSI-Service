@@ -1,5 +1,5 @@
 #include "mapper/Mapper.h"
-#include "CoSiMa.h"
+
 
 int Mapper::searchInput(std::shared_ptr<BaseSystemInterface> baseInterface) {
 	//integer
