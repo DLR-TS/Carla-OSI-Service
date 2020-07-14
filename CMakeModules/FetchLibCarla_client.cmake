@@ -1,4 +1,9 @@
-# Fetch LibCarla_client and dependencies not packaged for conan
+# Fetch LibCarla_client and dependencies not packaged for conan.
+# Conan dependencies:
+#	boost/1.72.0
+#	zlib/1.2.11
+#	libpng/1.6.37 # Carla wants 1.2.37, but conan-center only has newer versions. Also, this script currently expects a 1.6.x version - unless you update the set(LIBPNG_INCLUDE_PATH... line
+
 if(NOT COMMAND FetchContent_Declare)
 	include(FetchContent)
 endif(NOT COMMAND FetchContent_Declare)
@@ -45,7 +50,7 @@ message("CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
 message("CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
 
 function(fetch_carla_and_non_conan_dependencies)
-	# Using a function for fetching Carla and dependencies not available as conan package and adding it as subdirectory because of its separate variable scope
+	# Using a function for fetching Carla and those dependencies not available as conan package and adding it as subdirectory because of its separate variable scope
 
 	message(VERBOSE "Fetching Carla and non-conan dependencies")
 	message("CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -60,8 +65,6 @@ function(fetch_carla_and_non_conan_dependencies)
 
 	# Only specified in setup.bat
 	add_definitions(-DLIBCARLA_IMAGE_WITH_PNG_SUPPORT)
-
-	#set(BUILD_SHARED_LIBS False)
 
 	FetchContent_GetProperties(libRecast)
 	if(NOT librecast_POPULATED)
@@ -98,7 +101,7 @@ function(fetch_carla_and_non_conan_dependencies)
 
 	# Carla's recast variables actually point to directories in which the setup scripts collect the contents of the different include and library folders of recastnavigation
 	# This behaviour is imitated here.
-	# Needed libraries are: Recast, DetourCrowd, DetourNavMesh, DetourNavMeshBuilder, DetourNavMeshQuery, DetourCommon
+	# Needed libraries are: Recast, DetourCrowd, Detour
 	file(MAKE_DIRECTORY "${librecast_BINARY_DIR}/CombinedIncludes")
 	file(REMOVE_RECURSE "${librecast_BINARY_DIR}/CombinedIncludes/recast")#remove existing or rename will fail
 	file(COPY "${librecast_SOURCE_DIR}/Recast/Include" DESTINATION "${librecast_BINARY_DIR}/CombinedIncludes")
@@ -108,30 +111,17 @@ function(fetch_carla_and_non_conan_dependencies)
 	#file(COPY "${librecast_BINARY_DIR}/CombinedIncludes/Include" DESTINATION "${librecast_BINARY_DIR}/CombinedIncludes/recast")
 	set(RECAST_INCLUDE_PATH "${librecast_BINARY_DIR}/CombinedIncludes")
 
-	#file(MAKE_DIRECTORY "${librecast_BINARY_DIR}/LibsCollected")
-	#file(COPY	"${librecast_BINARY_DIR}/Recast/Include" 
-	#			"${librecast_BINARY_DIR}/DetourCrowd/Include"
-	#			"${librecast_BINARY_DIR}/Detour/Include"
-	#			DESTINATION "${librecast_BINARY_DIR}/LibsCollected")
-	#set(RECAST_LIB_PATH "${librecast_BINARY_DIR}/CombinedIncludes")
-	#set(RECAST_LIB_PATH "%RECAST_INSTALL_DIR%/lib")
-	#get_target_property(RECAST_LIB_PATH RecastNavigation::Recast INTERFACE_LINK_DIRECTORIES)# or INTERFACE_LINK_LIBRARIES?
 	get_target_property(RECAST_LIB_PATH RecastNavigation::Recast LIBRARY_OUTPUT_DIRECTORY)
 
-	#DEBUG OUTPUT
-	message("ZLIB_INCLUDE_PATH ${ZLIB_INCLUDE_PATH}")
-	message("RECAST_LIB_PATH ${RECAST_LIB_PATH}")
-	message("CONAN_INCLUDE_DIRS_LIBPNG ${CONAN_INCLUDE_DIRS_LIBPNG}")
-
+	
+	# Carla build system requires a change of CMAKE_BUILD_TYPE to build LibCarla_client. It uses a set of variables to decide to build release or debug libs instead
 	if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_BUILD_TYPE IN_LIST DEBUG_CONFIGURATIONS)
 		message(VERBOSE "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} is a debug configuration. CARLA_DEBUG enabled. Will build carla_client_debug instead of carla_client")
 		set(CARLA_DEBUG TRUE)
 	else()
 		message(VERBOSE "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} not found in DEBUG_CONFIGURATIONS (${DEBUG_CONFIGURATIONS}). Will build carla_client in RELEASE configuration")
 	endif()
-	
-	# Carla build system requires a change of CMAKE_BUILD_TYPE to build LibCarla_client
-	set(CMAKE_BUILD_TYPE "Client")
+	set(CMAKE_BUILD_TYPE "Client")# we're in a function scope, so this won't propagate and affect other files or targets
 	set(LIBCARLA_BUILD_TEST FALSE)
 	if(${CARLA_DEBUG})
 		set(LIBCARLA_BUILD_RELEASE FALSE)
@@ -146,32 +136,28 @@ function(fetch_carla_and_non_conan_dependencies)
 	if(NOT libcarla_client_POPULATED)
 		FetchContent_Populate(LibCarla_client)
 		add_subdirectory("${libcarla_client_SOURCE_DIR}/LibCarla/cmake" "${libcarla_client_BINARY_DIR}/LibCarla" EXCLUDE_FROM_ALL)
+	endif()
 		
-		# Carla changes its library name when including the RSS component in a build
-		if(TARGET carla_client_rss)
-			add_library(carla_client ALIAS carla_client_rss)
-		endif()
-		if(TARGET carla_client_rss_debug)
-			add_library(carla_client_debug ALIAS carla_client_rss)
-		endif()
-
-		#create target inlcuding dependencies to add as dependency of other targets
-		add_library(LibCarla_and_deps INTERFACE)
-		add_library(LibCarla::LibCarla_client ALIAS LibCarla_and_deps)
-		# Carla only defines private cmake include, which don't propagate --> re-add carla headers. Also misuse SYSTEM switch to hide compiler warnings
-		target_include_directories(LibCarla_and_deps SYSTEM INTERFACE "${libcarla_client_SOURCE_DIR}/LibCarla/source")
-		target_link_libraries(LibCarla_and_deps INTERFACE $<IF:$<BOOL:${CARLA_DEBUG}>,carla_client_debug,carla_client> CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast)
-		if (WIN32)
-			# Required for https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca used in carla::StringUtil::Match
-			target_link_libraries(LibCarla_and_deps INTERFACE Shlwapi)
-		endif()
-		#target_link_libraries(LibCarla_and_deps INTERFACE carla_client CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast)
-		# includes of link libraries somehow don't propagate. Also misuse SYSTEM switch to hide compiler warnings
-		target_include_directories(LibCarla_and_deps SYSTEM INTERFACE ${BOOST_INCLUDE_PATH} ${RPCLIB_INCLUDE_PATH} ${ZLIB_INCLUDE_PATH} ${LIBPNG_INCLUDE_PATH} ${RECAST_INCLUDE_PATH})
+	# Carla changes its library name when including the RSS component in a build
+	if(TARGET carla_client_rss)
+		add_library(carla_client ALIAS carla_client_rss)
+	endif()
+	if(TARGET carla_client_rss_debug)
+		add_library(carla_client_debug ALIAS carla_client_rss)
 	endif()
 
-	#get_target_property(_CARLA_INCLUDES LibCarla_and_deps INTERFACE_INCLUDE_DIRECTORIES)
-	#get_target_property(_CARLA_LIBS LibCarla_and_deps INTERFACE_LINK_LIBRARIES)
-	#message("LibCarla fetch end INTERFACE_INCLUDE_DIRECTORIES: ${_CARLA_INCLUDES}")
-	#message("LibCarla fetch end INTERFACE_LINK_LIBRARIES: ${_CARLA_LIBS}")
+	#create target inlcuding dependencies to add as dependency of other targets
+	add_library(LibCarla_and_deps INTERFACE)
+	add_library(LibCarla::LibCarla_client ALIAS LibCarla_and_deps)
+		
+	# Carla only defines private cmake include, which don't propagate --> re-add carla headers. Also misuse SYSTEM switch to hide compiler warnings
+	target_include_directories(LibCarla_and_deps SYSTEM INTERFACE "${libcarla_client_SOURCE_DIR}/LibCarla/source")
+	target_link_libraries(LibCarla_and_deps INTERFACE $<IF:$<BOOL:${CARLA_DEBUG}>,carla_client_debug,carla_client> CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast)
+	if (WIN32)
+		# Required for https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca used in carla::StringUtil::Match
+		target_link_libraries(LibCarla_and_deps INTERFACE Shlwapi)
+	endif()
+	#target_link_libraries(LibCarla_and_deps INTERFACE carla_client CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast)
+	# includes of link libraries somehow don't propagate. Also misuse SYSTEM switch to hide compiler warnings
+	target_include_directories(LibCarla_and_deps SYSTEM INTERFACE ${BOOST_INCLUDE_PATH} ${RPCLIB_INCLUDE_PATH} ${ZLIB_INCLUDE_PATH} ${LIBPNG_INCLUDE_PATH} ${RECAST_INCLUDE_PATH})
 endfunction()

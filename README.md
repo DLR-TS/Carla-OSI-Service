@@ -5,9 +5,12 @@
 preparations:
 install (conan.io)[conan.io]
 add conan.exe to PATH environment variable
-check out submodules (git submodule update --init --recursive) to get FMI4cpp or use GIT_SUBMODULE CMake option to do so automatically during build
+check out submodules (git submodule update --init --recursive) to get FMI4cpp or use GIT_SUBMODULE CMake option to do so automatically during build (enabled by default).
+Use option WITH_CARLA to build with the Carla base simulaton interface (currently enabled by default, as it is the only implemented base simulation interface).
+
 	- FMI4cpp is not available as conan package (might change in the future?)
-	- its dependencies are installed using conan, invoked from cmake when building CoSimulationManagerLib
+		-     its dependencies are installed using conan, invoked from cmake when configuring the project.
+	- First run of conan might take a while. CMake output might seem stuck while conan is working in the background
 
 in root folder:
 mkdir build && cd build

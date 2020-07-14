@@ -61,14 +61,6 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
 # OSI is not distributed as conan package, but we already took care of installig its dependency (protobuf), so we can just use it as submodule
 add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)
 
-# # Set path to CARLA source. If not provided, try environment variable CARLA_SOURCE_DIR.
-#set(CARLA_SOURCE_DIR $ENV{CARLA_SOURCE_DIR} CACHE PATH "Carla source directory")
-#find_package(LibCarla_client COMPONENTS BOOST_FILESYSTEM PNG)
-#if(LibCarla_client_FOUND)
-#	set(WITH_CARLA TRUE)
-#	message(VERBOSE "Found Carla. Will add Carla base interface to build")
-#endif()
-
 option(WITH_CARLA "Fetch Carla and non-conan dependencies and build base simulator interface based on LibCarla_client" ON)
 if(WITH_CARLA)
 	message(VERBOSE "Will add Carla base interface to build")
@@ -101,7 +93,7 @@ target_link_libraries(CoSimulationManagerLib PUBLIC ${CONAN_LIBS})
 target_link_libraries(CoSimulationManagerLib PUBLIC fmi4cpp)
 
 if(WITH_CARLA)
-	# CARLA is not managed by conan, thus it is added here
+	# CARLA is not managed by conan, thus it is added here when enabled
 	target_link_libraries(CoSimulationManagerLib PUBLIC LibCarla::LibCarla_client)
 
 	get_target_property(_CARLA_INCLUDES LibCarla::LibCarla_client INTERFACE_INCLUDE_DIRECTORIES)
