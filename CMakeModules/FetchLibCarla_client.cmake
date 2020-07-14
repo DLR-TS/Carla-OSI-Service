@@ -46,15 +46,10 @@ FetchContent_Declare(
   CMAKE_ARGS "-DRPCLIB_BUILD_EXAMPLES=OFF"
 )
 
-message("CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
-message("CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
-
 function(fetch_carla_and_non_conan_dependencies)
 	# Using a function for fetching Carla and those dependencies not available as conan package and adding it as subdirectory because of its separate variable scope
 
-	message(VERBOSE "Fetching Carla and non-conan dependencies")
-	message("CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
-	message("CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
+	message(STATUS "Fetching Carla and non-conan dependencies")
 
 	if(WIN32)#TODO This test might be too unprecise
 		add_compile_definitions(_WIN32_WINNT=0x0600)
@@ -71,7 +66,6 @@ function(fetch_carla_and_non_conan_dependencies)
 		FetchContent_Populate(libRecast)
 		set(RECASTNAVIGATION_TEST False)
 		set(RECASTNAVIGATION_DEMO False)
-		message("LibRecast: ${librecast_SOURCE_DIR} ${librecast_BINARY_DIR}")
 		add_subdirectory(${librecast_SOURCE_DIR} ${librecast_BINARY_DIR} EXCLUDE_FROM_ALL)
 	endif()
 

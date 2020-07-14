@@ -63,9 +63,7 @@ add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)
 
 option(WITH_CARLA "Fetch Carla and non-conan dependencies and build base simulator interface based on LibCarla_client" ON)
 if(WITH_CARLA)
-	message(VERBOSE "Will add Carla base interface to build")
-	message("CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE}")
-	message("CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG}")
+	message(STATUS "Will add Carla base interface to build")
 	include(FetchLibCarla_client)
 	
 	#fetch_carla_and_non_conan_dependencies($<CONFIG:Debug>)
@@ -97,7 +95,6 @@ if(WITH_CARLA)
 	target_link_libraries(CoSimulationManagerLib PUBLIC LibCarla::LibCarla_client)
 
 	get_target_property(_CARLA_INCLUDES LibCarla::LibCarla_client INTERFACE_INCLUDE_DIRECTORIES)
-	message("LibCarla INTERFACE_INCLUDE_DIRECTORIES: ${_CARLA_INCLUDES}")
 endif(WITH_CARLA)
 
 # OSI is not managed by conan, thus it is added here
@@ -110,15 +107,11 @@ else()
 	target_link_libraries(CoSimulationManagerLib PUBLIC open_simulation_interface_static)
 endif(BUILD_SHARED_LIBS)
 
-get_target_property(OUT CoSimulationManagerLib INCLUDE_DIRECTORIES)
-message("INCLUDE_DIRECTORIES: ${OUT}")
-get_target_property(OUT CoSimulationManagerLib INTERFACE_INCLUDE_DIRECTORIES)
-message("INTERFACE_INCLUDE_DIRECTORIES: ${OUT}")
 
 find_package(Catch2 REQUIRED)
 add_executable(test_CoSiMa ${TESTFILES})
 target_include_directories(test_CoSiMa PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
-target_link_libraries(test_CoSiMa CoSimulationManagerLib ${CONAN_LIBS} Catch2::Catch2)
+target_link_libraries(test_CoSiMa CoSimulationManagerLib Catch2::Catch2)
 
 #copy test resources to build folder
 add_custom_command(TARGET test_CoSiMa PRE_BUILD
