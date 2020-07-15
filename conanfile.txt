@@ -24,6 +24,7 @@ cmake
 
 [options]
 boost:shared=True
+boost:error_code_header_only=True
 
 [imports]
 bin, *.dll -> ./bin

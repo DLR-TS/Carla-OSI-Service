@@ -46,7 +46,7 @@ conan_cmake_run(CONANFILE conanfile.txt
 	# FMI4CPP_USING_CONAN is faulty because it doesn't use the correct binary dir
 	#set(FMI4CPP_USING_CONAN ON CACHE BOOL "Build FMI4cpp using conan" FORCE)
 	#include(${CMAKE_CURRENT_BINARY_DIR}/lib/FMI4cpp/conanbuildinfo.cmake)
-conan_basic_setup()
+#conan_basic_setup()
 add_subdirectory(lib/FMI4cpp/ EXCLUDE_FROM_ALL)
 
 # include protobuf, yaml_cpp, catch2, fakeit
@@ -134,5 +134,10 @@ catch_discover_tests(test_CoSiMa)
 configure_file(${CMAKE_CURRENT_LIST_DIR}/include/CoSiMa.h.in ${CMAKE_CURRENT_BINARY_DIR}/include/CoSiMa.h)
 #configure_file(${CMAKE_CURRENT_LIST_DIR}/src/CoSiMa.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/src/CoSiMa.cpp)
 add_executable (CoSimulationManager "${CMAKE_CURRENT_LIST_DIR}/src/CoSiMa.cpp" "${CMAKE_CURRENT_BINARY_DIR}/include/CoSiMa.h")
-target_link_libraries(CoSimulationManager CoSimulationManagerLib)
+target_link_libraries(CoSimulationManager PUBLIC CoSimulationManagerLib ${CONAN_LIBS})
 target_include_directories(CoSimulationManager PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
+
+# The import section in conanfile.txt is supposed to do the same, but somehow it stopped working.
+# so far, only boost is needed. Additional globbing expressions can be added if needed
+file(GLOB CONAN_BOOST_LIBS ${CONAN_BIN_DIRS_BOOST}/*.dll )
+file(COPY ${CONAN_BOOST_LIBS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin)

@@ -55,7 +55,7 @@ function(fetch_carla_and_non_conan_dependencies)
 		add_compile_definitions(_WIN32_WINNT=0x0600)
 		add_compile_definitions(HAVE_SNPRINTF)
 		# Always defined for windows builds, but server specific for linux builds.
-		add_compile_definitions(BOOST_ERROR_CODE_HEADER_ONLY)
+		#add_compile_definitions(BOOST_ERROR_CODE_HEADER_ONLY)# option set in conanfile.txt
 	endif()
 
 	# Only specified in setup.bat
@@ -151,7 +151,7 @@ function(fetch_carla_and_non_conan_dependencies)
 		# Required for https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca used in carla::StringUtil::Match
 		target_link_libraries(LibCarla_and_deps INTERFACE Shlwapi)
 	endif()
-	#target_link_libraries(LibCarla_and_deps INTERFACE carla_client CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast)
+
 	# includes of link libraries somehow don't propagate. Also misuse SYSTEM switch to hide compiler warnings
 	target_include_directories(LibCarla_and_deps SYSTEM INTERFACE ${BOOST_INCLUDE_PATH} ${RPCLIB_INCLUDE_PATH} ${ZLIB_INCLUDE_PATH} ${LIBPNG_INCLUDE_PATH} ${RECAST_INCLUDE_PATH})
 endfunction()
