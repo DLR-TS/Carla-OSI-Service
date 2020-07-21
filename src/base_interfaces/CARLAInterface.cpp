@@ -7,8 +7,12 @@ int CARLAInterface::readConfiguration(baseConfigVariants_t variant) {
 		return 1;
 	}
 
-	host = config->host;
-	port = config->port;
+	this->host = config->host;
+	this->port = config->port;
+	this->transactionTimeout = std::chrono::duration<double>(config->transactionTimeout);
+	this->deltaSeconds = config->deltaSeconds;
+
+	return 0;
 }
 
 int CARLAInterface::initialise() {

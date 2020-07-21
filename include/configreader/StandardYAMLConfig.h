@@ -17,12 +17,20 @@ public:
 * host name or ip
 * \var port
 * port
+* \var transactionTimeout
+* transaction timeout in seconds
+* \var deltaSeconds
+* simulation time delta per tick
 */
 struct CARLAInterfaceConfig {
 public:
 	std::string host;
 	uint16_t port;
+	double transactionTimeout;
+	double deltaSeconds;
 };
+
+struct DominionInterfaceConfig{};
 
 /**
  *\paragraph Naming definitions

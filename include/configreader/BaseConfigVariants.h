@@ -5,6 +5,6 @@
 #include <string>
 #include "configreader/StandardYAMLConfig.h"
 
-typedef std::variant<CARLAInterfaceConfig> baseConfigVariants_t;
+typedef std::variant<CARLAInterfaceConfig, DominionInterfaceConfig> baseConfigVariants_t;
 
 #endif BASECONFIGVARIANTS_H
