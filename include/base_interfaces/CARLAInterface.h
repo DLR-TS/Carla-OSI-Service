@@ -5,6 +5,8 @@
 #include <string>
 #include "base_interfaces/BaseSystemInterface.h"
 #include "configreader/BaseConfigVariants.h"
+#include "base_interfaces/Carla/Utility.h"
+
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>

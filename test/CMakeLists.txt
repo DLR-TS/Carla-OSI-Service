@@ -9,6 +9,7 @@ ${CMAKE_CURRENT_LIST_DIR}/tests-OSMPInterface.cpp
 ${CMAKE_CURRENT_LIST_DIR}/tests-OSIBridge.cpp
 
 $<$<BOOL:${WITH_CARLA}>:${CMAKE_CURRENT_LIST_DIR}/tests-CARLABaseSystemInterface.cpp>
+$<$<BOOL:${WITH_CARLA}>:${CMAKE_CURRENT_LIST_DIR}/tests-CARLAUtility.cpp>
 
 ${CMAKE_CURRENT_LIST_DIR}/MockBaseSimulator.cpp
 ${CMAKE_CURRENT_LIST_DIR}/MockInterfaceSimulator.cpp
