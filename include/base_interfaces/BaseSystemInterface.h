@@ -17,12 +17,12 @@ public:
 	Connect with host/port information from corresponding fields
 	\return Success status.
 	*/
-	virtual int connect() = 0;
+	virtual int initialise() = 0;
 	/**
-	Disconnect the previously established connection.
-	\return Success status.
+	Perform a simulation step
+	\return Time in seconds advanced during step
 	*/
-	virtual int disconnect() = 0;
+	virtual double doStep() = 0;
 
 	virtual int getIntValue(std::string base_name) = 0;
 	virtual bool getBoolValue(std::string base_name) = 0;

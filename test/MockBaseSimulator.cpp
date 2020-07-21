@@ -67,11 +67,12 @@ public:
 		return 0;
 	};
 
-	virtual int connect() override {
+	virtual int initialise() override {
 		return 0;
 	};
 
-	virtual int disconnect() override {
+	virtual double doStep() override {
 		return 0;
-	};
+	}
+
 };

@@ -8,8 +8,8 @@
 class DominionInterface : public BaseSystemInterface
 {
 	virtual int readConfiguration(baseConfigVariants_t config) override;
-	virtual int connect() override;
-	virtual int disconnect() override;
+	virtual int initialise() override;
+	virtual double doStep() override;
 
 	virtual int getIntValue(std::string base_name) override;
 	virtual bool getBoolValue(std::string base_name) override;

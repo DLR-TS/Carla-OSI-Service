@@ -11,14 +11,15 @@ int CARLAInterface::readConfiguration(baseConfigVariants_t variant) {
 	port = config->port;
 }
 
-int CARLAInterface::connect() {
+int CARLAInterface::initialise() {
+	//connect
 	this->client = std::make_unique<carla::client::Client>(host, port);
 	this->client->SetTimeout(transactionTimeout);
 	this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
 	return 0;
 }
 
-int CARLAInterface::disconnect() {
+double CARLAInterface::doStep() {
 	return 0;
 }
 

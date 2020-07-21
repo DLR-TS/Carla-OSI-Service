@@ -4,11 +4,7 @@ int DominionInterface::readConfiguration(baseConfigVariants_t variant) {
 	return 0;
 }
 
-int DominionInterface::connect() {
-	return 0;
-}
-
-int DominionInterface::disconnect() {
+int DominionInterface::initialise() {
 	return 0;
 }
 

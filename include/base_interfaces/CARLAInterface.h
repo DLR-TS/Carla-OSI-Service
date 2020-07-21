@@ -38,12 +38,12 @@ public:
 	Connect with host/port information from corresponding fields
 	\return Success status.
 	*/
-	virtual int connect() override;
+	virtual int initialise() override;
 	/**
-	Disconnect the previously established connection.
-	\return Success status.
+	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
+	\return Time in seconds advanced during step
 	*/
-	virtual int disconnect() override;
+	virtual double doStep() override;
 
 	virtual int getIntValue(std::string base_name) override;
 	virtual bool getBoolValue(std::string base_name) override;
