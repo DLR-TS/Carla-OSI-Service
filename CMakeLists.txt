@@ -93,8 +93,6 @@ target_link_libraries(CoSimulationManagerLib PUBLIC fmi4cpp)
 if(WITH_CARLA)
 	# CARLA is not managed by conan, thus it is added here when enabled
 	target_link_libraries(CoSimulationManagerLib PUBLIC LibCarla::LibCarla_client)
-
-	get_target_property(_CARLA_INCLUDES LibCarla::LibCarla_client INTERFACE_INCLUDE_DIRECTORIES)
 endif(WITH_CARLA)
 
 # OSI is not managed by conan, thus it is added here
@@ -103,8 +101,10 @@ if(BUILD_SHARED_LIBS)
 	# By default, OSI exports no symbols when building a dll, preventing linking to the shared library on windows. Force export of all global symbols
 	set_property(TARGET open_simulation_interface PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
 	target_link_libraries(CoSimulationManagerLib PUBLIC open_simulation_interface)
+	message(STATUS "Will build shared library for OSI")
 else()
 	target_link_libraries(CoSimulationManagerLib PUBLIC open_simulation_interface_static)
+	message(STATUS "Will build static library for OSI")
 endif(BUILD_SHARED_LIBS)
 
 

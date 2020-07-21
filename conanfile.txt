@@ -27,4 +27,5 @@ boost:shared=True
 boost:error_code_header_only=True
 
 [imports]
-bin, *.dll -> ./bin
+bin, *.dll -> ./bin # Copies all dll files from packages bin folder to "bin" folder
+lib, *.dylib* -> ./bin # Copies all dylib files from packages lib folder to "bin" folder
