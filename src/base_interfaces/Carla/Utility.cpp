@@ -5,6 +5,7 @@ osi3::Orientation3d CarlaUtility::toOSI(carla::geom::Rotation& rotation)
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
 	osi3::Orientation3d orient;
+	//TODO OSI prefers values in angular range [pi,pi]
 	orient.set_yaw(-rotation.yaw * M_PI / 180.0);
 	orient.set_pitch(rotation.pitch * M_PI / 180.0);
 	orient.set_roll(rotation.roll * M_PI / 180.0);
@@ -30,20 +31,34 @@ osi3::Vector3d CarlaUtility::toOSI(carla::geom::Vector3D& location) {
 	return vec;
 }
 
+osi3::Vector2d CarlaUtility::toOSI(carla::geom::Vector2D& vector) {
+	//flip y
+	osi3::Vector2d vec;
+	vec.set_x(vector.x);
+	vec.set_y(vector.y);
+	return vec;
+}
+
 carla::geom::Rotation CarlaUtility::toCarla(osi3::Orientation3d& orientation) {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
-	return carla::geom::Rotation((float)(orientation.pitch() * 180 / M_PI), (float)(orientation.yaw() * 180 / M_PI), (float)(orientation.roll() * 180 / M_PI));
+	return carla::geom::Rotation(
+		(float)(orientation.pitch() * 180 * M_1_PI),
+		(float)(orientation.yaw() * -180 * M_1_PI),
+		(float)(orientation.roll() * 180 * M_1_PI));
 }
 
 carla::geom::BoundingBox CarlaUtility::toCarla(osi3::Dimension3d& dimension, osi3::Vector3d& position) {
-	//TODO
 	carla::geom::Location pos = CarlaUtility::toCarla(position);
 	carla::geom::Vector3D extent((float)(dimension.length() / 2.0), (float)(dimension.width() / 2.0), (float)(dimension.height() / 2.0));
-	return carla::geom::BoundingBox();
+	return carla::geom::BoundingBox(pos, extent);
 }
 
 carla::geom::Location CarlaUtility::toCarla(osi3::Vector3d& position) {
 	//flip y
 	return carla::geom::Location((float)position.x(), (float)-position.y(), (float)position.z());
+}
+
+carla::geom::Vector2D CarlaUtility::toCarla(osi3::Vector2d& position) {
+	return carla::geom::Vector2D((float)position.x(), (float)position.y());
 }

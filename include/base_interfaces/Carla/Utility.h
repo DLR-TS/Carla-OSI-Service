@@ -7,6 +7,9 @@
 
 #include <carla/geom/Transform.h>
 #include <carla/geom/BoundingBox.h>
+#include <carla/geom/Rotation.h>
+#include <carla/geom/Vector3D.h>
+#include <carla/geom/Vector2D.h>
 
 #include "osi_common.pb.h"
 #include "osi_datarecording.pb.h"
@@ -42,11 +45,13 @@ namespace CarlaUtility {
 	std::pair<osi3::Dimension3d, osi3::Vector3d> toOSI(carla::geom::BoundingBox& boundingBox);
 	osi3::Vector3d toOSI(carla::geom::Vector3D& location);
 	//carla::geom::Vector3D is a generalization of carla::geom::Location
-	//osi3::Vector3d toOSI(carla::geom::Location location);
+	//osi3::Vector3d toOSI(carla::geom::Location& location);
+	osi3::Vector2d toOSI(carla::geom::Vector2D& vector);
 
 	carla::geom::Rotation toCarla(osi3::Orientation3d& orientation);
 	carla::geom::BoundingBox toCarla(osi3::Dimension3d& dimension, osi3::Vector3d& position);
 	carla::geom::Location toCarla(osi3::Vector3d& position);
+	carla::geom::Vector2D toCarla(osi3::Vector2d& vector);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first
