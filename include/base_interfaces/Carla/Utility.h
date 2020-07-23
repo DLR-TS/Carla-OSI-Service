@@ -5,9 +5,10 @@
 #include <iterator>
 #include <math.h>
 
-#include <carla/geom/Transform.h>
+#include <carla/client/Actor.h>
 #include <carla/geom/BoundingBox.h>
 #include <carla/geom/Rotation.h>
+#include <carla/geom/Transform.h>
 #include <carla/geom/Vector3D.h>
 #include <carla/geom/Vector2D.h>
 
@@ -52,6 +53,11 @@ namespace CarlaUtility {
 	carla::geom::BoundingBox toCarla(osi3::Dimension3d& dimension, osi3::Vector3d& position);
 	carla::geom::Location toCarla(osi3::Vector3d& position);
 	carla::geom::Vector2D toCarla(osi3::Vector2d& vector);
+
+	osi3::Identifier toOSI(carla::ActorId actorID);
+	carla::ActorId toCarla(osi3::Identifier id);
+
+	osi3::StationaryObject toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first

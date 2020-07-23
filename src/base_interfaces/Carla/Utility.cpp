@@ -1,3 +1,6 @@
+#include "..\..\..\include\base_interfaces\Carla\Utility.h"
+#include "..\..\..\include\base_interfaces\Carla\Utility.h"
+#include "..\..\..\include\base_interfaces\Carla\Utility.h"
 #include "base_interfaces/Carla/Utility.h"
 
 osi3::Orientation3d CarlaUtility::toOSI(carla::geom::Rotation& rotation)
@@ -61,4 +64,40 @@ carla::geom::Location CarlaUtility::toCarla(osi3::Vector3d& position) {
 
 carla::geom::Vector2D CarlaUtility::toCarla(osi3::Vector2d& position) {
 	return carla::geom::Vector2D((float)position.x(), (float)position.y());
+}
+
+osi3::Identifier CarlaUtility::toOSI(carla::ActorId actorID)
+{
+	osi3::Identifier id;
+	id.set_value(actorID);
+	return id;
+}
+
+carla::ActorId CarlaUtility::toCarla(osi3::Identifier id)
+{
+	return static_cast<carla::ActorId>(id.value);
+}
+
+osi3::StationaryObject CarlaUtility::toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor)
+{
+	osi3::StationaryObject prop;
+	prop.set_allocated_id(&CarlaUtility::toOSI(actor->GetId()));
+	
+	osi3::BaseStationary* base = prop.mutable_base();
+	//TODO bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
+	// also mentioned in https://github.com/carla-simulator/carla/issues/3025
+	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
+	//base->set_allocated_dimension(dimension);
+	auto transform = actor->GetTransform();
+	base->set_allocated_position(&CarlaUtility::toOSI(transform.location));
+	base->set_allocated_orientation(&CarlaUtility::toOSI(transform.rotation));
+	
+	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
+
+	//TODO Carla doesn't seem to offer information needed for osi3::StationaryObject::Classification. Using default instance
+	prop.mutable_classification();//creates default instance as side-effect
+
+	prop.set_model_reference(actor->GetTypeId());
+
+	return prop;
 }

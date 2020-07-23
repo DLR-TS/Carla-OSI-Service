@@ -137,10 +137,13 @@ void CARLAInterface::parseStationaryMapObjects()
 	}
 
 	carla::SharedPtr<carla::client::Map> map = world->GetMap();
-	//TODO parse map parts that won't change during simulation
 
 	mapTruth->set_map_reference(map->GetName());
 
+	//TODO parse map parts that won't change during simulation
+	for each(auto prop in *world->GetActors()->Filter("static.prop")) {
+		//TODO parse as StationaryObject
+	}
 
 	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
 
@@ -166,7 +169,7 @@ osi3::GroundTruth CARLAInterface::parseWorldToGroundTruth()
 
 
 
-			//TODO should walkers be parsed as moving objects?
+			//TODO should walkers be parsed as moving objects? They are not StationaryObject
 		}
 	}
 
