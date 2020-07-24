@@ -61,6 +61,16 @@ class CARLAInterface : public BaseSystemInterface
 
 public:
 
+	~CARLAInterface() {
+		if (world) {
+			//Unfreeze the server and Unreal Editor, useful for development
+			auto settings = world->GetSettings();
+			settings.synchronous_mode = false;
+			world->ApplySettings(settings);
+			world->Tick(transactionTimeout);
+		}
+	};
+
 	/**
 	Read configuration for this base simulator interface.
 	\param config the decoding struct
