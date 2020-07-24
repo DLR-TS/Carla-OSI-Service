@@ -49,15 +49,35 @@ double CARLAInterface::doStep() {
 		throw std::exception("No world");
 	}
 
+	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
+	auto worldActors = world->GetActors();
+	for each (auto actor in *worldActors)
+	{
+		worldActorIDs.insert(actor->GetId());
+	}
+	CarlaUtility::twoWayDifference(
+		activeActors.begin(), activeActors.end(),
+		worldActorIDs.begin(), worldActorIDs.end(),
+		std::inserter(addedActors, addedActors.begin()),
+		std::inserter(removedActors, removedActors.begin())
+	);
 
 	world->Tick(this->transactionTimeout);
 	//world->WaitForTick(this->transactionTimeout);
 
-	std::vector<carla::ActorId> removedActors;
-	auto worldActors = world->GetActors();
-	//std::sort(worldActors->begin(), worldActors->end());
-	//std::set_difference(activeActors.begin(), activeActors.end(), worldActors->begin(), worldActors->end(), removedActors.begin());
-	//std::sort(activeActors.begin(), activeActors.end());
+	addedActors.clear();
+	removedActors.clear();
+	worldActorIDs.clear();
+	worldActors = world->GetActors();
+	for each (auto actor in *worldActors)
+	{
+		worldActorIDs.insert(actor->GetId());
+	}
+	CarlaUtility::twoWayDifference(
+		activeActors.begin(), activeActors.end(),
+		worldActorIDs.begin(), worldActorIDs.end(),
+		std::inserter(addedActors, addedActors.end()),
+		std::inserter(removedActors, removedActors.end()));
 
 	return this->deltaSeconds;
 }
