@@ -3,7 +3,7 @@
 #include "base_interfaces/CARLAInterface.h"
 #include "configreader/StandardYamlConfig.h"
 
-TEST_CASE("CARLAInterface", "[CARLAInterface]") {
+TEST_CASE("CARLAInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	// host, port, transaction timeout, delta seconds (1/framerate)
 	CARLAInterfaceConfig config{ "localhost", 2000u, 5, (1.0 / 60) };
 

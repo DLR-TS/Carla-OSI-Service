@@ -39,6 +39,8 @@
 //TODO no object needed => no class needed, but we also don't want to use namespaces...
 //class CarlaUtility {
 namespace CarlaUtility {
+	//std::variant<carla::client::Vehicle, carla::client::Walker, carla::client::Junction> boundingBoxType_variants;
+
 	// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
 	// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
 
@@ -58,6 +60,7 @@ namespace CarlaUtility {
 	carla::ActorId toCarla(osi3::Identifier id);
 
 	osi3::StationaryObject toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
+	osi3::TrafficSign toOSITrafficSign(carla::SharedPtr< carla::client::Actor> actor);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first

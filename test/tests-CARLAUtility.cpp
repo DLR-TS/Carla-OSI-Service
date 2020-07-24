@@ -42,7 +42,7 @@ TEST_CASE("Two way difference", "[TwoWayDifference][Utility]") {
 	}
 }
 
-TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Utility]") {
+TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
@@ -130,4 +130,9 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Utility]") {
 		}
 
 	}
+}
+
+TEST_CASE("Carla Prop to StationaryObject", "[Carla][Utility][!hide][RequiresCarlaServer]") {
+	//TODO find a way to use the ActorFactory without a carla server
+
 }

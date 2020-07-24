@@ -28,7 +28,9 @@ int CARLAInterface::initialise() {
 	this->world->ApplySettings(settings);
 
 	//get all actors and their role (if set)
-	for each (auto actor in *world->GetActors())
+	auto actors = world->GetActors();
+	std::cout << "Actor count at init: " << actors->size() << std::endl;
+	for each (auto actor in *actors)
 	{
 		activeActors.insert(actor->GetId());
 		auto attributes = actor->GetAttributes();
@@ -37,6 +39,8 @@ int CARLAInterface::initialise() {
 				actorRole2IDMap.try_emplace(attribute.GetValue(), actor->GetId());
 			}
 		}
+
+		std::cout << actor->GetDisplayId() << std::endl;
 	}
 
 	parseStationaryMapObjects();
@@ -149,20 +153,55 @@ osi3::Timestamp CARLAInterface::parseTimestamp()
 
 void CARLAInterface::parseStationaryMapObjects()
 {
-	if (mapTruth) {
-		mapTruth->Clear();
-	}
-	else {
-		mapTruth = std::make_shared<osi3::GroundTruth>();
-	}
+	mapTruth = std::make_shared<osi3::GroundTruth>();
 
 	carla::SharedPtr<carla::client::Map> map = world->GetMap();
 
 	mapTruth->set_map_reference(map->GetName());
 
+	auto stationaryObjects = mapTruth->mutable_stationary_object();
 	//TODO parse map parts that won't change during simulation
-	for each(auto prop in *world->GetActors()->Filter("static.prop")) {
-		//TODO parse as StationaryObject
+
+	// Static props apparently aren't part of the actor list, so this list is empty
+	auto staticProps = world->GetActors()->Filter("static.prop.*");
+	for each(auto prop in *staticProps) {
+		// parse as StationaryObject
+		stationaryObjects->AddAllocated(&CarlaUtility::toOSIStationaryObject(prop));
+
+		//DEBUG
+		std::cout << "Got an Actor of type 'static.prop.*'" << prop->GetDisplayId() << std::endl;
+	}
+
+	//DEBUG
+	auto landmarks = map->GetAllLandmarks();
+	std::cout << "Landmarks: " << landmarks.size() << std::endl;
+	for each(auto landmark in landmarks) {
+		std::cout << landmark->GetName() << " " << landmark->GetId() << " " << landmark->GetRoadId() << " " << landmark->GetType() << std::endl;
+	}
+
+	//DEBUG
+	auto traffic = world->GetActors()->Filter("traffic.*");
+	std::cout << "traffic Actors: " << traffic->size() << std::endl;
+#ifdef WIN32
+	//auto trafficLight = traffic->Filter("traffic.traffic_light");
+	std::unique_ptr<std::vector<carla::SharedPtr<carla::client::Actor>>> trafficSigns =
+		std::make_unique<std::vector<carla::SharedPtr<carla::client::Actor>>>();
+	std::copy_if(traffic->begin(), traffic->end(), std::inserter(*trafficSigns, trafficSigns->begin()),
+		[](carla::SharedPtr<carla::client::Actor> actor) {return 0 != actor->GetTypeId().rfind("traffic.traffic_light", 0); });
+#else
+	// fnmatch supports negation
+	auto trafficSigns = traffic->Filter("!traffic.traffic_light");
+#endif
+
+	std::cout << "traffic signs: " << trafficSigns->size() << std::endl;
+	for each(auto trafficSign in *trafficSigns) {
+		std::cout << trafficSign->GetDisplayId() << std::endl;
+		auto attributes = trafficSign->GetAttributes();
+		std::cout << " attributes: " << attributes.size() << std::endl;
+		for each (auto attribute in attributes) {
+			std::cout << "  " << attribute.GetId() << ": " << attribute.GetValue() << std::endl;
+		}
+
 	}
 
 	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
