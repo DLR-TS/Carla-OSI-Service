@@ -46,37 +46,37 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
-			osi3::Orientation3d orientation = CarlaUtility::toOSI(rotation);
-			REQUIRE(M_PI_4 == orientation.pitch());
-			REQUIRE(M_PI_2 == orientation.yaw());
-			REQUIRE(M_PI == orientation.roll());
+			osi3::Orientation3d* orientation = CarlaUtility::toOSI(rotation);
+			REQUIRE(M_PI_4 == orientation->pitch());
+			REQUIRE(M_PI_2 == orientation->yaw());
+			REQUIRE(M_PI == orientation->roll());
 		}
 
 		SECTION("Location") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
-			osi3::Vector3d position = CarlaUtility::toOSI(location);
-			REQUIRE(1.2f == position.x());
-			REQUIRE(-3.4f == position.y());
-			REQUIRE(5.6f == position.z());
+			osi3::Vector3d* position = CarlaUtility::toOSI(location);
+			REQUIRE(1.2f == position->x());
+			REQUIRE(-3.4f == position->y());
+			REQUIRE(5.6f == position->z());
 		}
 
 		SECTION("2D Vector") {
 			carla::geom::Vector2D vector(0.1f, -0.1f);
-			osi3::Vector2d vector2d = CarlaUtility::toOSI(vector);
-			REQUIRE(0.1f == vector2d.x());
-			REQUIRE(-0.1f == vector2d.y());
+			osi3::Vector2d* vector2d = CarlaUtility::toOSI(vector);
+			REQUIRE(0.1f == vector2d->x());
+			REQUIRE(-0.1f == vector2d->y());
 		}
 
 		SECTION("BoundingBox") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::BoundingBox boundingBox(location, carla::geom::Vector3D(1.f, 2.f, 4.f));
-			std::pair<osi3::Dimension3d, osi3::Vector3d> osiBB = CarlaUtility::toOSI(boundingBox);
-			REQUIRE(1.2f == osiBB.second.x());
-			REQUIRE(-3.4f == osiBB.second.y());
-			REQUIRE(5.6f == osiBB.second.z());
-			REQUIRE(2.f == osiBB.first.length());
-			REQUIRE(4.f == osiBB.first.width());
-			REQUIRE(8.f == osiBB.first.height());
+			std::pair<osi3::Dimension3d*, osi3::Vector3d*> osiBB = CarlaUtility::toOSI(boundingBox);
+			REQUIRE(1.2f == osiBB.second->x());
+			REQUIRE(-3.4f == osiBB.second->y());
+			REQUIRE(5.6f == osiBB.second->z());
+			REQUIRE(2.f == osiBB.first->length());
+			REQUIRE(4.f == osiBB.first->width());
+			REQUIRE(8.f == osiBB.first->height());
 		}
 	}
 	SECTION("toCarla") {
@@ -85,7 +85,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			orientation.set_pitch(M_PI_4);
 			orientation.set_yaw(M_PI_2);
 			orientation.set_roll(M_PI - M_PI_4);
-			carla::geom::Rotation rotation = CarlaUtility::toCarla(orientation);
+			carla::geom::Rotation rotation = CarlaUtility::toCarla(&orientation);
 			REQUIRE(45.f == rotation.pitch);
 			REQUIRE(-90.f == rotation.yaw);
 			REQUIRE(135.f == rotation.roll);
@@ -96,7 +96,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			position.set_x(0.1);
 			position.set_y(2.3);
 			position.set_z(4.5);
-			carla::geom::Location location = CarlaUtility::toCarla(position);
+			carla::geom::Location location = CarlaUtility::toCarla(&position);
 			REQUIRE(0.1f == location.x);
 			REQUIRE(-2.3f == location.y);
 			REQUIRE(4.5f == location.z);
@@ -106,7 +106,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			osi3::Vector2d vector2d;
 			vector2d.set_x(0.1);
 			vector2d.set_y(-0.1);
-			carla::geom::Vector2D vector = CarlaUtility::toCarla(vector2d);
+			carla::geom::Vector2D vector = CarlaUtility::toCarla(&vector2d);
 			REQUIRE(0.1f == vector.x);
 			REQUIRE(-0.1f == vector.y);
 		}
@@ -120,7 +120,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			dimension.set_length(8.);
 			dimension.set_width(4.);
 			dimension.set_height(10.);
-			carla::geom::BoundingBox boundingBox = CarlaUtility::toCarla(dimension, position);
+			carla::geom::BoundingBox boundingBox = CarlaUtility::toCarla(&dimension, &position);
 			REQUIRE(0.1f == boundingBox.location.x);
 			REQUIRE(-2.3f == boundingBox.location.y);
 			REQUIRE(4.5f == boundingBox.location.z);

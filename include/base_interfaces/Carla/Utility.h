@@ -44,23 +44,23 @@ namespace CarlaUtility {
 	// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
 	// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
 
-	osi3::Orientation3d toOSI(carla::geom::Rotation& rotation);
-	std::pair<osi3::Dimension3d, osi3::Vector3d> toOSI(carla::geom::BoundingBox& boundingBox);
-	osi3::Vector3d toOSI(carla::geom::Vector3D& location);
+	osi3::Orientation3d* toOSI(carla::geom::Rotation& rotation);
+	std::pair<osi3::Dimension3d*, osi3::Vector3d*> toOSI(carla::geom::BoundingBox& boundingBox);
+	osi3::Vector3d* toOSI(carla::geom::Vector3D& location);
 	//carla::geom::Vector3D is a generalization of carla::geom::Location
 	//osi3::Vector3d toOSI(carla::geom::Location& location);
-	osi3::Vector2d toOSI(carla::geom::Vector2D& vector);
+	osi3::Vector2d* toOSI(carla::geom::Vector2D& vector);
 
-	carla::geom::Rotation toCarla(osi3::Orientation3d& orientation);
-	carla::geom::BoundingBox toCarla(osi3::Dimension3d& dimension, osi3::Vector3d& position);
-	carla::geom::Location toCarla(osi3::Vector3d& position);
-	carla::geom::Vector2D toCarla(osi3::Vector2d& vector);
+	carla::geom::Rotation toCarla(osi3::Orientation3d* orientation);
+	carla::geom::BoundingBox toCarla(osi3::Dimension3d* dimension, osi3::Vector3d* position);
+	carla::geom::Location toCarla(osi3::Vector3d* position);
+	carla::geom::Vector2D toCarla(osi3::Vector2d* vector);
 
-	osi3::Identifier toOSI(carla::ActorId actorID);
-	carla::ActorId toCarla(osi3::Identifier id);
+	osi3::Identifier* toOSI(carla::ActorId actorID);
+	carla::ActorId toCarla(osi3::Identifier* id);
 
-	osi3::StationaryObject toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
-	osi3::TrafficSign toOSITrafficSign(carla::SharedPtr< carla::client::Actor> actor);
+	osi3::StationaryObject* toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
+	osi3::TrafficSign* toOSITrafficSign(carla::SharedPtr< carla::client::Actor> actor);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first

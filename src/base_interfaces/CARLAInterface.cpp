@@ -139,14 +139,14 @@ std::string_view CARLAInterface::getPrefix(std::string_view name)
 }
 
 
-osi3::Timestamp CARLAInterface::parseTimestamp()
+osi3::Timestamp* CARLAInterface::parseTimestamp()
 {
-	osi3::Timestamp osiTime;
+	osi3::Timestamp* osiTime = new osi3::Timestamp();
 	auto carlaTime = world->GetSnapshot().GetTimestamp();
 	double intPart;
 	double fractional = std::modf(carlaTime.elapsed_seconds, &intPart);
-	osiTime.set_seconds(google::protobuf::int64(intPart));
-	osiTime.set_nanos(google::protobuf::uint32(fractional *1e9));
+	osiTime->set_seconds(google::protobuf::int64(intPart));
+	osiTime->set_nanos(google::protobuf::uint32(fractional *1e9));
 	return osiTime;
 }
 
@@ -166,7 +166,7 @@ void CARLAInterface::parseStationaryMapObjects()
 	auto staticProps = world->GetActors()->Filter("static.prop.*");
 	for each(auto prop in *staticProps) {
 		// parse as StationaryObject
-		stationaryObjects->AddAllocated(&CarlaUtility::toOSIStationaryObject(prop));
+		stationaryObjects->AddAllocated(CarlaUtility::toOSIStationaryObject(prop));
 
 		//DEBUG
 		std::cout << "Got an Actor of type 'static.prop.*'" << prop->GetDisplayId() << std::endl;
@@ -194,6 +194,7 @@ void CARLAInterface::parseStationaryMapObjects()
 #endif
 
 	std::cout << "traffic signs: " << trafficSigns->size() << std::endl;
+	auto OSITrafficSigns = mapTruth->mutable_traffic_sign();
 	for each(auto trafficSign in *trafficSigns) {
 		std::cout << trafficSign->GetDisplayId() << std::endl;
 		auto attributes = trafficSign->GetAttributes();
@@ -201,6 +202,8 @@ void CARLAInterface::parseStationaryMapObjects()
 		for each (auto attribute in attributes) {
 			std::cout << "  " << attribute.GetId() << ": " << attribute.GetValue() << std::endl;
 		}
+		auto OSITrafficSign = CarlaUtility::toOSITrafficSign(trafficSign);
+		OSITrafficSigns->AddAllocated(OSITrafficSign);
 
 	}
 
@@ -208,20 +211,20 @@ void CARLAInterface::parseStationaryMapObjects()
 
 }
 
-osi3::GroundTruth CARLAInterface::parseWorldToGroundTruth()
+osi3::GroundTruth* CARLAInterface::parseWorldToGroundTruth()
 {
 
 	// lanes and lane boundaries are part of the map, which shouldn't change during simulation and can be preparsed during init
 	// use mapTruth as a base for every new groundTruth message that already contains unchanging fields
-	osi3::GroundTruth groundTruth(*mapTruth);
-	//groundTruth.MergeFrom(mapTruth);
+	osi3::GroundTruth* groundTruth = new osi3::GroundTruth();
+	groundTruth->MergeFrom(*mapTruth);
 
 	for each (auto actor in *world->GetActors()) {
 		auto typeID = actor->GetTypeId();
 
 		//based on blueprint vehicle.*
 		if (typeID.rfind("vehicle", 0) == 0) {
-			auto vehicle = groundTruth.add_moving_object();
+			auto vehicle = groundTruth->add_moving_object();
 			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
 			//TODO parse vehicle as moving object
 
@@ -237,9 +240,9 @@ osi3::GroundTruth CARLAInterface::parseWorldToGroundTruth()
 	return groundTruth;
 }
 
-std::vector<osi3::SensorView> CARLAInterface::parseSensorActors()
+std::vector<osi3::SensorView*> CARLAInterface::parseSensorActors()
 {
-	std::vector<osi3::SensorView> sensorViews;
+	std::vector<osi3::SensorView*> sensorViews;
 	for each (auto actor in *world->GetActors()) {
 		auto typeID = actor->GetTypeId();
 
@@ -248,7 +251,7 @@ std::vector<osi3::SensorView> CARLAInterface::parseSensorActors()
 		//based on blueprint sensor.*
 		if (0 == typeID.rfind("sensor", 0))
 		{
-			osi3::SensorView sensorView;
+			osi3::SensorView* sensorView = new osi3::SensorView();
 			auto sensor = boost::static_pointer_cast<carla::client::Sensor>(actor);
 
 			//substring of typeID
