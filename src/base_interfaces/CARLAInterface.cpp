@@ -172,16 +172,12 @@ void CARLAInterface::parseStationaryMapObjects()
 		std::cout << "Got an Actor of type 'static.prop.*'" << prop->GetDisplayId() << std::endl;
 	}
 
-	//DEBUG
 	auto landmarks = map->GetAllLandmarks();
-	std::cout << "Landmarks: " << landmarks.size() << std::endl;
 	for each(auto landmark in landmarks) {
 		std::cout << landmark->GetName() << " " << landmark->GetId() << " " << landmark->GetRoadId() << " " << landmark->GetType() << std::endl;
 	}
 
-	//DEBUG
 	auto traffic = world->GetActors()->Filter("traffic.*");
-	std::cout << "traffic Actors: " << traffic->size() << std::endl;
 #ifdef WIN32
 	//auto trafficLight = traffic->Filter("traffic.traffic_light");
 	std::unique_ptr<std::vector<carla::SharedPtr<carla::client::Actor>>> trafficSigns =
@@ -193,15 +189,8 @@ void CARLAInterface::parseStationaryMapObjects()
 	auto trafficSigns = traffic->Filter("!traffic.traffic_light");
 #endif
 
-	std::cout << "traffic signs: " << trafficSigns->size() << std::endl;
 	auto OSITrafficSigns = mapTruth->mutable_traffic_sign();
 	for each(auto trafficSign in *trafficSigns) {
-		std::cout << trafficSign->GetDisplayId() << std::endl;
-		auto attributes = trafficSign->GetAttributes();
-		std::cout << " attributes: " << attributes.size() << std::endl;
-		for each (auto attribute in attributes) {
-			std::cout << "  " << attribute.GetId() << ": " << attribute.GetValue() << std::endl;
-		}
 		auto OSITrafficSign = CarlaUtility::toOSITrafficSign(trafficSign);
 		OSITrafficSigns->AddAllocated(OSITrafficSign);
 

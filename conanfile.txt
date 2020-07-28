@@ -14,6 +14,8 @@ bzip2/1.0.8
 zlib/1.2.11
 # wanted by Carla (wants 1.2.37, but conan only has newer versions)
 libpng/1.6.37
+# used for Carla base interface (Carla also contains version 1.9 as third party library)
+pugixml/1.10
 
 
 [generators]
