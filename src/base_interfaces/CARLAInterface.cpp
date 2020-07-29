@@ -159,6 +159,9 @@ void CARLAInterface::parseStationaryMapObjects()
 
 	mapTruth->set_map_reference(map->GetName());
 
+	//parse OpenDRIVE for retrieving information dropped in Carla
+	auto result = xodr.load_string(map->GetOpenDrive().c_str());
+
 	auto stationaryObjects = mapTruth->mutable_stationary_object();
 	//TODO parse map parts that won't change during simulation
 
@@ -171,6 +174,7 @@ void CARLAInterface::parseStationaryMapObjects()
 		//DEBUG
 		std::cout << "Got an Actor of type 'static.prop.*'" << prop->GetDisplayId() << std::endl;
 	}
+	//TODO maybe parse Road Objects Record of OpenDrive file, if present - corresponds to OSI's StationaryObject
 
 	auto landmarks = map->GetAllLandmarks();
 	for each(auto landmark in landmarks) {
@@ -190,10 +194,10 @@ void CARLAInterface::parseStationaryMapObjects()
 #endif
 
 	auto OSITrafficSigns = mapTruth->mutable_traffic_sign();
-	for each(auto trafficSign in *trafficSigns) {
-		auto OSITrafficSign = CarlaUtility::toOSITrafficSign(trafficSign);
+	for (auto trafficSign : *trafficSigns) {
+		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
+		auto OSITrafficSign = CarlaUtility::toOSI(carlaTrafficSign, xodr);
 		OSITrafficSigns->AddAllocated(OSITrafficSign);
-
 	}
 
 	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
@@ -221,6 +225,13 @@ osi3::GroundTruth* CARLAInterface::parseWorldToGroundTruth()
 
 
 			//TODO should walkers be parsed as moving objects? They are not StationaryObject
+		}
+		else if ("traffic.traffic_light" == typeID) {
+			carla::SharedPtr<carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
+			//TODO parse carla::client::TrafficLight as a set of osi3::TrafficLight
+			//a osi3::TrafficLight describes a single bulb of a traffic light
+
+
 		}
 	}
 

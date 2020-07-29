@@ -6,11 +6,15 @@
 #include <math.h>
 
 #include <carla/client/Actor.h>
+#include <carla/client/TrafficLight.h>
+#include <carla/client/TrafficSign.h>
 #include <carla/geom/BoundingBox.h>
 #include <carla/geom/Rotation.h>
 #include <carla/geom/Transform.h>
 #include <carla/geom/Vector3D.h>
 #include <carla/geom/Vector2D.h>
+
+#include "pugixml.hpp"
 
 #include "osi_common.pb.h"
 #include "osi_datarecording.pb.h"
@@ -60,7 +64,8 @@ namespace CarlaUtility {
 	carla::ActorId toCarla(osi3::Identifier* id);
 
 	osi3::StationaryObject* toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
-	osi3::TrafficSign* toOSITrafficSign(carla::SharedPtr< carla::client::Actor> actor);
+	osi3::TrafficSign* toOSI(carla::SharedPtr< carla::client::TrafficSign> actor, pugi::xml_document& xodr);
+	std::vector<osi3::TrafficLight*> toOSI(carla::SharedPtr< carla::client::TrafficLight> actor, pugi::xml_document& xodr);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first

@@ -3,10 +3,12 @@
 
 #include <variant>
 #include <string>
+
 #include "base_interfaces/BaseSystemInterface.h"
 #include "configreader/BaseConfigVariants.h"
 #include "base_interfaces/Carla/Utility.h"
 
+#include "pugiXML.hpp"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -58,6 +60,8 @@ class CARLAInterface : public BaseSystemInterface
 	carla::time_duration transactionTimeout;
 	double deltaSeconds;
 	std::shared_ptr<osi3::GroundTruth> mapTruth;
+	// OpenDRIVE xml representation of the map
+	pugi::xml_document xodr;
 
 public:
 

@@ -2,6 +2,7 @@
 #include "..\..\..\include\base_interfaces\Carla\Utility.h"
 #include "..\..\..\include\base_interfaces\Carla\Utility.h"
 #include "..\..\..\include\base_interfaces\Carla\Utility.h"
+#include "..\..\..\include\base_interfaces\Carla\Utility.h"
 #include "base_interfaces/Carla/Utility.h"
 
 osi3::Orientation3d* CarlaUtility::toOSI(carla::geom::Rotation& rotation)
@@ -103,9 +104,11 @@ osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(carla::SharedPtr< ca
 	return prop;
 }
 
-osi3::TrafficSign* CarlaUtility::toOSITrafficSign(carla::SharedPtr<carla::client::Actor> actor)
+osi3::TrafficSign* CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficSign> actor, pugi::xml_document& xodr)
 {
 	osi3::TrafficSign* sign = new osi3::TrafficSign();
+
+	//TODO use OpenDRIVE for better traffic sign description. Also use it to differentiate between traffic signs as road marking and 'normal' traffic signs
 
 	auto main = sign->mutable_main_sign();
 	auto base = main->mutable_base();
@@ -179,10 +182,68 @@ osi3::TrafficSign* CarlaUtility::toOSITrafficSign(carla::SharedPtr<carla::client
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY);
 	}
 	else if (actor->GetTypeId() == "traffic.unknown") {
-		//Unknown as part of ground truth is forbidden
+		//Unknown as part of OSI ground truth is forbidden
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_OTHER);
 	}
 
 
 	return sign;
+}
+
+std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficLight> actor, pugi::xml_document& xodr)
+{
+	std::vector<osi3::TrafficLight*> osiTrafficLights;
+
+	//TODO OSI defines a traffic light as an actual bulb. Therefore, red, yellow and green are three separate traffic lights
+
+
+	//find corresponding traffic light in xodr file
+	auto opendrive = xodr.child("OpenDRIVE");
+	for (auto road = opendrive.child("road"); road; road.next_sibling("road")) {
+		// This node traversal needs no error handling because pugiXML never returns null, but empty nodes which return false as boolean.
+		for (auto signal = road.child("signals").child("signal"); signal; signal.next_sibling("signal")) {
+			std::string id = actor->GetSignId();
+			if (0 < id.length() && id == signal.attribute("id").as_string()) {
+
+				//TODO parse traffic lights from OpenDRIVE xml description
+
+				return osiTrafficLights;
+			}
+		}
+	}
+
+	// sign id not found
+	// create a single dummy traffic light using information available in Carla
+	osi3::TrafficLight * dummy = new osi3::TrafficLight();
+	dummy->set_allocated_id(CarlaUtility::toOSI(actor->GetId()));
+
+	auto base = dummy->mutable_base();
+	auto transform = actor->GetTransform();
+	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
+	// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
+	//TODO assure rotation is applied local
+	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
+	base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
+
+	auto classification = dummy->mutable_classification();
+	switch (actor->GetState()) {
+	case carla::rpc::TrafficLightState::Red:
+		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_RED);
+		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+		break;
+	case carla::rpc::TrafficLightState::Yellow:
+		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_YELLOW);
+		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+		break;
+	case carla::rpc::TrafficLightState::Green:
+		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_GREEN);
+		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+		break;
+	default:
+		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_OTHER);
+		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_OFF);
+	}
+	classification->set_icon(osi3::TrafficLight_Classification_Icon_ICON_NONE);
+
+	return osiTrafficLights;
 }
