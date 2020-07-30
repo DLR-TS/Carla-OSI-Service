@@ -240,41 +240,27 @@ osi3::GroundTruth* CARLAInterface::parseWorldToGroundTruth()
 	return groundTruth;
 }
 
-std::vector<osi3::SensorView*> CARLAInterface::parseSensorActors()
+void sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
 {
-	std::vector<osi3::SensorView*> sensorViews;
-	for each (auto actor in *world->GetActors()) {
-		auto typeID = actor->GetTypeId();
 
+	osi3::SensorView* sensorView = new osi3::SensorView();
 
+	auto typeID = sensor->GetTypeId();
+	//substring of typeID
+	std::string_view sensorType(&typeID[7]);
 
-		//based on blueprint sensor.*
-		if (0 == typeID.rfind("sensor", 0))
-		{
-			osi3::SensorView* sensorView = new osi3::SensorView();
-			auto sensor = boost::static_pointer_cast<carla::client::Sensor>(actor);
+	if (0 == sensorType.rfind("camera.rgb", 0))
+	{
 
-			//substring of typeID
-			std::string_view sensorType(&typeID[7]);
-
-			if (0 == sensorType.rfind("camera.rgb", 0))
-			{
-
-			}
-			else if (0 == sensorType.rfind("lidar.ray_cast", 0))
-			{
-
-			}
-			else if (0 == sensorType.rfind("other.radar", 0))
-			{
-
-			}
-
-
-
-
-			//TODO parse sensor view depending on typeID
-		}
 	}
-	return sensorViews;
+	else if (0 == sensorType.rfind("lidar.ray_cast", 0))
+	{
+
+	}
+	else if (0 == sensorType.rfind("other.radar", 0))
+	{
+
+	}
+
+
 }

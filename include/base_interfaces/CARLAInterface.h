@@ -112,7 +112,8 @@ private:
 	//TODO return type
 	void parseStationaryMapObjects();
 	osi3::GroundTruth* parseWorldToGroundTruth();
-	std::vector<osi3::SensorView*> parseSensorActors();
+
+	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 
 };
 
