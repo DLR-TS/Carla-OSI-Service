@@ -285,10 +285,10 @@ osi3::GroundTruth* CARLAInterface::parseWorldToGroundTruth()
 	return groundTruth;
 }
 
-void sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+void CARLAInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
 {
 
-	osi3::SensorView* sensorView = new osi3::SensorView();
+	std::unique_ptr<osi3::SensorView> sensorView = std::make_unique<osi3::SensorView>();
 
 	auto typeID = sensor->GetTypeId();
 	//substring of typeID
@@ -297,18 +297,25 @@ void sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::Sh
 	if (0 == sensorType.rfind("camera.rgb", 0))
 	{
 		auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
-		CarlaUtility::toOSICamera(sensor, image);
+		auto cameraSensorView = CarlaUtility::toOSICamera(sensor, image);
+		sensorView->mutable_camera_sensor_view()->AddAllocated(cameraSensorView);
 	}
 	else if (0 == sensorType.rfind("lidar.ray_cast", 0))
 	{
 		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
-		CarlaUtility::toOSILidar(sensor, measurement);
+		auto lidarSensorView = CarlaUtility::toOSILidar(sensor, measurement);
+		sensorView->mutable_lidar_sensor_view()->AddAllocated(lidarSensorView);
 	}
 	else if (0 == sensorType.rfind("other.radar", 0))
 	{
 		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
-		CarlaUtility::toOSIRadar(sensor, measurement);
+		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
+		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
+	}
+	else {
+		std::cerr << "CARLAInterface.sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
-
+	auto varName = actorRole2IDMap.right.at(sensor->GetId());
+	varName2MessageMap[varName] = sensorView->SerializeAsString();
 }

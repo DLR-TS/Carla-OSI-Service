@@ -345,7 +345,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::
 
 osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
 {
-	auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
+	auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
 	std::optional<double> hFov;
 	std::optional<double> vFov;
 	auto attributes = sensor->GetAttributes();
