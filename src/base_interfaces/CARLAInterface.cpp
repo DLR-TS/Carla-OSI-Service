@@ -1,4 +1,4 @@
-#include "base_interfaces\CARLAInterface.h"
+#include "base_interfaces/CARLAInterface.h"
 
 int CARLAInterface::readConfiguration(baseConfigVariants_t variant) {
 	CARLAInterfaceConfig* config = std::get_if<CARLAInterfaceConfig>(&variant);
@@ -27,23 +27,24 @@ int CARLAInterface::initialise() {
 	settings.synchronous_mode = true;
 	this->world->ApplySettings(settings);
 
-	//get all actors and their role (if set)
-	auto actors = world->GetActors();
-	std::cout << "Actor count at init: " << actors->size() << std::endl;
-	for each (auto actor in *actors)
-	{
-		activeActors.insert(actor->GetId());
-		auto attributes = actor->GetAttributes();
-		for each (auto attribute in attributes) {
-			if ("role_name" == attribute.GetId() && !attribute.GetValue().empty()) {
-				actorRole2IDMap.try_emplace(attribute.GetValue(), actor->GetId());
-			}
-		}
-
-		std::cout << actor->GetDisplayId() << std::endl;
-	}
+	//performing a tick does the same
+	////get all actors and their role (if set)
+	//auto actors = world->GetActors();
+	//std::cout << "Actor count at init: " << actors->size() << std::endl;
+	//for each (auto actor in *actors)
+	//{
+	//	activeActors.insert(actor->GetId());
+	//	auto attributes = actor->GetAttributes();
+	//	for each (auto attribute in attributes) {
+	//		if ("role_name" == attribute.GetId() && !attribute.GetValue().empty()) {
+	//			actorRole2IDMap.try_emplace(attribute.GetValue(), actor->GetId());
+	//		}
+	//	}
 
 	parseStationaryMapObjects();
+
+	// perform a tick to fill actor and message lists
+	doStep();
 
 	return 0;
 }
@@ -53,6 +54,7 @@ double CARLAInterface::doStep() {
 		throw std::exception("No world");
 	}
 
+	// track actors added/removed by simulation interfaces
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
 	auto worldActors = world->GetActors();
 	for each (auto actor in *worldActors)
@@ -66,9 +68,13 @@ double CARLAInterface::doStep() {
 		std::inserter(removedActors, removedActors.begin())
 	);
 
+	//TODO inform Carla of added/removed actors
+	//TODO inform Carla of traffic updates
+
 	world->Tick(this->transactionTimeout);
 	//world->WaitForTick(this->transactionTimeout);
 
+	// track actors added/removed by Carla
 	addedActors.clear();
 	removedActors.clear();
 	worldActorIDs.clear();
@@ -82,6 +88,34 @@ double CARLAInterface::doStep() {
 		worldActorIDs.begin(), worldActorIDs.end(),
 		std::inserter(addedActors, addedActors.end()),
 		std::inserter(removedActors, removedActors.end()));
+
+	//TODO implement reactions
+	for (auto removedActor : removedActors) {
+		if (actorRole2IDMap.right.count(removedActor)) {
+			actorRole2IDMap.right.erase(removedActor);
+		}
+		activeActors.erase(removedActor);
+	}
+	for (auto addedActor : addedActors) {
+		activeActors.insert(addedActor);
+		auto actor = world->GetActor(addedActor);
+		auto attributes = actor->GetAttributes();
+		for (auto attribute : attributes) {
+			if ("role_name" == attribute.GetId()) {
+				if (!std::empty(attribute.GetValue())) {
+					auto value = boost::bimap<std::string, carla::ActorId>::value_type(attribute.GetValue(), addedActor);
+					actorRole2IDMap.insert(value);
+
+					// if actor is of type sensor, add sensor update listener to receive latest sensor data
+					if (0 == actor->GetTypeId().rfind("sensor.", 0)) {
+						auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
+						sensor->Listen([this, sensor](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData); });
+					}
+				}
+				break;
+			}
+		}
+	}
 
 	return this->deltaSeconds;
 }
@@ -103,9 +137,9 @@ double CARLAInterface::getDoubleValue(std::string base_name) {
 };
 
 std::string CARLAInterface::getStringValue(std::string base_name) {
-
-
-
+	if (varName2MessageMap.count(base_name)) {
+		return varName2MessageMap[base_name];
+	}
 
 	return "";
 };
@@ -127,6 +161,17 @@ int CARLAInterface::setDoubleValue(std::string base_name, double value) {
 };
 
 int CARLAInterface::setStringValue(std::string base_name, std::string value) {
+	std::string mergedMessage;
+	if (actorRole2IDMap.left.count(base_name)) {
+		auto actor = world->GetActor(actorRole2IDMap.left[base_name]);
+
+		//TODO update Carla actor and store merged serialized OSI message in varName2MessageMap
+	}
+	else {
+		varName2MessageMap[base_name] = value;
+	}
+
+
 	return 0;
 }
 std::string_view CARLAInterface::getPrefix(std::string_view name)
@@ -251,15 +296,18 @@ void sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::Sh
 
 	if (0 == sensorType.rfind("camera.rgb", 0))
 	{
-
+		auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
+		CarlaUtility::toOSICamera(sensor, image);
 	}
 	else if (0 == sensorType.rfind("lidar.ray_cast", 0))
 	{
-
+		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
+		CarlaUtility::toOSILidar(sensor, measurement);
 	}
 	else if (0 == sensorType.rfind("other.radar", 0))
 	{
-
+		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
+		CarlaUtility::toOSIRadar(sensor, measurement);
 	}
 
 

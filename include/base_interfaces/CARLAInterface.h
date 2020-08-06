@@ -9,6 +9,7 @@
 #include "base_interfaces/Carla/Utility.h"
 
 #include "pugiXML.hpp"
+#include <boost/bimap.hpp>
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -55,7 +56,11 @@ class CARLAInterface : public BaseSystemInterface
 	uint16_t port;
 	std::unique_ptr<carla::client::World> world;
 	std::unique_ptr<carla::client::Client> client;
-	std::map<std::string, carla::ActorId> actorRole2IDMap;
+	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role
+	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
+	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
+	std::map<std::string, std::string> varName2MessageMap;
+	// contains all actor ids reported by Carla
 	std::set<carla::ActorId> activeActors;
 	carla::time_duration transactionTimeout;
 	double deltaSeconds;
