@@ -1,0 +1,7 @@
+#ignore everything except .gitignore file and FMI4cpp
+*
+!.gitignore
+!FMI4cpp/
+!FMI4cpp/*
+!open-simulation-interface/
+!open-simulation-interface/*

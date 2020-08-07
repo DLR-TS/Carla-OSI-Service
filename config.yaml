@@ -1,0 +1,9 @@
+- simulator: VTD
+  ip: 127.0.0.1 # ip of running VTD server
+  port: 1337
+  input: 
+      - {interface_name: a, base_name: b, type: bool} # name and type of VTD variables
+      - {interface_name: b, base_name: a, type: double} 
+  output: [] #emtpy list
+- simulator: FMI
+  models: PATH_TO_.ssp # path to model.xml files

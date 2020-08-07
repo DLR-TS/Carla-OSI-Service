@@ -1,0 +1,10 @@
+[requires]
+protobuf/3.11.4
+yaml-cpp/0.6.3
+catch2/2.12.1
+FakeIt/2.0.5@gasuketsu/stable
+
+[generators]
+cmake
+cmake_paths
+cmake_find_package

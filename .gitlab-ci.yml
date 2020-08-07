@@ -1,0 +1,67 @@
+# gitlab-ci.yml
+# Author(s): Danny Behnecke
+# Copyright (C) 2020 DLR TS. All rights reserved.
+
+# There will be four stages in the end:
+# prepare: set up necessary installations and environment variables if needed, to test setup scripts
+# build: build all modules of Dominion Environment
+# test: run all tests
+# deploy: once an artifactory is available, deploy build to here
+
+before_script:
+  - echo $CI_BUILD_REF
+  - echo $CI_PROJECT_DIR
+
+stages:
+  - prepare
+  - build
+  - test
+  #   - deploy
+
+create_cmake:
+  stage: prepare
+  tags:
+    - linux
+    - ubuntu
+  script:
+    - mkdir build
+    - cd build
+    - cmake -DCMAKE_BUILD_TYPE=Release ..
+  artifacts:
+    paths:
+      - build/
+
+build_all_linux:
+  stage: build
+  tags:
+    - linux
+    - ubuntu
+  script:
+    - cd $CI_PROJECT_DIR/build
+    - make
+  dependencies:
+    - create_cmake
+
+build_test_linux:
+  stage: test
+  tags:
+    - linux
+    - ubuntu
+  script:
+    - make $CI_PROJECT_DIR/build/test_CoSiMa
+  dependencies:
+    - create_cmake
+    - build_all_linux
+# pages:
+#   stage: deploy
+#   tags:
+#     - linux
+#   script:
+#     - cd Documentation/sphinx/
+#     - ./make_html.sh
+#     - mv .build/html ${CI_PROJECT_DIR}/public
+#   artifacts:
+#     paths:
+#       - public
+#   only:
+#     - master

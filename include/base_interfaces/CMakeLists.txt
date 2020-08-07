@@ -1,0 +1,6 @@
+set(BASE_INTERFACE_INCLUDES
+${CMAKE_CURRENT_LIST_DIR}/BaseSystemInterface.h 
+${CMAKE_CURRENT_LIST_DIR}/DominionInterface.h 
+
+PARENT_SCOPE
+)

@@ -1,0 +1,16 @@
+- simulator: VTD
+  ip: 127.0.0.1
+  port: 1337
+  input: 
+      - {interface_name: a, base_name: b, type: bool}
+  output:
+       - {interface_name: e, base_name: f, type: bool}
+- simulator: FMI
+  models: PATH_TO_.ssp
+- simulator: vtd
+  ip: 127.0.0.2
+  port: 1339
+  input: 
+      - {interface_name: w, base_name: er, type: bool}
+  output:
+       - {interface_name: g, base_name: l, type: bool}
