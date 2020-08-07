@@ -1,6 +1,3 @@
-[submodule "lib/FMI4cpp"]
-	path = lib/FMI4cpp
-	url = https://github.com/NTNU-IHB/FMI4cpp.git
 [submodule "lib/open-simulation-interface"]
 	path = lib/open-simulation-interface
 	url = https://github.com/OpenSimulationInterface/open-simulation-interface.git

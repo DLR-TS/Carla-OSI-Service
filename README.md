@@ -1,4 +1,6 @@
-# CoSimulationManager for SETLevel4to5
+# CARLA OSI client for SETLevel4to5
+
+A client for CARLA simulator. Translates World and sensor outputs into OSI messages
 
 ## Installation Guide
 
@@ -6,20 +8,13 @@ preparations:
 install (conan.io)[conan.io]
 add conan.exe to PATH environment variable
 check out submodules (git submodule update --init --recursive) to get FMI4cpp or use GIT_SUBMODULE CMake option to do so automatically during build (enabled by default).
-Use option WITH_CARLA to build with the Carla base simulaton interface (currently enabled by default, as it is the only implemented base simulation interface).
-
-	- FMI4cpp is not available as conan package (might change in the future?)
-		-     its dependencies are installed using conan, invoked from cmake when configuring the project.
-	- First run of conan might take a while. CMake output might seem stuck while conan is working in the background
-
-in root folder:
-mkdir build && cd build
-conan install ..
-
 
 use cmake for project generation
 
 
 ## Used Libraries
 
+carla 0.9.9.4
+catch2
 cmake-conan 0.15
+open-simulation-interface

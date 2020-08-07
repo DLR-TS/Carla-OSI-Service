@@ -1,6 +1,6 @@
 #include "catch2/catch.hpp"
 
-#include "base_interfaces/Carla/Utility.h"
+#include "Utility.h"
 
 TEST_CASE("Two way difference", "[TwoWayDifference][Utility]") {
 	SECTION("All empty") {

@@ -1,4 +1,4 @@
-#include "base_interfaces/Carla/Utility.h"
+#include "Utility.h"
 
 osi3::Orientation3d* CarlaUtility::toOSI(carla::geom::Rotation& rotation)
 {
@@ -307,7 +307,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::
 	std::optional<double> vFov;
 	if (upperFov && lowerFov) {
 		//upper and lower field of view are given in degree
-		vFov = (upperFov.value - lowerFov.value) * M_PI / 180.0;
+		vFov = (upperFov.value() - lowerFov.value()) * M_PI / 180.0;
 	}
 	uint32_t numPixels;//OSI field uses uint32_t
 	for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
@@ -323,10 +323,10 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::
 	//TODO get lidar directions
 	//config->add_directions()
 	if (rotationFrequency) {
-		config->set_emitter_frequency(rotationFrequency.value);
+		config->set_emitter_frequency(rotationFrequency.value());
 	}
 	if (vFov) {
-		config->set_field_of_view_vertical(vFov.value);
+		config->set_field_of_view_vertical(vFov.value());
 	}
 	config->set_field_of_view_horizontal(M_PI * 2);
 	config->set_max_number_of_interactions(1);
@@ -366,10 +366,10 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::
 	auto config = radarSensorview->mutable_view_configuration();
 	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
 	if (hFov) {
-		config->set_field_of_view_horizontal(hFov.value);
+		config->set_field_of_view_horizontal(hFov.value());
 	}
 	if (vFov) {
-		config->set_field_of_view_vertical(vFov.value);
+		config->set_field_of_view_vertical(vFov.value());
 	}
 	config->set_max_number_of_interactions(1);
 	//TODO number of rays (horizontal/vertical)

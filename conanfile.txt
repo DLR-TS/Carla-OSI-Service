@@ -4,24 +4,19 @@ protobuf/3.9.1@bincrafters/stable
 yaml-cpp/0.6.3
 catch2/2.12.1
 FakeIt/2.0.5@gasuketsu/stable
-# requirements of FMI4cpp (wants 1.66.0) and Carla (wants 1.72.0)
+# used to parse OpenDRIVE description of Carla's map (Carla also contains version 1.9 as third party library)
+pugixml/1.10
+# requirement of Carla (wants 1.72.0)
 boost/1.72.0
-# required by FMI4cpp
-libzip/1.5.2@bincrafters/stable
-# required by FMI4cpp
-bzip2/1.0.8
-# requirements of FMI4cpp (wants 1.2.11) and Carla (wants 1.2.11)
+# requirement of  Carla (wants 1.2.11)
 zlib/1.2.11
 # wanted by Carla (wants 1.2.37, but conan only has newer versions)
 libpng/1.6.37
-# used for Carla base interface (Carla also contains version 1.9 as third party library)
-pugixml/1.10
 
 
 [generators]
 cmake
-# cmake_find_package generates an incompatible Findprotobuf.cmake 
-#cmake_paths
+# cmake_find_package generates an incompatible Findprotobuf.cmake
 #cmake_find_package
 
 [options]

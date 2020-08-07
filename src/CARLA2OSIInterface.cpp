@@ -1,21 +1,15 @@
-#include "base_interfaces/CARLAInterface.h"
+#include "CARLA2OSIInterface.h"
 
-int CARLAInterface::readConfiguration(baseConfigVariants_t variant) {
-	CARLAInterfaceConfig* config = std::get_if<CARLAInterfaceConfig>(&variant);
-	if (nullptr == config) {
-		std::cerr << "Called with wrong configuration variant!" << std::endl;
-		return 1;
-	}
-
-	this->host = config->host;
-	this->port = config->port;
-	this->transactionTimeout = std::chrono::duration<double>(config->transactionTimeout);
-	this->deltaSeconds = config->deltaSeconds;
+int CARLA2OSIInterface::readConfiguration(CARLA2OSIInterfaceConfig& config) {
+	this->host = config.host;
+	this->port = config.port;
+	this->transactionTimeout = std::chrono::duration<double>(config.transactionTimeout);
+	this->deltaSeconds = config.deltaSeconds;
 
 	return 0;
 }
 
-int CARLAInterface::initialise() {
+int CARLA2OSIInterface::initialise() {
 	//connect
 	this->client = std::make_unique<carla::client::Client>(host, port);
 	this->client->SetTimeout(transactionTimeout);
@@ -49,7 +43,7 @@ int CARLAInterface::initialise() {
 	return 0;
 }
 
-double CARLAInterface::doStep() {
+double CARLA2OSIInterface::doStep() {
 	if (!world) {
 		throw std::exception("No world");
 	}
@@ -120,23 +114,23 @@ double CARLAInterface::doStep() {
 	return this->deltaSeconds;
 }
 
-int CARLAInterface::getIntValue(std::string base_name) {
+int CARLA2OSIInterface::getIntValue(std::string base_name) {
 	return 0;
 };
 
-bool CARLAInterface::getBoolValue(std::string base_name) {
+bool CARLA2OSIInterface::getBoolValue(std::string base_name) {
 	return true;
 };
 
-float CARLAInterface::getFloatValue(std::string base_name) {
+float CARLA2OSIInterface::getFloatValue(std::string base_name) {
 	return 0.0;
 };
 
-double CARLAInterface::getDoubleValue(std::string base_name) {
+double CARLA2OSIInterface::getDoubleValue(std::string base_name) {
 	return 0.0;
 };
 
-std::string CARLAInterface::getStringValue(std::string base_name) {
+std::string CARLA2OSIInterface::getStringValue(std::string base_name) {
 	if (varName2MessageMap.count(base_name)) {
 		return varName2MessageMap[base_name];
 	}
@@ -144,26 +138,26 @@ std::string CARLAInterface::getStringValue(std::string base_name) {
 	return "";
 };
 
-int CARLAInterface::setIntValue(std::string base_name, int value) {
+int CARLA2OSIInterface::setIntValue(std::string base_name, int value) {
 	return 0;
 };
 
-int CARLAInterface::setBoolValue(std::string base_name, bool value) {
+int CARLA2OSIInterface::setBoolValue(std::string base_name, bool value) {
 	return 0;
 };
 
-int CARLAInterface::setFloatValue(std::string base_name, float value) {
+int CARLA2OSIInterface::setFloatValue(std::string base_name, float value) {
 	return 0;
 };
 
-int CARLAInterface::setDoubleValue(std::string base_name, double value) {
+int CARLA2OSIInterface::setDoubleValue(std::string base_name, double value) {
 	return 0;
 };
 
-int CARLAInterface::setStringValue(std::string base_name, std::string value) {
+int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value) {
 	std::string mergedMessage;
 	if (actorRole2IDMap.left.count(base_name)) {
-		auto actor = world->GetActor(actorRole2IDMap.left[base_name]);
+		auto actor = world->GetActor(actorRole2IDMap.left.at(base_name));
 
 		//TODO update Carla actor and store merged serialized OSI message in varName2MessageMap
 	}
@@ -174,7 +168,7 @@ int CARLAInterface::setStringValue(std::string base_name, std::string value) {
 
 	return 0;
 }
-std::string_view CARLAInterface::getPrefix(std::string_view name)
+std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 {
 	if (2 < name.size() && '#' == name[0]) {
 		std::string_view prefix = std::string_view(&name.at(1), name.find('#', 1));
@@ -184,7 +178,7 @@ std::string_view CARLAInterface::getPrefix(std::string_view name)
 }
 
 
-osi3::Timestamp* CARLAInterface::parseTimestamp()
+osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 {
 	osi3::Timestamp* osiTime = new osi3::Timestamp();
 	auto carlaTime = world->GetSnapshot().GetTimestamp();
@@ -196,7 +190,7 @@ osi3::Timestamp* CARLAInterface::parseTimestamp()
 }
 
 
-void CARLAInterface::parseStationaryMapObjects()
+void CARLA2OSIInterface::parseStationaryMapObjects()
 {
 	mapTruth = std::make_shared<osi3::GroundTruth>();
 
@@ -249,7 +243,7 @@ void CARLAInterface::parseStationaryMapObjects()
 
 }
 
-osi3::GroundTruth* CARLAInterface::parseWorldToGroundTruth()
+osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 {
 
 	// lanes and lane boundaries are part of the map, which shouldn't change during simulation and can be preparsed during init
@@ -285,7 +279,7 @@ osi3::GroundTruth* CARLAInterface::parseWorldToGroundTruth()
 	return groundTruth;
 }
 
-void CARLAInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
 {
 
 	std::unique_ptr<osi3::SensorView> sensorView = std::make_unique<osi3::SensorView>();
@@ -313,7 +307,7 @@ void CARLAInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> s
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
 	else {
-		std::cerr << "CARLAInterface.sensorEventAction called for unsupported sensor type" << std::endl;
+		std::cerr << "CARLA2OSIInterface.sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
 	auto varName = actorRole2IDMap.right.at(sensor->GetId());

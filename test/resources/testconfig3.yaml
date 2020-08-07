@@ -1,5 +1,0 @@
-- simulator: OSI
-  input:
-      - {interface_name: SensorView, base_name: sensors}
-  output:
-      - {interface_name: SensorViewConfiguration, base_name: sensorconf}

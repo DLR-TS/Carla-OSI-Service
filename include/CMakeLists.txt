@@ -1,9 +1,6 @@
-add_subdirectory(mapper)
-add_subdirectory(simulation_interfaces)
-add_subdirectory(configreader)
-add_subdirectory(base_interfaces)
-
-set(COSIMA_INCLUDES ${MAPPER_INCLUDES} ${SIMULATION_INTERFACE_INCLUDES} ${CONFIGREADER_INCLUDES} ${BASE_INTERFACE_INCLUDES}
-${CMAKE_CURRENT_LIST_DIR}/SimulationInterfaceFactory.h
+#includes
+set(CARLA_OSI_LIB_INCLUDES ${CARLA_OSI_LIB_INCLUDES}
+${CMAKE_CURRENT_LIST_DIR}/CARLA2OSIInterface.h
+${CMAKE_CURRENT_LIST_DIR}/Utility.h
 PARENT_SCOPE
 )
