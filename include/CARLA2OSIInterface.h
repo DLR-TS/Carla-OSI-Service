@@ -43,8 +43,10 @@
 #include "osi_sensorspecific.pb.h"
 #include "osi_sensorview.pb.h"
 #include "osi_sensorviewconfiguration.pb.h"
+#include "osi_trafficcommand.pb.h"
 #include "osi_trafficlight.pb.h"
 #include "osi_trafficsign.pb.h"
+#include "osi_trafficupdate.pb.h"
 #include "osi_version.pb.h"
 
 /**
@@ -77,6 +79,8 @@ class CARLA2OSIInterface
 	std::map<std::string, std::string> varName2MessageMap;
 	// contains all actor ids reported by Carla
 	std::set<carla::ActorId> activeActors;
+	// contains all actor ids used by send TrafficCommand
+	std::set<carla::ActorId> activeTrafficActors;
 	carla::time_duration transactionTimeout;
 	double deltaSeconds;
 	std::shared_ptr<osi3::GroundTruth> mapTruth;
@@ -135,6 +139,8 @@ private:
 
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 
+	void sendTrafficCommand(carla::ActorId ActorId);
+	void receiveTrafficUpdate();
 };
 
 #endif // !DOMINIONINTERFACE_H

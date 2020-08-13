@@ -39,7 +39,7 @@ osi3::Vector2d* CarlaUtility::toOSI(carla::geom::Vector2D& vector) {
 	return vec;
 }
 
-carla::geom::Rotation CarlaUtility::toCarla(osi3::Orientation3d* orientation) {
+carla::geom::Rotation CarlaUtility::toCarla(const osi3::Orientation3d* orientation) {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
 	return carla::geom::Rotation(
@@ -48,18 +48,18 @@ carla::geom::Rotation CarlaUtility::toCarla(osi3::Orientation3d* orientation) {
 		(float)(orientation->roll() * 180 * M_1_PI));
 }
 
-carla::geom::BoundingBox CarlaUtility::toCarla(osi3::Dimension3d* dimension, osi3::Vector3d* position) {
+carla::geom::BoundingBox CarlaUtility::toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position) {
 	carla::geom::Location pos = CarlaUtility::toCarla(position);
 	carla::geom::Vector3D extent((float)(dimension->length() / 2.0), (float)(dimension->width() / 2.0), (float)(dimension->height() / 2.0));
 	return carla::geom::BoundingBox(pos, extent);
 }
 
-carla::geom::Location CarlaUtility::toCarla(osi3::Vector3d* position) {
+carla::geom::Location CarlaUtility::toCarla(const osi3::Vector3d* position) {
 	//flip y
 	return carla::geom::Location((float)position->x(), (float)-position->y(), (float)position->z());
 }
 
-carla::geom::Vector2D CarlaUtility::toCarla(osi3::Vector2d* position) {
+carla::geom::Vector2D CarlaUtility::toCarla(const osi3::Vector2d* position) {
 	return carla::geom::Vector2D((float)position->x(), (float)position->y());
 }
 
@@ -70,7 +70,7 @@ osi3::Identifier* CarlaUtility::toOSI(carla::ActorId actorID)
 	return id;
 }
 
-carla::ActorId CarlaUtility::toCarla(osi3::Identifier* id)
+carla::ActorId CarlaUtility::toCarla(const osi3::Identifier* id)
 {
 	return (carla::ActorId)(id->value());
 }
@@ -388,4 +388,28 @@ carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(carla::S
 	}
 	auto vehicle = boost::dynamic_pointer_cast<carla::client::Vehicle>(actor);
 	return vehicle;
+}
+
+carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObject_VehicleClassification_LightState_IndicatorState indicatorState) {
+	carla::rpc::VehicleLightState::LightState state;
+	switch (indicatorState) {
+	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_LEFT:
+		state = carla::rpc::VehicleLightState::LightState::LeftBlinker;
+		break;
+	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_RIGHT:
+		state = carla::rpc::VehicleLightState::LightState::RightBlinker;
+		break;
+	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_WARNING:
+		state = carla::rpc::VehicleLightState::LightState(
+			(carla::rpc::VehicleLightState::flag_type)carla::rpc::VehicleLightState::LightState::RightBlinker 
+			| (carla::rpc::VehicleLightState::flag_type)carla::rpc::VehicleLightState::LightState::LeftBlinker);
+		break;
+	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_UNKNOWN:
+	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF:
+	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OTHER:
+		state = carla::rpc::VehicleLightState::LightState::None;
+		break;
+	}
+
+	return state;
 }

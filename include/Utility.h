@@ -19,6 +19,7 @@
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
+#include <carla/rpc/VehicleLightState.h>
 
 #include "pugixml.hpp"
 
@@ -61,17 +62,19 @@ namespace CarlaUtility {
 	//osi3::Vector3d toOSI(carla::geom::Location& location);
 	osi3::Vector2d* toOSI(carla::geom::Vector2D& vector);
 
-	carla::geom::Rotation toCarla(osi3::Orientation3d* orientation);
-	carla::geom::BoundingBox toCarla(osi3::Dimension3d* dimension, osi3::Vector3d* position);
-	carla::geom::Location toCarla(osi3::Vector3d* position);
-	carla::geom::Vector2D toCarla(osi3::Vector2d* vector);
+	carla::geom::Rotation toCarla(const osi3::Orientation3d* orientation);
+	carla::geom::BoundingBox toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position);
+	carla::geom::Location toCarla(const osi3::Vector3d* position);
+	carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
 
 	osi3::Identifier* toOSI(carla::ActorId actorID);
-	carla::ActorId toCarla(osi3::Identifier* id);
+	carla::ActorId toCarla(const osi3::Identifier* id);
 
 	osi3::StationaryObject* toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
 	osi3::TrafficSign* toOSI(carla::SharedPtr< carla::client::TrafficSign> actor, pugi::xml_document& xodr);
 	std::vector<osi3::TrafficLight*> toOSI(carla::SharedPtr< carla::client::TrafficLight> actor, pugi::xml_document& xodr);
+
+	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState_IndicatorState indicatorState);
 
 	osi3::CameraSensorView* toOSICamera(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 	osi3::LidarSensorView* toOSILidar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);

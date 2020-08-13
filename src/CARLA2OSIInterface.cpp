@@ -313,3 +313,86 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 	auto varName = actorRole2IDMap.right.at(sensor->GetId());
 	varName2MessageMap[varName] = sensorView->SerializeAsString();
 }
+
+void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
+	std::unique_ptr<osi3::TrafficCommand> trafficCommand = std::make_unique<osi3::TrafficCommand>();
+	auto actorid = CarlaUtility::toOSI(ActorId);
+	//save traffic actors separetly for receiving the traffic update
+	activeTrafficActors.emplace(ActorId);
+	
+	trafficCommand->set_allocated_traffic_participant_id(actorid);
+
+	//do action accordingly
+	int TrafficActionType = 0;//TODO Placeholder at the moment
+
+	switch (TrafficActionType) {
+	case 0:
+		//follow trajectory
+		break;
+	case 1:
+		//follow path
+		break;
+	case 2:
+		//acquire global position action
+		break;
+	case 3:
+		//lane change action
+		break;
+	case 4:
+		//speed action
+		break;
+	default:
+		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
+	}
+
+	auto varName = actorRole2IDMap.right.at(ActorId);
+	varName2MessageMap[varName] = trafficCommand->SerializeAsString();
+}
+
+void CARLA2OSIInterface::receiveTrafficUpdate() {
+	for (auto activeActor : activeTrafficActors) {
+		auto varName = actorRole2IDMap.right.at(activeActor);
+
+		osi3::TrafficUpdate trafficUpdate;
+		trafficUpdate.ParseFromString(varName2MessageMap[varName]);
+		//from OSI documentation: Only the id, base member (without dimension and base_polygon),
+		//and the vehicle_classification.light_state members are considered in
+		//updates, all other members can be left undefined, and will be
+		//ignored by the receiver of this message.
+
+		auto TrafficId = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->id());
+		if (TrafficId != activeActor) {
+			std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read wrong traffic participant update. Wanted: " << TrafficId
+				<< " Got: " << activeActor << std::endl;
+			return;
+		}
+
+		//TODO all these values must be interpreted by carla
+		
+		//BASE
+		auto position = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
+		auto orientation = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
+		auto velocity = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity());
+		auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
+
+		const double orientationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->roll();
+		const double orientationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->pitch();
+		const double orientationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->yaw();
+
+		const double accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->roll();
+		const double accelerationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->pitch();
+		const double accelerationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->yaw();
+
+		//LIGHTSTATE
+		auto indicatorState = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->indicator_state());
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->front_fog_light();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->rear_fog_light();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->head_light();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->high_beam();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->reversing_light();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->brake_light_state();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->license_plate_illumination_rear();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->emergency_vehicle_illumination();
+		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->service_vehicle_illumination();
+	}
+}
