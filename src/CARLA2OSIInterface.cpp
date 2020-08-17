@@ -355,44 +355,54 @@ void CARLA2OSIInterface::receiveTrafficUpdate() {
 
 		osi3::TrafficUpdate trafficUpdate;
 		trafficUpdate.ParseFromString(varName2MessageMap[varName]);
-		//from OSI documentation: Only the id, base member (without dimension and base_polygon),
+		//OSI documentation:
+		//Only the id, base member (without dimension and base_polygon),
 		//and the vehicle_classification.light_state members are considered in
 		//updates, all other members can be left undefined, and will be
 		//ignored by the receiver of this message.
 
-		auto TrafficId = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->id());
-		if (TrafficId != activeActor) {
-			std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read wrong traffic participant update. Wanted: " << TrafficId
-				<< " Got: " << activeActor << std::endl;
+		if (trafficUpdate.has_update() && trafficUpdate.mutable_update()->has_id()) {
+			auto TrafficId = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->id());
+			if (TrafficId != activeActor) {
+				std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read wrong traffic participant update. Wanted: " << TrafficId
+					<< " Got: " << activeActor << std::endl;
+				return;
+			}
+		}
+		else {
+			std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read traffic with no id." << std::endl;
 			return;
 		}
 
-		//TODO all these values must be interpreted by carla
-		
+		auto actor = world->GetActor(activeActor);
+
 		//BASE
-		auto position = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
-		auto orientation = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
-		auto velocity = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity());
-		auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
+		if (trafficUpdate.mutable_update()->mutable_base()->has_position()
+			&& trafficUpdate.mutable_update()->mutable_base()->has_orientation()) {
+			auto position = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
+			auto orientation = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
+			actor->SetTransform(carla::geom::Transform(position, orientation));
+		}
 
-		const double orientationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->roll();
-		const double orientationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->pitch();
-		const double orientationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->yaw();
+		//not needed for step mode
+		//auto velocity = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity());
+		//auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
 
-		const double accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->roll();
-		const double accelerationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->pitch();
-		const double accelerationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->yaw();
+		//const double orientationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->roll();
+		//const double orientationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->pitch();
+		//const double orientationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->yaw();
+
+		//const double accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->roll();
+		//const double accelerationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->pitch();
+		//const double accelerationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->yaw();
 
 		//LIGHTSTATE
-		auto indicatorState = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->indicator_state());
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->front_fog_light();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->rear_fog_light();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->head_light();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->high_beam();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->reversing_light();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->brake_light_state();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->license_plate_illumination_rear();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->emergency_vehicle_illumination();
-		trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state()->service_vehicle_illumination();
+		if (trafficUpdate.mutable_update()->mutable_vehicle_classification()->has_light_state()) {
+			auto indicatorState = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state());
+
+			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+			vehicleActor->SetLightState(indicatorState);
+		}
+
 	}
 }

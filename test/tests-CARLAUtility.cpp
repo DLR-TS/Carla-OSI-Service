@@ -129,6 +129,38 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			REQUIRE(5.f == boundingBox.extent.z);
 		}
 
+		SECTION("IndicatorState") {
+			osi3::MovingObject_VehicleClassification_LightState lightState;
+			carla::rpc::VehicleLightState::LightState carlaLightState = CarlaUtility::toCarla(&lightState);
+			//none
+			REQUIRE(carlaLightState == carla::rpc::VehicleLightState::LightState::None);
+			
+			//one
+			lightState.set_high_beam(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+			carlaLightState = CarlaUtility::toCarla(&lightState);
+			REQUIRE(carlaLightState == carla::rpc::VehicleLightState::LightState::HighBeam);
+
+			//two
+			lightState.set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_NORMAL);
+			carlaLightState = CarlaUtility::toCarla(&lightState);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::HighBeam);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Brake);
+		
+			//set all vehicle intersecting lights between OSI and CARLA
+			lightState.set_reversing_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+			lightState.set_front_fog_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+			lightState.set_head_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+			lightState.set_emergency_vehicle_illumination(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+			carlaLightState = CarlaUtility::toCarla(&lightState);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::HighBeam);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Brake);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Reverse);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Fog);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::LowBeam);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Special1);
+			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Special2);
+
+		}
 	}
 }
 

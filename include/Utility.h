@@ -74,7 +74,7 @@ namespace CarlaUtility {
 	osi3::TrafficSign* toOSI(carla::SharedPtr< carla::client::TrafficSign> actor, pugi::xml_document& xodr);
 	std::vector<osi3::TrafficLight*> toOSI(carla::SharedPtr< carla::client::TrafficLight> actor, pugi::xml_document& xodr);
 
-	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState_IndicatorState indicatorState);
+	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState);
 
 	osi3::CameraSensorView* toOSICamera(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 	osi3::LidarSensorView* toOSILidar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);

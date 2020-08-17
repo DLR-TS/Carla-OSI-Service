@@ -390,26 +390,185 @@ carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(carla::S
 	return vehicle;
 }
 
-carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObject_VehicleClassification_LightState_IndicatorState indicatorState) {
-	carla::rpc::VehicleLightState::LightState state;
-	switch (indicatorState) {
-	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_LEFT:
-		state = carla::rpc::VehicleLightState::LightState::LeftBlinker;
-		break;
-	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_RIGHT:
-		state = carla::rpc::VehicleLightState::LightState::RightBlinker;
-		break;
-	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_WARNING:
-		state = carla::rpc::VehicleLightState::LightState(
-			(carla::rpc::VehicleLightState::flag_type)carla::rpc::VehicleLightState::LightState::RightBlinker 
-			| (carla::rpc::VehicleLightState::flag_type)carla::rpc::VehicleLightState::LightState::LeftBlinker);
-		break;
-	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_UNKNOWN:
-	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF:
-	case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OTHER:
-		state = carla::rpc::VehicleLightState::LightState::None;
-		break;
+carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState) {
+	//aggregate all received light states
+	std::set<carla::rpc::VehicleLightState::LightState> receivedStates;
+	
+	if (indicatorState->has_indicator_state()) {
+		switch (indicatorState->indicator_state()) {
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_LEFT:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::LeftBlinker);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_RIGHT:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::RightBlinker);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_WARNING:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::LeftBlinker);
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::RightBlinker);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OTHER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as rear_fog_light
+	if (indicatorState->has_front_fog_light()) {
+		switch (indicatorState->front_fog_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Fog);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as front_fog_light
+	if (indicatorState->has_rear_fog_light()) {
+		switch (indicatorState->rear_fog_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Fog);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_head_light()) {
+		switch (indicatorState->head_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::LowBeam);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_high_beam()) {
+		switch (indicatorState->high_beam()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::HighBeam);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_reversing_light()) {
+		switch (indicatorState->reversing_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Reverse);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_brake_light_state()) {
+		switch (indicatorState->brake_light_state()) {
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_NORMAL:
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_STRONG:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Brake);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OTHER:
+			break;
+		default:
+			break;
+		}
+	}
+	//not part of carla
+	if (indicatorState->has_license_plate_illumination_rear()) {
+		switch (indicatorState->license_plate_illumination_rear()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as service_vehicle_illumination
+	//(Special1 and Special2: This is reserved for certain vehicles that can have special lights, like a siren.)
+	if (indicatorState->has_emergency_vehicle_illumination()) {
+		switch (indicatorState->emergency_vehicle_illumination()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special1);
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special2);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as emergency_vehicle_illumination
+	//(Special1 and Special2: This is reserved for certain vehicles that can have special lights, like a siren.)
+	if (indicatorState->has_service_vehicle_illumination()) {
+		switch (indicatorState->service_vehicle_illumination()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special1);
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special2);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
 	}
 
+	//aggregate all received light states into one state
+	carla::rpc::VehicleLightState::LightState state = carla::rpc::VehicleLightState::LightState::None;
+	for (carla::rpc::VehicleLightState::LightState receivedState : receivedStates) {
+		state = carla::rpc::VehicleLightState::LightState(
+			(carla::rpc::VehicleLightState::flag_type)state | (carla::rpc::VehicleLightState::flag_type)receivedState);
+	}
 	return state;
 }
