@@ -321,26 +321,63 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	activeTrafficActors.emplace(ActorId);
 	
 	trafficCommand->set_allocated_traffic_participant_id(actorid);
+	auto trafficAction = trafficCommand->add_action();
 
 	//do action accordingly
 	int TrafficActionType = 0;//TODO Placeholder at the moment
 
 	switch (TrafficActionType) {
 	case 0:
+	{
 		//follow trajectory
-		break;
+		osi3::FollowTrajectoryAction* trajectoryAction = new osi3::FollowTrajectoryAction();
+		//trajectoryAction->set_allocated_action_header();
+		//trajectoryAction->add_trajectory_point(); //repeated
+		//trajectoryAction->set_constrain_orientation();
+		//trajectoryAction->set_following_mode();
+		trafficAction->set_allocated_follow_trajectory_action(trajectoryAction);
+		break; 
+	}
 	case 1:
+	{
 		//follow path
+		osi3::FollowPathAction* pathAction = new osi3::FollowPathAction();
+		//pathAction->set_allocated_action_header();
+		//pathAction->add_path_point(); //repeated
+		//pathAction->set_constrain_orientation();
+		//pathAction->set_following_mode();
+		trafficAction->set_allocated_follow_path_action(pathAction);
 		break;
+	}
 	case 2:
+	{
 		//acquire global position action
+		osi3::AcquireGlobalPositionAction* acquireGlobalPositionAction = new osi3::AcquireGlobalPositionAction();
+		//acquireGlobalPositionAction->set_allocated_action_header();
+		//acquireGlobalPositionAction->set_allocated_position();
+		//acquireGlobalPositionAction->set_allocated_orientation();
+		trafficAction->set_allocated_acquire_global_position_action(acquireGlobalPositionAction);
 		break;
+	}
 	case 3:
+	{
 		//lane change action
+		osi3::LaneChangeAction* laneChangeAction = new osi3::LaneChangeAction();
+		//laneChangeAction->set_allocated_action_header();
+		//laneChangeAction->set_relative_target_lane();
+		//laneChangeAction->set_dynamics_shape();
+		//laneChangeAction->set_duration();
+		//laneChangeAction->set_distance();
+		trafficAction->set_allocated_lane_change_action(laneChangeAction);
 		break;
+	}
 	case 4:
+	{
 		//speed action
+		osi3::SpeedAction* speedAction = new osi3::SpeedAction();
+		trafficAction->set_allocated_speed_action(speedAction);
 		break;
+	}
 	default:
 		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
 	}
