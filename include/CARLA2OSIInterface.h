@@ -48,6 +48,8 @@
 #include "osi_trafficsign.pb.h"
 #include "osi_trafficupdate.pb.h"
 #include "osi_version.pb.h"
+#include "sl45_motioncommand.pb.h"
+#include "sl45_vehiclecommunicationdata.pb.h"
 
 /**
 * \var host
@@ -141,6 +143,5 @@ private:
 
 	void sendTrafficCommand(carla::ActorId ActorId);
 	void receiveTrafficUpdate();
+	void sendMotionCommand(carla::ActorId ActorId);
 };
-
-#endif // !DOMINIONINTERFACE_H

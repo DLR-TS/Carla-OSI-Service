@@ -443,3 +443,43 @@ void CARLA2OSIInterface::receiveTrafficUpdate() {
 
 	}
 }
+
+void CARLA2OSIInterface::sendMotionCommand(carla::ActorId ActorId) {
+	std::unique_ptr<setlevel4to5::MotionCommand> motionCommand = std::make_unique<setlevel4to5::MotionCommand>();
+	auto actorid = CarlaUtility::toOSI(ActorId);
+	//save traffic actors separetly for receiving the traffic update
+	activeTrafficActors.emplace(ActorId);
+
+	//motionCommand->set_allocated_version(); TODO
+	motionCommand->set_allocated_timestamp(parseTimestamp());
+
+	//Current State
+	setlevel4to5::DynamicState* currentState = new setlevel4to5::DynamicState();
+
+	// The point in time when the state is supposed to be reached.
+	//TODO
+	//currentState->set_allocated_timestamp();
+	/*currentState->set_position_x();
+	currentState->set_position_y();
+	currentState->set_heading_angle();
+	currentState->set_velocity();
+	currentState->set_acceleration();
+	currentState->set_curvature();*/
+	
+	motionCommand->set_allocated_current_state(currentState);
+
+	//Trajectory
+	setlevel4to5::MotionCommand_Trajectory* trajectory = new setlevel4to5::MotionCommand_Trajectory();
+
+	//step oriented approach in SL45
+	trajectory->set_spacing_type(setlevel4to5::MotionCommand_Trajectory_SpacingType_SPACING_TIME);
+	//TODO Spacing
+	//trajectory->set_spacing();
+	
+	//TODO trajectory points
+	//trajectory->add_trajectory_point();
+	motionCommand->set_allocated_trajectory(trajectory);
+
+	delete currentState;
+	delete trajectory;
+}
