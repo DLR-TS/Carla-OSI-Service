@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CARLAUTILITY_H
+#define CARLAUTILITY_H
 
 #define _USE_MATH_DEFINES
 
@@ -111,3 +112,5 @@ namespace CarlaUtility {
 		return std::pair(add_first, rem_first);
 	}
 };
+
+#endif !CARLAUTILITY_H

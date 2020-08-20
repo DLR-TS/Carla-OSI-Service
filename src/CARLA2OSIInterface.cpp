@@ -63,7 +63,12 @@ double CARLA2OSIInterface::doStep() {
 	);
 
 	//TODO inform Carla of added/removed actors
-	//TODO inform Carla of traffic updates
+	//inform Carla of traffic updates
+	BOOST_FOREACH(auto a, actorRole2IDMap.left)
+	{
+		receiveTrafficUpdate(a.second);
+		receiveMotionCommand(a.second);
+	}
 
 	world->Tick(this->transactionTimeout);
 	//world->WaitForTick(this->transactionTimeout);
@@ -317,8 +322,6 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	std::unique_ptr<osi3::TrafficCommand> trafficCommand = std::make_unique<osi3::TrafficCommand>();
 	auto actorid = CarlaUtility::toOSI(ActorId);
-	//save traffic actors separetly for receiving the traffic update
-	activeTrafficActors.emplace(ActorId);
 	
 	trafficCommand->set_allocated_traffic_participant_id(actorid);
 	osi3::Timestamp* timestamp = parseTimestamp();
@@ -387,12 +390,14 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	delete trajectoryAction, pathAction, acquireGlobalPositionAction, laneChangeAction, speedAction;
 }
 
-void CARLA2OSIInterface::receiveTrafficUpdate() {
-	for (auto activeActor : activeTrafficActors) {
-		auto varName = actorRole2IDMap.right.at(activeActor);
+void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
+	auto varName = actorRole2IDMap.right.at(actorId);
 
+	if (varName2MessageMap.find(varName) != varName2MessageMap.end())
+	{
 		osi3::TrafficUpdate trafficUpdate;
-		trafficUpdate.ParseFromString(varName2MessageMap[varName]);
+
+		trafficUpdate.ParseFromString(varName2MessageMap.at(varName));
 		//OSI documentation:
 		//Only the id, base member (without dimension and base_polygon),
 		//and the vehicle_classification.light_state members are considered in
@@ -401,9 +406,9 @@ void CARLA2OSIInterface::receiveTrafficUpdate() {
 
 		if (trafficUpdate.has_update() && trafficUpdate.mutable_update()->has_id()) {
 			auto TrafficId = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->id());
-			if (TrafficId != activeActor) {
+			if (TrafficId != actorId) {
 				std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read wrong traffic participant update. Wanted: " << TrafficId
-					<< " Got: " << activeActor << std::endl;
+					<< " Got: " << actorId << std::endl;
 				return;
 			}
 		}
@@ -412,7 +417,7 @@ void CARLA2OSIInterface::receiveTrafficUpdate() {
 			return;
 		}
 
-		auto actor = world->GetActor(activeActor);
+		auto actor = world->GetActor(actorId);
 
 		//BASE
 		if (trafficUpdate.mutable_update()->mutable_base()->has_position()
@@ -441,46 +446,57 @@ void CARLA2OSIInterface::receiveTrafficUpdate() {
 			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
 			vehicleActor->SetLightState(indicatorState);
 		}
-
 	}
 }
 
-void CARLA2OSIInterface::sendMotionCommand(carla::ActorId ActorId) {
-	std::unique_ptr<setlevel4to5::MotionCommand> motionCommand = std::make_unique<setlevel4to5::MotionCommand>();
-	auto actorid = CarlaUtility::toOSI(ActorId);
-	//save traffic actors separetly for receiving the traffic update
-	activeTrafficActors.emplace(ActorId);
+void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
+	auto varName = actorRole2IDMap.right.at(actorId);
 
-	//motionCommand->set_allocated_version(); TODO
-	motionCommand->set_allocated_timestamp(parseTimestamp());
+	if (varName2MessageMap.find(varName) != varName2MessageMap.end())
+	{
+		//From OSI documentation:
+		// The motion command comprises of the trajectory the vehicle should
+		// follow on, as well as the current dynamic state which contains
+		// the vehicle's localization and dynamic properties.
 
-	//Current State
-	setlevel4to5::DynamicState* currentState = new setlevel4to5::DynamicState();
+		setlevel4to5::MotionCommand motionCommand;
+		motionCommand.ParseFromString(varName2MessageMap[varName]);
 
-	// The point in time when the state is supposed to be reached.
-	//TODO
-	//currentState->set_allocated_timestamp();
-	/*currentState->set_position_x();
-	currentState->set_position_y();
-	currentState->set_heading_angle();
-	currentState->set_velocity();
-	currentState->set_acceleration();
-	currentState->set_curvature();*/
-	
-	motionCommand->set_allocated_current_state(currentState);
+		//TODO add checks?
+		motionCommand.version();
+		motionCommand.timestamp();
 
-	//Trajectory
-	setlevel4to5::MotionCommand_Trajectory* trajectory = new setlevel4to5::MotionCommand_Trajectory();
+		//From OSI documentation
+		// The coordinate system is right handed, a heading of zero equalling
+		// the object being heading in x-direction.
+		// All coordinates and orientations are relative to the global ground
+		// truth frame.
+		//
+		// Units are [m] for positions, [m/s] for velocities, [m/s^2] for
+		// accelerations and [rad] for angles.
 
-	//step oriented approach in SL45
-	trajectory->set_spacing_type(setlevel4to5::MotionCommand_Trajectory_SpacingType_SPACING_TIME);
-	//TODO Spacing
-	//trajectory->set_spacing();
-	
-	//TODO trajectory points
-	//trajectory->add_trajectory_point();
-	motionCommand->set_allocated_trajectory(trajectory);
+		//TODO check timestamp
+		motionCommand.current_state().timestamp();
+		//not needed for step mode
+		//double velocity = motionCommand.current_state().velocity();
+		//double acceleration = motionCommand.current_state().acceleration();
+		//double curvature = motionCommand.current_state().curvature();
 
-	delete currentState;
-	delete trajectory;
+		//set position and orientation of traffic participant
+		osi3::Vector3d vector;
+		vector.set_x(motionCommand.current_state().position_x());
+		vector.set_y(motionCommand.current_state().position_y());
+
+		osi3::Orientation3d orientation;
+		orientation.set_yaw(motionCommand.current_state().heading_angle());
+
+		carla::geom::Location location = CarlaUtility::toCarla(&vector);
+		carla::geom::Rotation rotation = CarlaUtility::toCarla(&orientation);
+
+		auto actor = world->GetActor(actorId);
+		actor->SetTransform(carla::geom::Transform(location, rotation));
+
+		//Trajectory
+		//ground truth does not need future trajectory
+	}
 }
