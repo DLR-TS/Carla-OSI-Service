@@ -322,7 +322,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	std::unique_ptr<osi3::TrafficCommand> trafficCommand = std::make_unique<osi3::TrafficCommand>();
 	auto actorid = CarlaUtility::toOSI(ActorId);
-	
+
 	trafficCommand->set_allocated_traffic_participant_id(actorid);
 	osi3::Timestamp* timestamp = parseTimestamp();
 	trafficCommand->set_allocated_timestamp(timestamp);
@@ -331,53 +331,42 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	//do action accordingly
 	int TrafficActionType = 0;//TODO Placeholder at the moment
 
-	osi3::FollowTrajectoryAction* trajectoryAction = nullptr;
-	osi3::FollowPathAction* pathAction = nullptr;
-	osi3::AcquireGlobalPositionAction* acquireGlobalPositionAction = nullptr;
-	osi3::LaneChangeAction* laneChangeAction = nullptr;
-	osi3::SpeedAction* speedAction = nullptr;
-
 	switch (TrafficActionType) {
 	case 0:
 		//follow trajectory
-		trajectoryAction = new osi3::FollowTrajectoryAction();
+		auto trajectoryAction = trafficAction->mutable_follow_trajectory_action();
 		//trajectoryAction->set_allocated_action_header();
 		//trajectoryAction->add_trajectory_point(); //repeated
 		//trajectoryAction->set_constrain_orientation();
 		//trajectoryAction->set_following_mode();
-		trafficAction->set_allocated_follow_trajectory_action(trajectoryAction);
-		break; 
+		break;
 	case 1:
 		//follow path
-		pathAction = new osi3::FollowPathAction();
+		auto pathAction = trafficAction->mutable_follow_path_action();
 		//pathAction->set_allocated_action_header();
 		//pathAction->add_path_point(); //repeated
 		//pathAction->set_constrain_orientation();
 		//pathAction->set_following_mode();
-		trafficAction->set_allocated_follow_path_action(pathAction);
 		break;
 	case 2:
 		//acquire global position action
-		acquireGlobalPositionAction = new osi3::AcquireGlobalPositionAction();
+		auto acquireGlobalPositionAction = trafficAction->mutable_acquire_global_position_action();
 		//acquireGlobalPositionAction->set_allocated_action_header();
 		//acquireGlobalPositionAction->set_allocated_position();
 		//acquireGlobalPositionAction->set_allocated_orientation();
-		trafficAction->set_allocated_acquire_global_position_action(acquireGlobalPositionAction);
 		break;
 	case 3:
 		//lane change action
-		laneChangeAction = new osi3::LaneChangeAction();
+		auto laneChangeAction = trafficAction->mutable_lane_change_action();
 		//laneChangeAction->set_allocated_action_header();
 		//laneChangeAction->set_relative_target_lane();
 		//laneChangeAction->set_dynamics_shape();
 		//laneChangeAction->set_duration();
 		//laneChangeAction->set_distance();
-		trafficAction->set_allocated_lane_change_action(laneChangeAction);
 		break;
 	case 4:
 		//speed action
-		speedAction = new osi3::SpeedAction();
-		trafficAction->set_allocated_speed_action(speedAction);
+		auto speedAction = trafficAction->mutable_speed_action();
 		break;
 	default:
 		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
@@ -387,7 +376,6 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	varName2MessageMap[varName] = trafficCommand->SerializeAsString();
 
 	delete timestamp;
-	delete trajectoryAction, pathAction, acquireGlobalPositionAction, laneChangeAction, speedAction;
 }
 
 void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
