@@ -1,5 +1,7 @@
 #include "Utility.h"
 
+using ID = CarlaUtility::CarlaUniqueID_t;
+
 osi3::Orientation3d* CarlaUtility::toOSI(carla::geom::Rotation& rotation)
 {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
@@ -63,22 +65,45 @@ carla::geom::Vector2D CarlaUtility::toCarla(osi3::Vector2d* position) {
 	return carla::geom::Vector2D((float)position->x(), (float)position->y());
 }
 
-osi3::Identifier* CarlaUtility::toOSI(carla::ActorId actorID)
-{
-	osi3::Identifier* id = new osi3::Identifier();
-	id->set_value(actorID);
-	return id;
+CarlaUtility::CarlaUniqueID_t CarlaUtility::toCarla(osi3::Identifier* identifier) {
+	//carlaID as lower 32 bits, CarlaUniqueID_t type index as upper 32 bits, as stored in osi3::Identifier * CarlaUtility::toOSI(CarlaUtility::CarlaUniqueID_t carlaID) {
+	IDUnion idUnion{ identifier->value() };
+
+	switch ((CarlaUniqueID_e)idUnion.type) {
+	default:
+	case ActorID:
+		return (carla::ActorId) idUnion.id;
+	case RoadIDLaneID:
+		return std::make_pair((carla::road::RoadId)idUnion.id, (carla::road::LaneId)idUnion.special);
+	case JuncID:
+		return (carla::road::JuncId) idUnion.id;
+	}
+
 }
 
-carla::ActorId CarlaUtility::toCarla(osi3::Identifier* id)
+osi3::Identifier * CarlaUtility::toOSI(const uint32_t id, CarlaUtility::CarlaUniqueID_e type)
 {
-	return (carla::ActorId)(id->value());
+	////id has to match index of type in variant CarlaUniqueID_t
+	//return CarlaUtility::toOSI(CarlaUtility::getTyped(type, id));
+	return toOSI(id, 0, type);
+}
+
+osi3::Identifier * CarlaUtility::toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, CarlaUniqueID_e type)
+{
+	CarlaUtility::IDUnion idUnion;
+	idUnion.type = type;
+	idUnion.id = roadId;
+	idUnion.special = (int16_t)laneId;
+
+	osi3::Identifier* identifier = new osi3::Identifier();
+	identifier->set_value(idUnion.value);
+	return identifier;
 }
 
 osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
-	prop->set_allocated_id(CarlaUtility::toOSI(actor->GetId()));
+	prop->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
 
 	osi3::BaseStationary* base = prop->mutable_base();
 	//TODO bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
@@ -93,6 +118,7 @@ osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(carla::SharedPtr< ca
 
 	//TODO Carla doesn't seem to offer information needed for osi3::StationaryObject::Classification. Using default instance
 	prop->mutable_classification();//creates default instance as side-effect
+	//TODO fill with information from OpenDRIVE file, if available
 
 	prop->set_model_reference(actor->GetTypeId());
 
@@ -210,7 +236,7 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(carla::SharedPtr<carla::cli
 	// sign id not found
 	// create a single dummy traffic light using information available in Carla
 	osi3::TrafficLight * dummy = new osi3::TrafficLight();
-	dummy->set_allocated_id(CarlaUtility::toOSI(actor->GetId()));
+	dummy->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
 
 	auto base = dummy->mutable_base();
 	auto transform = actor->GetTransform();
@@ -276,7 +302,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(carla::SharedPtr<carla::client
 	config->set_field_of_view_horizontal(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
+	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
 
 	//TODO calculate sensor position in vehicle coordinates, that is relative to the vehicles rear
 	//config->set_allocated_mounting_position(position)
@@ -338,7 +364,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::
 	//TODO OSI expects a constant number of pixels per message, but Carla only reports new values of the angle sweeped during the last frame
 	config->set_num_of_pixels(numPixels);
 	//TODO number of rays (horizontal/vertical) of lidar
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
+	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
 
 	return lidarSensorView;
 }
@@ -364,7 +390,7 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::
 	//TODO Maybe use the osi3::FeatureData-based osi3::RadarDetection instead of a osi3::SensorView, which is similar to Carla's Radar output
 
 	auto config = radarSensorview->mutable_view_configuration();
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
+	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
 	if (hFov) {
 		config->set_field_of_view_horizontal(hFov.value());
 	}

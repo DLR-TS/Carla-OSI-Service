@@ -50,6 +50,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			REQUIRE(M_PI_4 == orientation->pitch());
 			REQUIRE(M_PI_2 == orientation->yaw());
 			REQUIRE(M_PI == orientation->roll());
+			delete orientation;
 		}
 
 		SECTION("Location") {
@@ -58,6 +59,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			REQUIRE(1.2f == position->x());
 			REQUIRE(-3.4f == position->y());
 			REQUIRE(5.6f == position->z());
+			delete position;
 		}
 
 		SECTION("2D Vector") {
@@ -65,6 +67,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			osi3::Vector2d* vector2d = CarlaUtility::toOSI(vector);
 			REQUIRE(0.1f == vector2d->x());
 			REQUIRE(-0.1f == vector2d->y());
+			delete vector2d;
 		}
 
 		SECTION("BoundingBox") {
@@ -77,6 +80,60 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			REQUIRE(2.f == osiBB.first->length());
 			REQUIRE(4.f == osiBB.first->width());
 			REQUIRE(8.f == osiBB.first->height());
+			delete osiBB.first;
+			delete osiBB.second;
+		}
+
+		SECTION("ActorID") {
+			//actorID is unsigned
+			carla::ActorId actorID(-2);
+			osi3::Identifier* identifier = CarlaUtility::toOSI(actorID, CarlaUtility::ActorID);
+			CarlaUtility::IDUnion value;
+			value.value = identifier->value();
+			REQUIRE(8589934590ull == value.value);
+			REQUIRE(-2 == value.id);
+			REQUIRE(0 == value.special);
+			REQUIRE(CarlaUtility::ActorID == value.type);
+			delete identifier;
+		}
+		SECTION("ActorID (implicit type)") {
+			//actorID is unsigned
+			carla::ActorId actorID(1234567890u);
+			osi3::Identifier* identifier = CarlaUtility::toOSI(actorID);
+			CarlaUtility::IDUnion value;
+			value.value = identifier->value();
+			REQUIRE(5529535186ull == value.value);
+			REQUIRE(1234567890u == value.id);
+			REQUIRE(0 == value.special);
+			REQUIRE(CarlaUtility::ActorID == value.type);
+			delete identifier;
+		}
+
+		SECTION("Roads and Junctions") {
+			//LaneID is signed
+			SECTION("RoadID and LaneID") {
+				carla::road::RoadId roadID(-1234567890);
+				carla::road::LaneId laneID(-7);
+				osi3::Identifier* identifier = CarlaUtility::toOSI(roadID, laneID);
+				CarlaUtility::IDUnion value;
+				value.value = identifier->value();
+				REQUIRE(0xFFF90002B669FD2Eull == value.value);
+				REQUIRE(-1234567890 == value.id);
+				REQUIRE(-7 == value.special);
+				REQUIRE(CarlaUtility::RoadIDLaneID == value.type);
+				delete identifier;
+			}
+			SECTION("JuncID") {
+				carla::road::JuncId juncID(-1234567890);
+				osi3::Identifier* identifier = CarlaUtility::toOSI(juncID, CarlaUtility::JuncID);
+				CarlaUtility::IDUnion value;
+				value.value = identifier->value();
+				REQUIRE(0x3B669FD2Eull == value.value);
+				REQUIRE(-1234567890 == value.id);
+				REQUIRE(0 == value.special);
+				REQUIRE(CarlaUtility::JuncID == value.type);
+				delete identifier;
+			}
 		}
 	}
 	SECTION("toCarla") {

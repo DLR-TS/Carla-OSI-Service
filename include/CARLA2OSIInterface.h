@@ -21,6 +21,7 @@
 #include <carla/geom/Transform.h>
 #include <carla/image/ImageIO.h>
 #include <carla/image/ImageView.h>
+#include <carla/road/Lane.h>
 #include <carla/sensor/data/Image.h>
 
 #include "osi_common.pb.h"

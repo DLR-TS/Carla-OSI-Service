@@ -5,8 +5,10 @@
 #include <iterator>
 #include <math.h>
 #include <optional>
+#include <variant>
 
 #include <carla/client/Actor.h>
+#include <carla/client/Junction.h>
 #include <carla/client/Sensor.h>
 #include <carla/client/TrafficLight.h>
 #include <carla/client/TrafficSign.h>
@@ -16,6 +18,7 @@
 #include <carla/geom/Transform.h>
 #include <carla/geom/Vector3D.h>
 #include <carla/geom/Vector2D.h>
+#include <carla/road/RoadTypes.h>
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
@@ -66,8 +69,55 @@ namespace CarlaUtility {
 	carla::geom::Location toCarla(osi3::Vector3d* position);
 	carla::geom::Vector2D toCarla(osi3::Vector2d* vector);
 
-	osi3::Identifier* toOSI(carla::ActorId actorID);
-	carla::ActorId toCarla(osi3::Identifier* id);
+	//OSI uses a single identifier database
+	//We need to avoid using ids of possibly existing in another type,
+	//as Carla uses different counters for ids of actors, roads/lanes and junctions. (As does OpenDRIVE)
+	//
+	//LaneIDs are not globally unique, but relative to their road. Also, they are close to 0, as they have to be defined continuously from 0, up and/or down. Thus, they have to be combined with their RoadID
+	typedef std::variant<carla::ActorId, std::pair<carla::road::RoadId, carla::road::LaneId>, carla::road::JuncId> CarlaUniqueID_t;
+	//
+	//Carla ids have only 32 bits, which will be copied into the lower 32 bits of the OSI identifier. (RoadID in case of Lanes)
+	//The type will be marked in the upper 16 bits of the osi3::Identifier's 64bit value, the remaining 16 upper bits are used for the LaneID. This limits the implementation to only 65.534 lanes per road.
+	union IDUnion {
+		// OSI id value
+		uint64_t value;
+		struct {
+			// Carla/OpenDRIVE id
+			uint32_t id;
+			// Carla/OpenDRIVE id type
+			uint16_t type;
+			// Carla/OpenDRIVE sub-id, for example, LaneID as part of a road id
+			int16_t special;
+		};
+	};
+	//osi3::Identifier* toOSI(CarlaUniqueID_t id);
+	//CarlaUniqueID_t toCarla(osi3::Identifier* identifier);
+
+	//should be the same index as used in CarlaUniqueID_t
+	enum CarlaUniqueID_e : uint16_t {
+		ActorID = 1,
+		RoadIDLaneID = 2,
+		JuncID = 3,
+	};//Unused globally unique OpenDRIVE ids: object, outline, tunnel, bridge, signal, controller, junctionGroup, (some for railroads: switch, mainTrack, sideTrack, station, platform),
+
+	//Since some Carla ids are typedefs of the same primitive type, the relevant type for CarlaUniqueID can not be deduced because of the ambiguity
+	osi3::Identifier* toOSI(const uint32_t id, CarlaUniqueID_e type = ActorID);
+	osi3::Identifier* toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, CarlaUniqueID_e type = RoadIDLaneID);
+	CarlaUniqueID_t toCarla(osi3::Identifier* identifier);
+
+	////Create CarlaUniqueID_t with given type index and initial value. Used in carla id <-> OSI identifier conversion
+	//template <uint32_t N = 1>//template meta programming
+	//CarlaUniqueID_t getTyped(const uint32_t type, const uint32_t initialValue) {
+	//	if (N == type) {
+	//		return CarlaUniqueID_t((std::variant_alternative_t<N, CarlaUniqueID_t>)initialValue);
+	//	}
+	//	return getTyped<N + 1>(type, initialValue);
+	//}
+	//template <> //specialization as stop condition
+	//CarlaUniqueID_t getTyped< std::variant_size_v<CarlaUniqueID_t> >(const uint32_t type, const uint32_t initialValue) {
+	//	return std::monostate();
+	//}
+
 
 	osi3::StationaryObject* toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
 	osi3::TrafficSign* toOSI(carla::SharedPtr< carla::client::TrafficSign> actor, pugi::xml_document& xodr);
