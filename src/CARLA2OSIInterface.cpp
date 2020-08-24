@@ -258,12 +258,71 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 		if (typeID.rfind("vehicle", 0) == 0) {
 			auto vehicle = groundTruth->add_moving_object();
 			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
-			//TODO parse vehicle as moving object
+
+			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
+			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
+
+			auto classification = vehicle->mutable_vehicle_classification();
+			classification->set_has_trailer(false);
+
+			// Get closest waypoint to determine current lane
+			auto waypoint = world->GetMap()->GetWaypoint(vehicleActor->GetLocation());
+			//TODO vehicle might be on more than one lane
+			auto laneIDs = vehicle->mutable_assigned_lane_id();
+			if (waypoint->IsJunction()) {
+				laneIDs->AddAllocated(CarlaUtility::toOSI(waypoint->GetJunctionId(), CarlaUtility::JuncID));
+			}
+			else {
+				laneIDs->AddAllocated(CarlaUtility::toOSI(waypoint->GetRoadId(), waypoint->GetLaneId()));
+			}
+
+			auto attributes = vehicle->mutable_vehicle_attributes();
+
+			for (auto attribute : vehicleActor->GetAttributes()) {
+				//TODO verify/improve object type mapping
+				if ("object_type" == attribute.GetId()) {
+					auto value = attribute.GetValue();
+					if (std::string::npos != value.find("bicycle")) {
+						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE);
+					}
+					else if (std::string::npos != value.find("motorbike")
+						|| std::string::npos != value.find("moped")) {
+						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE);
+					}
+					else {
+						//TODO extend object type mapping
+						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR);
+					}
+				}
+				else if ("number_of_wheels" == attribute.GetId()) {
+					attributes->set_number_wheels(attribute.As<int>());
+				}
+			}
+
+			//TODO parse vehicle lights
+
+			//TODO Bounding box to rear/front offsets
+
+			//TODO ground clearance
+			//TODO wheel radius
 
 
 
 
-			//TODO should walkers be parsed as moving objects? They are not StationaryObject
+		}
+		else if (typeID.rfind("walker.pedestrian", 0) == 0) {
+			auto pedestrian = groundTruth->add_moving_object();
+			auto walkerActor = boost::static_pointer_cast<carla::client::Walker>(actor);
+
+			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
+			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
+
+			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
+			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
+
+			//TODO parse pedestrian as moving object
+
+
 		}
 		else if ("traffic.traffic_light" == typeID) {
 			carla::SharedPtr<carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
