@@ -2,7 +2,12 @@
 
 using ID = CarlaUtility::CarlaUniqueID_t;
 
-osi3::Orientation3d* CarlaUtility::toOSI(carla::geom::Rotation& rotation)
+carla::geom::Vector3D CarlaUtility::mul(const carla::geom::Vector3D & vector, const float f)
+{
+	return carla::geom::Vector3D(vector.x * f, vector.y * f, vector.z * f);
+}
+
+osi3::Orientation3d* CarlaUtility::toOSI(const carla::geom::Rotation& rotation)
 {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
@@ -14,7 +19,7 @@ osi3::Orientation3d* CarlaUtility::toOSI(carla::geom::Rotation& rotation)
 	return orient;
 }
 
-std::pair<osi3::Dimension3d*, osi3::Vector3d*> CarlaUtility::toOSI(carla::geom::BoundingBox& boundingBox) {
+std::pair<osi3::Dimension3d*, osi3::Vector3d*> CarlaUtility::toOSI(const carla::geom::BoundingBox& boundingBox) {
 	osi3::Dimension3d* dim = new osi3::Dimension3d();
 	// dimensions are unsigned
 	dim->set_length(boundingBox.extent.x * 2);
@@ -24,7 +29,7 @@ std::pair<osi3::Dimension3d*, osi3::Vector3d*> CarlaUtility::toOSI(carla::geom::
 	return std::pair(dim, vec);
 }
 
-osi3::Vector3d* CarlaUtility::toOSI(carla::geom::Vector3D& location) {
+osi3::Vector3d* CarlaUtility::toOSI(const carla::geom::Vector3D& location) {
 	//flip y
 	osi3::Vector3d* vec = new osi3::Vector3d();
 	vec->set_x(location.x);
@@ -33,7 +38,7 @@ osi3::Vector3d* CarlaUtility::toOSI(carla::geom::Vector3D& location) {
 	return vec;
 }
 
-osi3::Vector2d* CarlaUtility::toOSI(carla::geom::Vector2D& vector) {
+osi3::Vector2d* CarlaUtility::toOSI(const carla::geom::Vector2D& vector) {
 	//flip y
 	osi3::Vector2d* vec = new osi3::Vector2d();
 	vec->set_x(vector.x);
@@ -41,7 +46,7 @@ osi3::Vector2d* CarlaUtility::toOSI(carla::geom::Vector2D& vector) {
 	return vec;
 }
 
-carla::geom::Rotation CarlaUtility::toCarla(osi3::Orientation3d* orientation) {
+carla::geom::Rotation CarlaUtility::toCarla(const osi3::Orientation3d* orientation) {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
 	return carla::geom::Rotation(
@@ -50,22 +55,22 @@ carla::geom::Rotation CarlaUtility::toCarla(osi3::Orientation3d* orientation) {
 		(float)(orientation->roll() * 180 * M_1_PI));
 }
 
-carla::geom::BoundingBox CarlaUtility::toCarla(osi3::Dimension3d* dimension, osi3::Vector3d* position) {
+carla::geom::BoundingBox CarlaUtility::toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position) {
 	carla::geom::Location pos = CarlaUtility::toCarla(position);
 	carla::geom::Vector3D extent((float)(dimension->length() / 2.0), (float)(dimension->width() / 2.0), (float)(dimension->height() / 2.0));
 	return carla::geom::BoundingBox(pos, extent);
 }
 
-carla::geom::Location CarlaUtility::toCarla(osi3::Vector3d* position) {
+carla::geom::Location CarlaUtility::toCarla(const osi3::Vector3d* position) {
 	//flip y
 	return carla::geom::Location((float)position->x(), (float)-position->y(), (float)position->z());
 }
 
-carla::geom::Vector2D CarlaUtility::toCarla(osi3::Vector2d* position) {
+carla::geom::Vector2D CarlaUtility::toCarla(const osi3::Vector2d* position) {
 	return carla::geom::Vector2D((float)position->x(), (float)position->y());
 }
 
-CarlaUtility::CarlaUniqueID_t CarlaUtility::toCarla(osi3::Identifier* identifier) {
+CarlaUtility::CarlaUniqueID_t CarlaUtility::toCarla(const osi3::Identifier* identifier) {
 	//carlaID as lower 32 bits, CarlaUniqueID_t type index as upper 32 bits, as stored in osi3::Identifier * CarlaUtility::toOSI(CarlaUtility::CarlaUniqueID_t carlaID) {
 	IDUnion idUnion{ identifier->value() };
 
@@ -100,7 +105,7 @@ osi3::Identifier * CarlaUtility::toOSI(const carla::road::RoadId roadId, const c
 	return identifier;
 }
 
-osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor)
+osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(const carla::SharedPtr< const carla::client::Actor> actor)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
 	prop->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
@@ -125,7 +130,36 @@ osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(carla::SharedPtr< ca
 	return prop;
 }
 
-osi3::TrafficSign* CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficSign> actor, pugi::xml_document& xodr)
+osi3::BaseMoving * CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
+{
+	osi3::BaseMoving* base = new osi3::BaseMoving();
+
+	auto transform = actor->GetTransform();
+	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
+	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+
+	//TODO actor bounding box
+	//base->set_allocated_dimension
+
+	//TODO determine contour on z-plane
+	//auto contour = base->mutable_base_polygon();
+	//contour->Add
+
+	// velocity and acceleration as part of ground truth are given in global coordinate system
+	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
+	base->set_allocated_velocity(CarlaUtility::toOSI(actor->GetVelocity()));
+	base->set_allocated_acceleration(CarlaUtility::toOSI(actor->GetAcceleration()));
+	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
+	base->set_allocated_orientation_rate(CarlaUtility::toOSI(carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)));
+
+	//TODO Carla has no rotational acceleration
+	//base->set_allocated_orientation_acceleration
+
+
+	return base;
+}
+
+osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor, const pugi::xml_document& xodr)
 {
 	osi3::TrafficSign* sign = new osi3::TrafficSign();
 
@@ -211,7 +245,7 @@ osi3::TrafficSign* CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficSi
 	return sign;
 }
 
-std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficLight> actor, pugi::xml_document& xodr)
+std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor, const  pugi::xml_document& xodr)
 {
 	std::vector<osi3::TrafficLight*> osiTrafficLights;
 
@@ -269,10 +303,10 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(carla::SharedPtr<carla::cli
 	return osiTrafficLights;
 }
 
-osi3::CameraSensorView* CarlaUtility::toOSICamera(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
 {
 	//Contains RGBA uint8 values
-	auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
+	auto image = boost::dynamic_pointer_cast<const carla::sensor::data::Image>(sensorData);
 	if (!image) return nullptr;
 	auto height = image->GetHeight();
 	auto width = image->GetWidth();
@@ -312,9 +346,9 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(carla::SharedPtr<carla::client
 	return cameraSensorView;
 }
 
-osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
 {
-	auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
+	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::LidarMeasurement>(sensorData);
 	std::optional<double> rotationFrequency;
 	std::optional<double> upperFov;
 	std::optional<double> lowerFov;
@@ -369,9 +403,9 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::
 	return lidarSensorView;
 }
 
-osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
 {
-	auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
+	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::RadarMeasurement>(sensorData);
 	std::optional<double> hFov;
 	std::optional<double> vFov;
 	auto attributes = sensor->GetAttributes();
@@ -407,11 +441,12 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::
 	return nullptr;
 }
 
-carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(carla::SharedPtr<carla::client::Actor> actor)
+carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor)
 {
-	while (actor && 0 != actor->GetTypeId().rfind("vehicle", 0)) {
-		actor = actor->GetParent();
+	auto current = actor->GetParent();
+	while (current && 0 != current->GetTypeId().rfind("vehicle", 0)) {
+		current = current->GetParent();
 	}
-	auto vehicle = boost::dynamic_pointer_cast<carla::client::Vehicle>(actor);
+	auto vehicle = boost::dynamic_pointer_cast<carla::client::Vehicle>(current);
 	return vehicle;
 }
