@@ -73,15 +73,13 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 		SECTION("BoundingBox") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::BoundingBox boundingBox(location, carla::geom::Vector3D(1.f, 2.f, 4.f));
-			std::pair<osi3::Dimension3d*, osi3::Vector3d*> osiBB = CarlaUtility::toOSI(boundingBox);
+			auto osiBB = CarlaUtility::toOSI(boundingBox);
 			REQUIRE(1.2f == osiBB.second->x());
 			REQUIRE(-3.4f == osiBB.second->y());
 			REQUIRE(5.6f == osiBB.second->z());
 			REQUIRE(2.f == osiBB.first->length());
 			REQUIRE(4.f == osiBB.first->width());
 			REQUIRE(8.f == osiBB.first->height());
-			delete osiBB.first;
-			delete osiBB.second;
 		}
 
 		SECTION("ActorID") {

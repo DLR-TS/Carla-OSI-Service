@@ -304,8 +304,7 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 
 			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
 			auto [dimension, location] = CarlaUtility::toOSI(vehicleActor->GetBoundingBox());
-			delete location;
-			vehicle->mutable_base()->set_allocated_dimension(dimension);
+			vehicle->mutable_base()->set_allocated_dimension(dimension.release());
 
 			//TODO Bounding box to rear/front offsets
 
@@ -323,9 +322,9 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
 			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
 
+			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
 			auto[dimension, location] = CarlaUtility::toOSI(walkerActor->GetBoundingBox());
-			delete location;
-			pedestrian->mutable_base()->set_allocated_dimension(dimension);
+			pedestrian->mutable_base()->set_allocated_dimension(dimension.release());
 
 			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
 			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 

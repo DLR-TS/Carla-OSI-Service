@@ -19,14 +19,15 @@ osi3::Orientation3d* CarlaUtility::toOSI(const carla::geom::Rotation& rotation)
 	return orient;
 }
 
-std::pair<osi3::Dimension3d*, osi3::Vector3d*> CarlaUtility::toOSI(const carla::geom::BoundingBox& boundingBox) {
-	osi3::Dimension3d* dim = new osi3::Dimension3d();
+std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> CarlaUtility::toOSI(const carla::geom::BoundingBox& boundingBox) {
+	std::unique_ptr<osi3::Dimension3d> dim = std::make_unique<osi3::Dimension3d>();
 	// dimensions are unsigned
 	dim->set_length(boundingBox.extent.x * 2);
 	dim->set_width(boundingBox.extent.y * 2);
 	dim->set_height(boundingBox.extent.z * 2);
-	osi3::Vector3d* vec = CarlaUtility::toOSI(boundingBox.location);
-	return std::pair(dim, vec);
+	std::unique_ptr<osi3::Vector3d> vec;
+	vec.reset(CarlaUtility::toOSI(boundingBox.location));
+	return std::pair(std::move(dim), std::move(vec));
 }
 
 osi3::Vector3d* CarlaUtility::toOSI(const carla::geom::Vector3D& location) {

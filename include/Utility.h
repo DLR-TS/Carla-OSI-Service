@@ -62,7 +62,7 @@ namespace CarlaUtility {
 	// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
 
 	osi3::Orientation3d* toOSI(const carla::geom::Rotation& rotation);
-	std::pair<osi3::Dimension3d*, osi3::Vector3d*> toOSI(const carla::geom::BoundingBox& boundingBox);
+	std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> toOSI(const carla::geom::BoundingBox& boundingBox);
 	osi3::Vector3d* toOSI(const carla::geom::Vector3D& location);
 	//carla::geom::Vector3D is a generalization of carla::geom::Location
 	//osi3::Vector3d toOSI(const carla::geom::Location& location);
