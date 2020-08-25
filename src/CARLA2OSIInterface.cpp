@@ -299,8 +299,10 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 				}
 			}
 
-			//TODO parse vehicle lights
+			// parse vehicle lights
+			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
 
+			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
 			auto [dimension, location] = CarlaUtility::toOSI(vehicleActor->GetBoundingBox());
 			delete location;
 			vehicle->mutable_base()->set_allocated_dimension(dimension);

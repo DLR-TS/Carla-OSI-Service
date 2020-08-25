@@ -9,6 +9,7 @@
 
 #include <carla/client/Actor.h>
 #include <carla/client/Junction.h>
+#include <carla/client/LightState.h>
 #include <carla/client/Sensor.h>
 #include <carla/client/TrafficLight.h>
 #include <carla/client/TrafficSign.h>
@@ -56,6 +57,7 @@ namespace CarlaUtility {
 
 	carla::geom::Vector3D mul(const carla::geom::Vector3D& vector, const float f);
 
+	// Geometric translations
 	// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
 	// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
 
@@ -104,7 +106,7 @@ namespace CarlaUtility {
 
 	//Since some Carla ids are typedefs of the same primitive type, the relevant type for CarlaUniqueID can not be deduced because of the ambiguity
 	osi3::Identifier* toOSI(const uint32_t id, CarlaUniqueID_e type = ActorID);
-	osi3::Identifier* toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, CarlaUniqueID_e type = RoadIDLaneID);
+	osi3::Identifier* toOSI(const carla::road::RoadId id, const carla::road::LaneId special, CarlaUniqueID_e type = RoadIDLaneID);
 	CarlaUniqueID_t toCarla(const osi3::Identifier* identifier);
 
 	////Create CarlaUniqueID_t with given type index and initial value. Used in carla id <-> OSI identifier conversion
@@ -125,6 +127,8 @@ namespace CarlaUtility {
 	osi3::BaseMoving* toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
 	osi3::TrafficSign* toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor, const pugi::xml_document& xodr);
 	std::vector<osi3::TrafficLight*> toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor, const pugi::xml_document& xodr);
+
+	std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> toOSI(carla::client::Vehicle::LightState lightState);
 
 	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
