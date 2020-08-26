@@ -333,6 +333,7 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 
 	switch (TrafficActionType) {
 	case 0:
+	{
 		//follow trajectory
 		auto trajectoryAction = trafficAction->mutable_follow_trajectory_action();
 		//trajectoryAction->set_allocated_action_header();
@@ -340,7 +341,9 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 		//trajectoryAction->set_constrain_orientation();
 		//trajectoryAction->set_following_mode();
 		break;
+	}
 	case 1:
+	{
 		//follow path
 		auto pathAction = trafficAction->mutable_follow_path_action();
 		//pathAction->set_allocated_action_header();
@@ -348,14 +351,18 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 		//pathAction->set_constrain_orientation();
 		//pathAction->set_following_mode();
 		break;
+	}
 	case 2:
+	{
 		//acquire global position action
 		auto acquireGlobalPositionAction = trafficAction->mutable_acquire_global_position_action();
 		//acquireGlobalPositionAction->set_allocated_action_header();
 		//acquireGlobalPositionAction->set_allocated_position();
 		//acquireGlobalPositionAction->set_allocated_orientation();
 		break;
+	}
 	case 3:
+	{
 		//lane change action
 		auto laneChangeAction = trafficAction->mutable_lane_change_action();
 		//laneChangeAction->set_allocated_action_header();
@@ -364,10 +371,13 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 		//laneChangeAction->set_duration();
 		//laneChangeAction->set_distance();
 		break;
+	}
 	case 4:
+	{
 		//speed action
 		auto speedAction = trafficAction->mutable_speed_action();
 		break;
+	}
 	default:
 		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
 	}
