@@ -142,21 +142,21 @@ private:
 
 	//output
 	void sendTrafficCommand(carla::ActorId actorId);
-	
+
 	//input
 	/**
 	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
 	\param actorId
 	\return success indicator
 	*/
-	int receiveTrafficUpdate(carla::ActorId actorId);
+	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
 
 	/**
 	Read motion command message from ego vehicle and update position, rotation and velocity of CARLA actor.
 	\param actorId
 	\return success indicator
 	*/
-	int receiveMotionCommand(carla::ActorId ActorId);
+	int receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand);
 
 
 };
