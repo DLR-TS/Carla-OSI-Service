@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CARLAUTILITY_H
+#define CARLAUTILITY_H
 
 #define _USE_MATH_DEFINES
 
@@ -20,6 +21,7 @@
 #include <carla/geom/Vector3D.h>
 #include <carla/geom/Vector2D.h>
 #include <carla/road/RoadTypes.h>
+#include <carla/rpc/VehicleLightState.h>
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
@@ -130,6 +132,8 @@ namespace CarlaUtility {
 
 	std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> toOSI(carla::client::Vehicle::LightState lightState);
 
+	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState);
+
 	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
@@ -165,3 +169,5 @@ namespace CarlaUtility {
 		return std::pair(add_first, rem_first);
 	}
 };
+
+#endif !CARLAUTILITY_H

@@ -8,6 +8,7 @@
 
 #include "pugiXML.hpp"
 #include <boost/bimap.hpp>
+#include <boost/foreach.hpp>
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -44,9 +45,13 @@
 #include "osi_sensorspecific.pb.h"
 #include "osi_sensorview.pb.h"
 #include "osi_sensorviewconfiguration.pb.h"
+#include "osi_trafficcommand.pb.h"
 #include "osi_trafficlight.pb.h"
 #include "osi_trafficsign.pb.h"
+#include "osi_trafficupdate.pb.h"
 #include "osi_version.pb.h"
+#include "sl45_motioncommand.pb.h"
+#include "sl45_vehiclecommunicationdata.pb.h"
 
 /**
 * \var host
@@ -136,6 +141,25 @@ private:
 
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 
+	//output
+	void sendTrafficCommand(carla::ActorId actorId);
+
+	//input
+	/**
+	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
+	\param actorId
+	\return success indicator
+	*/
+	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
+
+	/**
+	Read motion command message from ego vehicle and update position, rotation and velocity of CARLA actor.
+	\param actorId
+	\return success indicator
+	*/
+	int receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand);
+
+
 };
 
-#endif // !DOMINIONINTERFACE_H
+#endif !CARLAINTERFACE_H
