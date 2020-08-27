@@ -431,7 +431,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 
 		//Velocity
 		if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
-			actor->SetVelocity(CarlaUtility::toCarlaVector(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
+			actor->SetVelocity(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
 		}
 
 		//Acceleration can not be set in CARLA

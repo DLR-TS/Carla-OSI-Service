@@ -65,10 +65,9 @@ namespace CarlaUtility {
 
 	carla::geom::Rotation toCarla(const osi3::Orientation3d* orientation);
 	carla::geom::BoundingBox toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position);
+	//carla::geom::Vector3D is a generalization of carla::geom::Location
 	carla::geom::Location toCarla(const osi3::Vector3d* position);
 	carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
-
-	carla::geom::Vector3D toCarlaVector(const osi3::Vector3d* position);
 
 	osi3::Identifier* toOSI(carla::ActorId actorID);
 	carla::ActorId toCarla(const osi3::Identifier* id);
