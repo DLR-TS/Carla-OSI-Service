@@ -59,6 +59,11 @@ carla::geom::Location CarlaUtility::toCarla(const osi3::Vector3d* position) {
 	return carla::geom::Location((float)position->x(), (float)-position->y(), (float)position->z());
 }
 
+carla::geom::Vector3D CarlaUtility::toCarlaVector(const osi3::Vector3d* position) {
+	//flip y
+	return carla::geom::Vector3D((float)position->x(), (float)-position->y(), (float)position->z());
+}
+
 carla::geom::Vector2D CarlaUtility::toCarla(const osi3::Vector2d* position) {
 	return carla::geom::Vector2D((float)position->x(), (float)position->y());
 }

@@ -425,23 +425,35 @@ void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 			actor->SetTransform(carla::geom::Transform(position, orientation));
 		}
 
-		//not needed for step mode
-		//auto velocity = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity());
-		//auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
+		if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
+			actor->SetVelocity(CarlaUtility::toCarlaVector(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
+		}
 
-		//const double orientationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->roll();
-		//const double orientationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->pitch();
-		//const double orientationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate()->yaw();
+		//Acceleration can not be set in CARLA
+		//GetAcceleration() calculates the acceleration with the actor's velocity
+		//if (trafficUpdate.mutable_update()->mutable_base()->has_acceleration()) {
+			//auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
+		//}
 
-		//const double accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->roll();
-		//const double accelerationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->pitch();
-		//const double accelerationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->yaw();
+		if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_rate()) {
+			const auto orientationRate = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
+
+			//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
+			actor->SetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
+		}
+
+		//Acceleration can not be set in CARLA
+		//if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_acceleration()){
+			//const double accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->roll();
+			//const double accelerationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->pitch();
+			//const double accelerationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->yaw();
+		//}
 
 		//LIGHTSTATE
 		if (trafficUpdate.mutable_update()->mutable_vehicle_classification()->has_light_state()) {
 			auto indicatorState = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state());
-
 			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+
 			vehicleActor->SetLightState(indicatorState);
 		}
 	}
@@ -452,6 +464,7 @@ void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
 
 	if (varName2MessageMap.find(varName) != varName2MessageMap.end())
 	{
+		auto actor = world->GetActor(actorId);
 		//From OSI documentation:
 		// The motion command comprises of the trajectory the vehicle should
 		// follow on, as well as the current dynamic state which contains
@@ -475,12 +488,8 @@ void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
 
 		//TODO check timestamp
 		motionCommand.current_state().timestamp();
-		//not needed for step mode
-		//double velocity = motionCommand.current_state().velocity();
-		//double acceleration = motionCommand.current_state().acceleration();
-		//double curvature = motionCommand.current_state().curvature();
-
-		//set position and orientation of traffic participant
+		
+		//Position and Orientation
 		osi3::Vector3d vector;
 		vector.set_x(motionCommand.current_state().position_x());
 		vector.set_y(motionCommand.current_state().position_y());
@@ -488,13 +497,31 @@ void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
 		osi3::Orientation3d orientation;
 		orientation.set_yaw(motionCommand.current_state().heading_angle());
 
+		//convert to CARLA
 		carla::geom::Location location = CarlaUtility::toCarla(&vector);
 		carla::geom::Rotation rotation = CarlaUtility::toCarla(&orientation);
 
-		auto actor = world->GetActor(actorId);
 		actor->SetTransform(carla::geom::Transform(location, rotation));
 
+		//Velocity
+		if (motionCommand.current_state().has_velocity()) {
+			double velocityTotal = motionCommand.current_state().velocity();
+
+			//extract angles from rotation
+			double angle_x = cos(rotation.yaw * M_1_PI / 180.0);
+			double angle_z = sin(rotation.yaw * M_1_PI / 180.0);
+
+			//y is upward
+			carla::geom::Vector3D velocity(angle_x * velocityTotal, 0, angle_z * velocityTotal);
+			actor->SetVelocity(velocity);
+		}
+
+		//Acceleration can not be set in CARLA
+		//double acceleration = motionCommand.current_state().acceleration();
+		//Curvature can not be set in CARLA since it is operated in step mode
+		//double curvature = motionCommand.current_state().curvature();
+
 		//Trajectory
-		//ground truth does not need future trajectory
+		//CARLA can not handle locations for future timestamps
 	}
 }

@@ -68,6 +68,8 @@ namespace CarlaUtility {
 	carla::geom::Location toCarla(const osi3::Vector3d* position);
 	carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
 
+	carla::geom::Vector3D toCarlaVector(const osi3::Vector3d* position);
+
 	osi3::Identifier* toOSI(carla::ActorId actorID);
 	carla::ActorId toCarla(const osi3::Identifier* id);
 
