@@ -51,6 +51,7 @@ double CARLA2OSIInterface::doStep() {
 	// track actors added/removed by simulation interfaces
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
 	auto worldActors = world->GetActors();
+	// compare actor ids, not actors
 	for each (auto actor in *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
@@ -73,6 +74,7 @@ double CARLA2OSIInterface::doStep() {
 	removedActors.clear();
 	worldActorIDs.clear();
 	worldActors = world->GetActors();
+	// compare actor ids, not actors
 	for each (auto actor in *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
@@ -155,21 +157,34 @@ int CARLA2OSIInterface::setDoubleValue(std::string base_name, double value) {
 };
 
 int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value) {
-	std::string mergedMessage;
+	auto prefix = getPrefix(base_name);
+	if (prefix.length() && 2 + prefix.length() < base_name.length) {
+		// variable has only a prefix and no name
+		//TODO do we desire variables that have only a prefix and no name?
+		return -2;
+	}
+	auto varName = std::string_view(&base_name.at(prefix.length + 2));
 	if (actorRole2IDMap.left.count(base_name)) {
 		auto actor = world->GetActor(actorRole2IDMap.left.at(base_name));
 
 		//TODO update Carla actor and store merged serialized OSI message in varName2MessageMap
 	}
+	else if (0 != varName.find("TrafficCommand")) {
+		//TODO parse as TrafficCommand and apply action
+	}
 	else {
+		//Cache unmapped messages so they can be retrieved as input
+		//TODO how to map base_name for retrieval as input?
 		varName2MessageMap[base_name] = value;
 	}
 
 
 	return 0;
 }
+
 std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 {
+	// a prefix is surrounded by '#'
 	if (2 < name.size() && '#' == name[0]) {
 		std::string_view prefix = std::string_view(&name.at(1), name.find('#', 1));
 		return prefix;
@@ -303,7 +318,7 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
 
 			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
-			auto [dimension, location] = CarlaUtility::toOSI(vehicleActor->GetBoundingBox());
+			auto[dimension, location] = CarlaUtility::toOSI(vehicleActor->GetBoundingBox());
 			vehicle->mutable_base()->set_allocated_dimension(dimension.release());
 
 			//TODO Bounding box to rear/front offsets

@@ -113,7 +113,7 @@ osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(const carla::SharedP
 
 	osi3::BaseStationary* base = prop->mutable_base();
 	//TODO bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
-	// also mentioned in https://github.com/carla-simulator/carla/issues/3025
+	// also mentioned in https://github.com/carla-simulator/carla/issues/3186, https://github.com/carla-simulator/carla/issues/3025 and https://github.com/carla-simulator/carla/issues/1766
 	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
 	//base->set_allocated_dimension(dimension);
 	auto transform = actor->GetTransform();

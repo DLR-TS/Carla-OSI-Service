@@ -1,6 +1,8 @@
 [requires]
 protoc_installer/3.9.1@bincrafters/stable
 protobuf/3.9.1@bincrafters/stable
+# protobuf from conan center has issues (see comment in generator section below)
+#protobuf/3.9.1
 yaml-cpp/0.6.3
 catch2/2.12.1
 FakeIt/2.0.5@gasuketsu/stable
@@ -16,12 +18,16 @@ libpng/1.6.37
 
 [generators]
 cmake
-# cmake_find_package generates an incompatible Findprotobuf.cmake
+# cmake_find_package generates an incompatible Findprotobuf.cmake. Waiting for https://github.com/conan-io/conan-center-index/pull/2488
 #cmake_find_package
+#cmake_paths
 
 [options]
 boost:shared=True
 boost:error_code_header_only=True
+protobuf:lite=False
+protobuf:shared=True
+protobuf:with_zlib=True
 
 [imports]
 bin, *.dll -> ./bin # Copies all dll files from packages bin folder to "bin" folder
