@@ -62,12 +62,16 @@ double CARLA2OSIInterface::doStep() {
 		std::inserter(removedActors, removedActors.begin())
 	);
 
-	//TODO inform Carla of added/removed actors
+	//TODO is this at the correct place in the doStep() method? Before or after the adding of new actors?
 	//inform Carla of traffic updates
 	BOOST_FOREACH(auto a, actorRole2IDMap.left)
 	{
-		receiveTrafficUpdate(a.second);
-		receiveMotionCommand(a.second);
+		int success = receiveTrafficUpdate(a.second);
+		success += receiveMotionCommand(a.second);
+		if (success != 0) {
+			std::cerr << "There is neither a TrafficUpdateMessage or a MotionCommandMessage for " << a.first
+				<< " : " << a.second << "!" << "  Code: " << success << std::endl;
+		}
 	}
 
 	world->Tick(this->transactionTimeout);
@@ -388,7 +392,7 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	delete timestamp;
 }
 
-void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
+int CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 	auto varName = actorRole2IDMap.right.at(actorId);
 
 	if (varName2MessageMap.find(varName) != varName2MessageMap.end())
@@ -407,12 +411,12 @@ void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 			if (TrafficId != actorId) {
 				std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read wrong traffic participant update. Wanted: " << TrafficId
 					<< " Got: " << actorId << std::endl;
-				return;
+				return 2;
 			}
 		}
 		else {
 			std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read traffic with no id." << std::endl;
-			return;
+			return 3;
 		}
 
 		auto actor = world->GetActor(actorId);
@@ -425,6 +429,7 @@ void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 			actor->SetTransform(carla::geom::Transform(position, orientation));
 		}
 
+		//Velocity
 		if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
 			actor->SetVelocity(CarlaUtility::toCarlaVector(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
 		}
@@ -435,6 +440,7 @@ void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 			//auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
 		//}
 
+		//Orientation
 		if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_rate()) {
 			const auto orientationRate = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
 
@@ -443,10 +449,9 @@ void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 		}
 
 		//Acceleration can not be set in CARLA
+		//GetAcceleration() calculates the acceleration with the actor's velocity
 		//if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_acceleration()){
-			//const double accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->roll();
-			//const double accelerationPitch = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->pitch();
-			//const double accelerationYaw = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration()->yaw();
+			//const osi3::Orientation3d* accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration();
 		//}
 
 		//LIGHTSTATE
@@ -456,10 +461,12 @@ void CARLA2OSIInterface::receiveTrafficUpdate(carla::ActorId actorId) {
 
 			vehicleActor->SetLightState(indicatorState);
 		}
+		return 0;
 	}
+	return 1;
 }
 
-void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
+int CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
 	auto varName = actorRole2IDMap.right.at(actorId);
 
 	if (varName2MessageMap.find(varName) != varName2MessageMap.end())
@@ -486,7 +493,7 @@ void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
 		// Units are [m] for positions, [m/s] for velocities, [m/s^2] for
 		// accelerations and [rad] for angles.
 
-		//TODO check timestamp
+		//TODO check timestamp of current state?
 		motionCommand.current_state().timestamp();
 		
 		//Position and Orientation
@@ -511,17 +518,20 @@ void CARLA2OSIInterface::receiveMotionCommand(carla::ActorId actorId) {
 			double angle_x = cos(rotation.yaw * M_1_PI / 180.0);
 			double angle_z = sin(rotation.yaw * M_1_PI / 180.0);
 
-			//y is upward
+			//y is upward in CARLA
 			carla::geom::Vector3D velocity(angle_x * velocityTotal, 0, angle_z * velocityTotal);
 			actor->SetVelocity(velocity);
 		}
 
 		//Acceleration can not be set in CARLA
+		//GetAcceleration() calculates the acceleration with the actor's velocity
 		//double acceleration = motionCommand.current_state().acceleration();
-		//Curvature can not be set in CARLA since it is operated in step mode
+		//Curvature can not be set in CARLA since it is operated in synchronous mode
 		//double curvature = motionCommand.current_state().curvature();
 
 		//Trajectory
 		//CARLA can not handle locations for future timestamps
+		return 0;
 	}
+	return 10;
 }

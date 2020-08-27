@@ -144,9 +144,19 @@ private:
 	void sendTrafficCommand(carla::ActorId actorId);
 	
 	//input
-	//is traffic update used in SL45?
-	void receiveTrafficUpdate(carla::ActorId actorId);
-	void receiveMotionCommand(carla::ActorId ActorId);
+	/**
+	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
+	\param actorId
+	\return success indicator
+	*/
+	int receiveTrafficUpdate(carla::ActorId actorId);
+
+	/**
+	Read motion command message from ego vehicle and update position, rotation and velocity of CARLA actor.
+	\param actorId
+	\return success indicator
+	*/
+	int receiveMotionCommand(carla::ActorId ActorId);
 
 
 };
