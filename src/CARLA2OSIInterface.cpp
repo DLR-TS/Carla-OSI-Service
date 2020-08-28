@@ -157,17 +157,63 @@ int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value)
 	auto prefix = getPrefix(base_name);
 	if (0 < prefix.length() && 2 + prefix.length() < base_name.length()) {
 		// variable has only a prefix and no name
+		std::cerr << "CARLA2OSIInterface::setStringValue: Tried to set a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
 		//TODO do we desire variables that have only a prefix and no name?
 		return -2;
 	}
+
 	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
+	if (0 != varName.rfind("OSMP", 0)) {
+		// OSMP variable names begin with 'OSMP', so this is not an OSMP variable
+		std::cerr << "CARLA2OSIInterface::setStringValue: '" << base_name << "' is not an OSMP variable." << std::endl;
+		return -4;
+	}
+
+	// find index, surrounded by [], at the variable name's back, if existent
+	uint64_t index = 0;//indices in OSMP variable names start at 1 -> value 0 indicates variable has no index
+	if (']' == varName.back()) {
+		int i = varName.rfind('[');
+		auto indexView = varName.substr(i + 1, varName.length() - (i + 2));
+		auto[ptr, errorCode] = std::from_chars(indexView.data(), indexView.data() + indexView.size(), index);
+
+		switch (errorCode)
+		{
+		case std::errc::invalid_argument:
+			std::cerr << "CARLA2OSIInterface::setStringValue: '" << indexView << "' is not an valid OSMP variable index (name='" << base_name << "')." << std::endl;
+			return -5;
+		case std::errc::result_out_of_range:
+			std::cerr << "CARLA2OSIInterface::setStringValue: '" << indexView << "' is out of range (name='" << base_name << "')." << std::endl;
+			return -6;
+		default:
+			break;
+		}
+	}
+
+	//find variable target/type
 	if (actorRole2IDMap.left.count(base_name)) {
 		auto actor = world->GetActor(actorRole2IDMap.left.at(base_name));
 
 		//TODO update Carla actor and store merged serialized OSI message in varName2MessageMap
 	}
-	else if (0 != varName.find("TrafficCommand")) {
-		//TODO parse as TrafficCommand and apply action
+	else if (std::string::npos != varName.find("MotionCommand")) {
+		// parse as MotionCommand and apply to ego vehicle
+		setlevel4to5::MotionCommand motionCommand;
+		if (!motionCommand.ParseFromString(value)) {
+			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			return -322;
+		}
+
+		receiveMotionCommand(motionCommand);
+	}
+	else if (std::string::npos != varName.find("TrafficUpdate")) {
+		// parse as TrafficUpdate and apply
+		osi3::TrafficUpdate trafficUpdate;
+		if (!trafficUpdate.ParseFromString(value)) {
+			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			return -322;
+		}
+
+		receiveTrafficUpdate(trafficUpdate);
 	}
 	else {
 		//Cache unmapped messages so they can be retrieved as input
@@ -182,8 +228,8 @@ int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value)
 std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 {
 	// a prefix is surrounded by '#'
-	if (2 < name.size() && '#' == name[0]) {
-		std::string_view prefix = std::string_view(&name.at(1), name.find('#', 1));
+	if (2 < name.size() && '#' == name.front()) {
+		std::string_view prefix = name.substr(1, name.find('#', 1));
 		return prefix;
 	}
 	return std::string_view();
@@ -253,7 +299,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
 
-}
+	}
 
 osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 {

@@ -1,6 +1,7 @@
 #ifndef CARLAINTERFACE_H
 #define CARLAINTERFACE_H
 
+#include <charconv>
 #include <variant>
 #include <string>
 
@@ -162,4 +163,4 @@ private:
 
 };
 
-#endif !CARLAINTERFACE_H
+#endif CARLAINTERFACE_H
