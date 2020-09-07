@@ -2,6 +2,14 @@
 
 #include "Utility.h"
 
+#include <carla/client/ActorBlueprint.h>
+#include <carla/client/ActorList.h>
+#include <carla/client/Actor.h>
+#include <carla/client/BlueprintLibrary.h>
+#include <carla/client/Client.h>
+#include <carla/client/World.h>
+#include <carla/geom/Transform.h>
+
 TEST_CASE("Two way difference", "[TwoWayDifference][Utility]") {
 	SECTION("All empty") {
 		std::vector<int> old, updated, added, removed;
@@ -189,7 +197,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			carla::rpc::VehicleLightState::LightState carlaLightState = CarlaUtility::toCarla(&lightState);
 			//none
 			REQUIRE(carlaLightState == carla::rpc::VehicleLightState::LightState::None);
-			
+
 			//one
 			lightState.set_high_beam(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
 			carlaLightState = CarlaUtility::toCarla(&lightState);
@@ -200,7 +208,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			carlaLightState = CarlaUtility::toCarla(&lightState);
 			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::HighBeam);
 			REQUIRE((uint32_t)carlaLightState & (uint32_t)carla::rpc::VehicleLightState::LightState::Brake);
-		
+
 			//set all vehicle intersecting lights between OSI and CARLA
 			lightState.set_reversing_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
 			lightState.set_front_fog_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
@@ -222,4 +230,52 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 TEST_CASE("Carla Prop to StationaryObject", "[Carla][Utility][!hide][RequiresCarlaServer]") {
 	//TODO find a way to use the ActorFactory without a carla server
 
+	auto client = std::make_unique<carla::client::Client>("localhost", 2000u);
+	client->SetTimeout(std::chrono::duration<double>(10));
+	auto world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+
+	//find a prop and spawn it in the current world to assert it contains an actor of type prop
+	auto blueprintLibrary = world->GetBlueprintLibrary();
+	auto propBlueprint = blueprintLibrary->Find("static.prop.barbeque");
+	auto randomLocation = world->GetRandomLocationFromNavigation();
+	auto fallbackLocation = carla::geom::Location(0, 0, 1);
+	auto propActor = world->SpawnActor(*propBlueprint, randomLocation.value_or(fallbackLocation));
+
+	auto bbox = world->GetActorBoundingBox(propActor->GetId());
+	auto stationaryObject = CarlaUtility::toOSI(propActor, bbox);
+
+	REQUIRE(stationaryObject->has_classification());
+	REQUIRE(stationaryObject->has_base());
+	REQUIRE(stationaryObject->has_id());
+	REQUIRE(stationaryObject->base().has_dimension());
+	REQUIRE(stationaryObject->base().has_orientation());
+	REQUIRE(stationaryObject->base().has_position());
+	REQUIRE(stationaryObject->classification().has_type());
+}
+
+TEST_CASE("Carla Prop Bounding Box", "[Carla][Utility][!hide][RequiresCarlaServer]") {
+	//TODO find a way to use the ActorFactory without a carla server
+
+	auto client = std::make_unique<carla::client::Client>("localhost", 2000u);
+	client->SetTimeout(std::chrono::duration<double>(10));
+	auto world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+
+	//find a prop and spawn it in the current world to assert it contains an actor of type prop
+	auto blueprintLibrary = world->GetBlueprintLibrary();
+	auto propBlueprint = blueprintLibrary->Find("static.prop.barbeque");
+	auto randomLocation = world->GetRandomLocationFromNavigation();
+	auto fallbackLocation = carla::geom::Location(0, 0, 1);
+	auto propActor = world->SpawnActor(*propBlueprint, randomLocation.value_or(fallbackLocation));
+
+	auto bbox = world->GetActorBoundingBox(propActor->GetId());
+
+	auto transform = propActor->GetTransform();
+	transform.location += transform.GetForwardVector();
+	transform.rotation.yaw += 45;
+	auto propActor2 = world->SpawnActor(*propBlueprint, transform);
+
+	auto bbox2 = world->GetActorBoundingBox(propActor2->GetId());
+
+
+	REQUIRE(bbox == bbox2);
 }

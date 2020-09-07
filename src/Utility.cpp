@@ -106,16 +106,19 @@ osi3::Identifier * CarlaUtility::toOSI(const carla::road::RoadId roadId, const c
 	return identifier;
 }
 
-osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(const carla::SharedPtr< const carla::client::Actor> actor)
+osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
 	prop->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
 
 	osi3::BaseStationary* base = prop->mutable_base();
-	//TODO bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
+	// bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
 	// also mentioned in https://github.com/carla-simulator/carla/issues/3186, https://github.com/carla-simulator/carla/issues/3025 and https://github.com/carla-simulator/carla/issues/1766
+	// The attribute behind the protected field is misused for traffic signs and traffic lights and holds their active area instead
 	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
-	//base->set_allocated_dimension(dimension);
+	// The bounding box has to be given as argument. To circumvent the described limitation, World::GetActorBoundingBox(ActorId) is added
+	auto[dimension, position] = CarlaUtility::toOSI(bbox);
+	base->set_allocated_dimension(dimension.release());
 	auto transform = actor->GetTransform();
 	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
 	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
@@ -123,7 +126,8 @@ osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(const carla::SharedP
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	//TODO Carla doesn't seem to offer information needed for osi3::StationaryObject::Classification. Using default instance
-	prop->mutable_classification();//creates default instance as side-effect
+	auto classification=prop->mutable_classification();//creates default instance as side-effect
+	classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
 	//TODO fill with information from OpenDRIVE file, if available
 
 	prop->set_model_reference(actor->GetTypeId());
@@ -446,7 +450,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_number_of_pixels_vertical(height);
 	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
 
-	//TODO calculate sensor position in vehicle coordinates, that is relative to the vehicles rear
+	//TODO calculate sensor position in vehicle coordinates
 	//config->set_allocated_mounting_position(position)
 	//config->set_allocated_mounting_position_rmse(rmse)
 
@@ -562,7 +566,7 @@ carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(const ca
 carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState) {
 	//aggregate all received light states
 	std::set<carla::rpc::VehicleLightState::LightState> receivedStates;
-	
+
 	if (indicatorState->has_indicator_state()) {
 		switch (indicatorState->indicator_state()) {
 		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_LEFT:

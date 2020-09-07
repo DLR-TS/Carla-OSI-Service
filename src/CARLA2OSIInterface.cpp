@@ -265,8 +265,10 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	// Static props apparently aren't part of the actor list, so this list is empty
 	auto staticProps = world->GetActors()->Filter("static.prop.*");
 	for each(auto prop in *staticProps) {
+		// class Actor has no generic way of retrieving its bounding box -> custom api
+		auto bbox = world->GetActorBoundingBox(prop->GetId());
 		// parse as StationaryObject
-		stationaryObjects->AddAllocated(CarlaUtility::toOSIStationaryObject(prop));
+		stationaryObjects->AddAllocated(CarlaUtility::toOSI(prop, bbox));
 
 		//DEBUG
 		std::cout << "Got an Actor of type 'static.prop.*'" << prop->GetDisplayId() << std::endl;
@@ -275,6 +277,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	auto landmarks = map->GetAllLandmarks();
 	for each(auto landmark in landmarks) {
+		//DEBUG
 		std::cout << landmark->GetName() << " " << landmark->GetId() << " " << landmark->GetRoadId() << " " << landmark->GetType() << std::endl;
 	}
 
@@ -299,7 +302,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
 
-	}
+}
 
 osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 {
@@ -387,16 +390,14 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
 			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
 
-			//TODO parse pedestrian as moving object
-
 
 		}
 		else if ("traffic.traffic_light" == typeID) {
-			carla::SharedPtr<carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
+			carla::SharedPtr<const carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
 			//TODO parse carla::client::TrafficLight as a set of osi3::TrafficLight
 			//a osi3::TrafficLight describes a single bulb of a traffic light
 
-
+			auto bulbs = CarlaUtility::toOSI(trafficLight, xodr);
 		}
 	}
 
@@ -640,5 +641,7 @@ int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motion
 	//Trajectory
 	//CARLA can not handle locations for future timestamps
 	//TODO write TrajectoryHandler to handle vehicle trajectory in this client?
+	//MotionCommand is not specified as a Sl4to5 OSMP Message
+
 	return 0;
 }

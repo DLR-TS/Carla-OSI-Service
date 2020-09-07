@@ -124,8 +124,8 @@ namespace CarlaUtility {
 	//	return std::monostate();
 	//}
 
-
-	osi3::StationaryObject* toOSIStationaryObject(const carla::SharedPtr<const carla::client::Actor> actor);
+	// Only specialized actors have a bounding box, therefore it has to be passed as additional argument
+	osi3::StationaryObject* toOSI(const carla::SharedPtr<const carla::client::Actor> actor, carla::geom::BoundingBox& bbox);
 	osi3::BaseMoving* toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
 	osi3::TrafficSign* toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor, const pugi::xml_document& xodr);
 	std::vector<osi3::TrafficLight*> toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor, const pugi::xml_document& xodr);
