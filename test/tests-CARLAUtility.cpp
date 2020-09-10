@@ -279,3 +279,27 @@ TEST_CASE("Carla Prop Bounding Box", "[Carla][Utility][!hide][RequiresCarlaServe
 
 	REQUIRE(bbox == bbox2);
 }
+
+//TODO move to CARLA
+TEST_CASE("Carla GetStationaryObject", "[Carla][Utility][!hide][RequiresCarlaServer][GetStationaryObject]") {
+	//TODO find a way to use the ActorFactory without a carla server
+
+	auto client = std::make_unique<carla::client::Client>("localhost", 2000u);
+	client->SetTimeout(std::chrono::duration<double>(120));
+	auto world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+
+	auto stationaryMapObjects = world->GetStationaryMapObjects();
+
+	for (auto stationaryMapObject : stationaryMapObjects) {
+		////if (std::string::npos != stationaryMapObject.name.rfind("Jeep"))
+		//if (9u == stationaryMapObject.semantic_tag) {
+		//	std::cout << stationaryMapObject.name << "  (" << (unsigned int) stationaryMapObject.semantic_tag << ") ";
+		//	std::cout << std::endl;
+		//	std::cout << "Extent: " << stationaryMapObject.bounding_box.extent.x << ", " << stationaryMapObject.bounding_box.extent.y << ", " << stationaryMapObject.bounding_box.extent.z << std::endl;
+		//	std::cout << "Position: " << stationaryMapObject.transform.location.x << ", " << stationaryMapObject.transform.location.y << ", " << stationaryMapObject.transform.location.z << std::endl;
+		//}
+
+		REQUIRE(0 < stationaryMapObject.id);
+	}
+	std::cout << stationaryMapObjects.size() << std::endl;
+}

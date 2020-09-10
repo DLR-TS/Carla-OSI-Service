@@ -101,6 +101,8 @@ namespace CarlaUtility {
 
 	//should be the same index as used in CarlaUniqueID_t
 	enum CarlaUniqueID_e : uint16_t {
+		NoCarlaID = 0,
+		StationaryMapObject = 0,
 		ActorID = 1,
 		RoadIDLaneID = 2,
 		JuncID = 3,

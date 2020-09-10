@@ -275,6 +275,83 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	}
 	//TODO maybe parse Road Objects Record of OpenDrive file, if present - corresponds to OSI's StationaryObject
 
+	std::vector<carla::rpc::StationaryMapObject> roadMarkings;
+
+	for (auto& mapObject : world->GetStationaryMapObjects()) {
+
+		//TODO don't parse RoadMarkings as stationary object but add them to their lane
+		if (mapObject.semantic_tag == 6u) {
+			roadMarkings.push_back(std::move(mapObject));
+			continue;
+		}
+		//TODO Skip meshes of roads and sidewalks, but not curbs
+
+		auto stationaryObject = mapTruth->add_stationary_object();
+		//TODO maybe keep a mapping of really unique actor FName to generated id
+		// id of stationaryMapObject is generated per call of world->GetStationaryMapObjects and is always equal to the array index. Thus it is not really an identifier and cannot be mapped back to Unreal/Carla
+		stationaryObject->set_allocated_id(CarlaUtility::toOSI(mapObject.id, CarlaUtility::CarlaUniqueID_e::StationaryMapObject));
+
+		auto base = stationaryObject->mutable_base();
+		auto[dimension, position] = CarlaUtility::toOSI(mapObject.bounding_box);
+		base->set_allocated_dimension(dimension.release());
+		base->set_allocated_position(CarlaUtility::toOSI(mapObject.transform.location));
+		base->set_allocated_orientation(CarlaUtility::toOSI(mapObject.transform.rotation));
+
+		//TODO base_polygon
+
+		//TODO Carla doesn't seem to offer much information needed for osi3::StationaryObject::Classification.
+		auto classification = stationaryObject->mutable_classification();//creates default instance as side-effect
+
+		//From Tagger.h
+		/*enum class ECityObjectLabel : uint8
+		{
+			None = 0u,
+			Buildings = 1u,
+			Fences = 2u,
+			Other = 3u,
+			Pedestrians = 4u,
+			Poles = 5u,
+			RoadLines = 6u,
+			Roads = 7u,
+			Sidewalks = 8u,
+			TrafficSigns = 12u,
+			Vegetation = 9u,
+			Vehicles = 10u,
+			Walls = 11u,
+		};*/
+		// Use the first tag that is not categorized as none or other
+
+		switch (mapObject.semantic_tag)
+		{
+		default:
+		case 3u:
+			//will be set to other if no other tag is available
+		case 4u://pedestrian
+		case 6u://road line
+		case 7u://road
+		case 8u://sidewalks
+		case 10u://vehicles
+		case 12u://traffic signs
+			std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.semantic_tag << std::endl;
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
+			break;
+		case 1u://buildings
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BUILDING);
+			break;
+		case 2u://fences
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BARRIER);
+		case 5u://poles
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_POLE);
+		case 9u://vegetation
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_VEGETATION);
+		case 11u://walls
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_WALL);
+		}
+
+		//TODO mapObject.name is not the model name
+		stationaryObject->set_model_reference(mapObject.name);
+	}
+
 	auto landmarks = map->GetAllLandmarks();
 	for each(auto landmark in landmarks) {
 		//DEBUG
