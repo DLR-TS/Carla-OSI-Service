@@ -51,6 +51,7 @@ double CARLA2OSIInterface::doStep() {
 	// track actors added/removed by simulation interfaces
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
 	auto worldActors = world->GetActors();
+	// compare actor ids, not actors
 	for each (auto actor in *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
@@ -62,9 +63,6 @@ double CARLA2OSIInterface::doStep() {
 		std::inserter(removedActors, removedActors.begin())
 	);
 
-	//TODO inform Carla of added/removed actors
-	//TODO inform Carla of traffic updates
-
 	world->Tick(this->transactionTimeout);
 	//world->WaitForTick(this->transactionTimeout);
 
@@ -73,6 +71,7 @@ double CARLA2OSIInterface::doStep() {
 	removedActors.clear();
 	worldActorIDs.clear();
 	worldActors = world->GetActors();
+	// compare actor ids, not actors
 	for each (auto actor in *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
@@ -155,23 +154,82 @@ int CARLA2OSIInterface::setDoubleValue(std::string base_name, double value) {
 };
 
 int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value) {
-	std::string mergedMessage;
+	auto prefix = getPrefix(base_name);
+	if (0 < prefix.length() && 2 + prefix.length() < base_name.length()) {
+		// variable has only a prefix and no name
+		std::cerr << "CARLA2OSIInterface::setStringValue: Tried to set a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
+		//TODO do we desire variables that have only a prefix and no name?
+		return -2;
+	}
+
+	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
+	if (0 != varName.rfind("OSMP", 0)) {
+		// OSMP variable names begin with 'OSMP', so this is not an OSMP variable
+		std::cerr << "CARLA2OSIInterface::setStringValue: '" << base_name << "' is not an OSMP variable." << std::endl;
+		return -4;
+	}
+
+	// find index, surrounded by [], at the variable name's back, if existent
+	uint64_t index = 0;//indices in OSMP variable names start at 1 -> value 0 indicates variable has no index
+	if (']' == varName.back()) {
+		int i = varName.rfind('[');
+		auto indexView = varName.substr(i + 1, varName.length() - (i + 2));
+		auto[ptr, errorCode] = std::from_chars(indexView.data(), indexView.data() + indexView.size(), index);
+
+		switch (errorCode)
+		{
+		case std::errc::invalid_argument:
+			std::cerr << "CARLA2OSIInterface::setStringValue: '" << indexView << "' is not an valid OSMP variable index (name='" << base_name << "')." << std::endl;
+			return -5;
+		case std::errc::result_out_of_range:
+			std::cerr << "CARLA2OSIInterface::setStringValue: '" << indexView << "' is out of range (name='" << base_name << "')." << std::endl;
+			return -6;
+		default:
+			break;
+		}
+	}
+
+	//find variable target/type
 	if (actorRole2IDMap.left.count(base_name)) {
 		auto actor = world->GetActor(actorRole2IDMap.left.at(base_name));
 
 		//TODO update Carla actor and store merged serialized OSI message in varName2MessageMap
 	}
+	else if (std::string::npos != varName.find("MotionCommand")) {
+		// parse as MotionCommand and apply to ego vehicle
+		setlevel4to5::MotionCommand motionCommand;
+		if (!motionCommand.ParseFromString(value)) {
+			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			return -322;
+		}
+
+		receiveMotionCommand(motionCommand);
+	}
+	else if (std::string::npos != varName.find("TrafficUpdate")) {
+		// parse as TrafficUpdate and apply
+		osi3::TrafficUpdate trafficUpdate;
+		if (!trafficUpdate.ParseFromString(value)) {
+			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			return -322;
+		}
+
+		receiveTrafficUpdate(trafficUpdate);
+	}
 	else {
+		//Cache unmapped messages so they can be retrieved as input
+		//TODO how to map base_name for retrieval as input?
 		varName2MessageMap[base_name] = value;
 	}
 
 
 	return 0;
 }
+
 std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 {
-	if (2 < name.size() && '#' == name[0]) {
-		std::string_view prefix = std::string_view(&name.at(1), name.find('#', 1));
+	// a prefix is surrounded by '#'
+	if (2 < name.size() && '#' == name.front()) {
+		std::string_view prefix = name.substr(1, name.find('#', 1));
 		return prefix;
 	}
 	return std::string_view();
@@ -340,7 +398,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 
 
-}
+	}
 
 osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 {
@@ -357,12 +415,80 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 		if (typeID.rfind("vehicle", 0) == 0) {
 			auto vehicle = groundTruth->add_moving_object();
 			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
-			//TODO parse vehicle as moving object
+
+			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
+			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
+
+			auto classification = vehicle->mutable_vehicle_classification();
+			classification->set_has_trailer(false);
+
+			// Get closest waypoint to determine current lane
+			auto waypoint = world->GetMap()->GetWaypoint(vehicleActor->GetLocation());
+			//TODO vehicle might be on more than one lane
+			auto laneIDs = vehicle->mutable_assigned_lane_id();
+			if (waypoint->IsJunction()) {
+				laneIDs->AddAllocated(CarlaUtility::toOSI(waypoint->GetJunctionId(), CarlaUtility::JuncID));
+			}
+			else {
+				laneIDs->AddAllocated(CarlaUtility::toOSI(waypoint->GetRoadId(), waypoint->GetLaneId()));
+			}
+
+			auto attributes = vehicle->mutable_vehicle_attributes();
+
+			for (auto attribute : vehicleActor->GetAttributes()) {
+				//TODO verify/improve object type mapping
+				if ("object_type" == attribute.GetId()) {
+					auto value = attribute.GetValue();
+					if (std::string::npos != value.find("bicycle")) {
+						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE);
+					}
+					else if (std::string::npos != value.find("motorbike")
+						|| std::string::npos != value.find("moped")) {
+						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE);
+					}
+					else {
+						//TODO extend object type mapping
+						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR);
+					}
+				}
+				else if ("number_of_wheels" == attribute.GetId()) {
+					attributes->set_number_wheels(attribute.As<int>());
+				}
+			}
+
+			// parse vehicle lights
+			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
+
+			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
+			auto[dimension, location] = CarlaUtility::toOSI(vehicleActor->GetBoundingBox());
+			vehicle->mutable_base()->set_allocated_dimension(dimension.release());
+
+			//TODO Bounding box to rear/front offsets
+
+			//TODO ground clearance
+			//TODO wheel radius
 
 
 
 
-			//TODO should walkers be parsed as moving objects? They are not StationaryObject
+		}
+		else if (typeID.rfind("walker.pedestrian", 0) == 0) {
+			auto pedestrian = groundTruth->add_moving_object();
+			auto walkerActor = boost::static_pointer_cast<carla::client::Walker>(actor);
+
+			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
+			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
+
+			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
+			auto[dimension, location] = CarlaUtility::toOSI(walkerActor->GetBoundingBox());
+			pedestrian->mutable_base()->set_allocated_dimension(dimension.release());
+
+			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
+			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
+
+			//TODO parse pedestrian as moving object
+
+
 		}
 		else if ("traffic.traffic_light" == typeID) {
 			carla::SharedPtr<carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
@@ -411,4 +537,207 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 
 	auto varName = actorRole2IDMap.right.at(sensor->GetId());
 	varName2MessageMap[varName] = sensorView->SerializeAsString();
+}
+
+void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
+	std::unique_ptr<osi3::TrafficCommand> trafficCommand = std::make_unique<osi3::TrafficCommand>();
+	auto actorid = CarlaUtility::toOSI(ActorId);
+
+	trafficCommand->set_allocated_traffic_participant_id(actorid);
+	osi3::Timestamp* timestamp = parseTimestamp();
+	trafficCommand->set_allocated_timestamp(timestamp);
+	auto trafficAction = trafficCommand->add_action();
+
+	//do action accordingly
+	int TrafficActionType = 0;//TODO Placeholder at the moment
+
+	switch (TrafficActionType) {
+	case 0:
+	{
+		//follow trajectory
+		auto trajectoryAction = trafficAction->mutable_follow_trajectory_action();
+		//trajectoryAction->set_allocated_action_header();
+		//trajectoryAction->add_trajectory_point(); //repeated
+		//trajectoryAction->set_constrain_orientation();
+		//trajectoryAction->set_following_mode();
+		break;
+	}
+	case 1:
+	{
+		//follow path
+		auto pathAction = trafficAction->mutable_follow_path_action();
+		//pathAction->set_allocated_action_header();
+		//pathAction->add_path_point(); //repeated
+		//pathAction->set_constrain_orientation();
+		//pathAction->set_following_mode();
+		break;
+	}
+	case 2:
+	{
+		//acquire global position action
+		auto acquireGlobalPositionAction = trafficAction->mutable_acquire_global_position_action();
+		//acquireGlobalPositionAction->set_allocated_action_header();
+		//acquireGlobalPositionAction->set_allocated_position();
+		//acquireGlobalPositionAction->set_allocated_orientation();
+		break;
+	}
+	case 3:
+	{
+		//lane change action
+		auto laneChangeAction = trafficAction->mutable_lane_change_action();
+		//laneChangeAction->set_allocated_action_header();
+		//laneChangeAction->set_relative_target_lane();
+		//laneChangeAction->set_dynamics_shape();
+		//laneChangeAction->set_duration();
+		//laneChangeAction->set_distance();
+		break;
+	}
+	case 4:
+	{
+		//speed action
+		auto speedAction = trafficAction->mutable_speed_action();
+		break;
+	}
+	default:
+		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
+	}
+
+	auto varName = actorRole2IDMap.right.at(ActorId);
+	varName2MessageMap[varName] = trafficCommand->SerializeAsString();
+
+	delete timestamp;
+}
+
+int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
+	//OSI documentation:
+	//Only the id, base member (without dimension and base_polygon),
+	//and the vehicle_classification.light_state members are considered in
+	//updates, all other members can be left undefined, and will be
+	//ignored by the receiver of this message.
+
+	if (!trafficUpdate.has_update() && trafficUpdate.mutable_update()->has_id()) {
+		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read traffic with no id." << std::endl;
+		return 3;
+	}
+	auto TrafficId = std::get<carla::ActorId>(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->id()));
+	auto actor = world->GetActor(TrafficId);
+	if (TrafficId != actor->GetId()) {
+		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;
+		return 2;
+	}
+
+
+	//BASE
+	if (trafficUpdate.mutable_update()->mutable_base()->has_position()
+		&& trafficUpdate.mutable_update()->mutable_base()->has_orientation()) {
+		auto position = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
+		auto orientation = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
+		actor->SetTransform(carla::geom::Transform(position, orientation));
+	}
+
+	//Velocity
+	if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
+		actor->SetVelocity(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
+	}
+
+	//Acceleration can not be set in CARLA
+	//GetAcceleration() calculates the acceleration with the actor's velocity
+	//if (trafficUpdate.mutable_update()->mutable_base()->has_acceleration()) {
+		//auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
+	//}
+
+	//Orientation
+	if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_rate()) {
+		const auto orientationRate = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
+
+		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
+		actor->SetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
+	}
+
+	//Acceleration can not be set in CARLA
+	//GetAcceleration() calculates the acceleration with the actor's velocity
+	//if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_acceleration()){
+		//const osi3::Orientation3d* accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration();
+	//}
+
+	//LIGHTSTATE
+	if (trafficUpdate.mutable_update()->mutable_vehicle_classification()->has_light_state()) {
+		auto indicatorState = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state());
+		auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+
+		vehicleActor->SetLightState(indicatorState);
+	}
+	return 0;
+}
+
+int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand) {
+	// MotionCommand describes a 2D trajectory to follow
+
+	//TODO MotionCommand has no id field -> verify message applies to ego vehicle
+
+	//TODO how to safely retrieve the ego vehicle? 
+	// ego vehicle in Carla usually is named 'hero'
+	if (0 == actorRole2IDMap.left.count("hero")) {
+		return -100;
+	}
+	auto actorId = actorRole2IDMap.left.at("hero");
+	auto actor = world->GetActor(actorId);
+	//From OSI documentation:
+	// The motion command comprises of the trajectory the vehicle should
+	// follow on, as well as the current dynamic state which contains
+	// the vehicle's localization and dynamic properties.
+
+	//TODO add checks?
+	motionCommand.version();
+	motionCommand.timestamp();
+
+	//From OSI documentation
+	// The coordinate system is right handed, a heading of zero equalling
+	// the object being heading in x-direction.
+	// All coordinates and orientations are relative to the global ground
+	// truth frame.
+	//
+	// Units are [m] for positions, [m/s] for velocities, [m/s^2] for
+	// accelerations and [rad] for angles.
+
+	//TODO check timestamp of current state?
+	motionCommand.current_state().timestamp();
+
+	//Position and Orientation
+	osi3::Vector3d vector;
+	vector.set_x(motionCommand.current_state().position_x());
+	vector.set_y(motionCommand.current_state().position_y());
+
+	osi3::Orientation3d orientation;
+	orientation.set_yaw(motionCommand.current_state().heading_angle());
+
+	//convert to CARLA
+	carla::geom::Location location = CarlaUtility::toCarla(&vector);
+	carla::geom::Rotation rotation = CarlaUtility::toCarla(&orientation);
+
+	actor->SetTransform(carla::geom::Transform(location, rotation));
+
+	//Velocity
+	if (motionCommand.current_state().has_velocity()) {
+		double velocityTotal = motionCommand.current_state().velocity();
+
+		//extract angles from rotation
+		double angle_x = cos(rotation.yaw * M_1_PI / 180.0);
+		double angle_z = sin(rotation.yaw * M_1_PI / 180.0);
+
+		//y is upward in CARLA
+		carla::geom::Vector3D velocity(angle_x * velocityTotal, 0, angle_z * velocityTotal);
+		actor->SetVelocity(velocity);
+	}
+
+	//Acceleration can not be set in CARLA
+	//GetAcceleration() calculates the acceleration with the actor's velocity
+	//double acceleration = motionCommand.current_state().acceleration();
+	//Curvature can not be set in CARLA since it is operated in synchronous mode
+	//double curvature = motionCommand.current_state().curvature();
+
+	//Trajectory
+	//CARLA can not handle locations for future timestamps
+	//TODO write TrajectoryHandler to handle vehicle trajectory in this client?
+	return 0;
 }

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CARLAUTILITY_H
+#define CARLAUTILITY_H
 
 #define _USE_MATH_DEFINES
 
@@ -9,6 +10,7 @@
 
 #include <carla/client/Actor.h>
 #include <carla/client/Junction.h>
+#include <carla/client/LightState.h>
 #include <carla/client/Sensor.h>
 #include <carla/client/TrafficLight.h>
 #include <carla/client/TrafficSign.h>
@@ -19,6 +21,7 @@
 #include <carla/geom/Vector3D.h>
 #include <carla/geom/Vector2D.h>
 #include <carla/road/RoadTypes.h>
+#include <carla/rpc/VehicleLightState.h>
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
@@ -54,20 +57,23 @@
 namespace CarlaUtility {
 	//std::variant<carla::client::Vehicle, carla::client::Walker, carla::client::Junction> boundingBoxType_variants;
 
+	carla::geom::Vector3D mul(const carla::geom::Vector3D& vector, const float f);
+
+	// Geometric translations
 	// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
 	// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
 
-	osi3::Orientation3d* toOSI(carla::geom::Rotation& rotation);
-	std::pair<osi3::Dimension3d*, osi3::Vector3d*> toOSI(carla::geom::BoundingBox& boundingBox);
-	osi3::Vector3d* toOSI(carla::geom::Vector3D& location);
+	osi3::Orientation3d* toOSI(const carla::geom::Rotation& rotation);
+	std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> toOSI(const carla::geom::BoundingBox& boundingBox);
+	osi3::Vector3d* toOSI(const carla::geom::Vector3D& location);
 	//carla::geom::Vector3D is a generalization of carla::geom::Location
-	//osi3::Vector3d toOSI(carla::geom::Location& location);
-	osi3::Vector2d* toOSI(carla::geom::Vector2D& vector);
+	//osi3::Vector3d toOSI(const carla::geom::Location& location);
+	osi3::Vector2d* toOSI(const carla::geom::Vector2D& vector);
 
-	carla::geom::Rotation toCarla(osi3::Orientation3d* orientation);
-	carla::geom::BoundingBox toCarla(osi3::Dimension3d* dimension, osi3::Vector3d* position);
-	carla::geom::Location toCarla(osi3::Vector3d* position);
-	carla::geom::Vector2D toCarla(osi3::Vector2d* vector);
+	carla::geom::Rotation toCarla(const osi3::Orientation3d* orientation);
+	carla::geom::BoundingBox toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position);
+	carla::geom::Location toCarla(const osi3::Vector3d* position);
+	carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
 
 	//OSI uses a single identifier database
 	//We need to avoid using ids of possibly existing in another type,
@@ -102,8 +108,8 @@ namespace CarlaUtility {
 
 	//Since some Carla ids are typedefs of the same primitive type, the relevant type for CarlaUniqueID can not be deduced because of the ambiguity
 	osi3::Identifier* toOSI(const uint32_t id, CarlaUniqueID_e type = ActorID);
-	osi3::Identifier* toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, CarlaUniqueID_e type = RoadIDLaneID);
-	CarlaUniqueID_t toCarla(osi3::Identifier* identifier);
+	osi3::Identifier* toOSI(const carla::road::RoadId id, const carla::road::LaneId special, CarlaUniqueID_e type = RoadIDLaneID);
+	CarlaUniqueID_t toCarla(const osi3::Identifier* identifier);
 
 	////Create CarlaUniqueID_t with given type index and initial value. Used in carla id <-> OSI identifier conversion
 	//template <uint32_t N = 1>//template meta programming
@@ -119,15 +125,20 @@ namespace CarlaUtility {
 	//}
 
 
-	osi3::StationaryObject* toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor);
-	osi3::TrafficSign* toOSI(carla::SharedPtr< carla::client::TrafficSign> actor, pugi::xml_document& xodr);
-	std::vector<osi3::TrafficLight*> toOSI(carla::SharedPtr< carla::client::TrafficLight> actor, pugi::xml_document& xodr);
+	osi3::StationaryObject* toOSIStationaryObject(const carla::SharedPtr<const carla::client::Actor> actor);
+	osi3::BaseMoving* toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
+	osi3::TrafficSign* toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor, const pugi::xml_document& xodr);
+	std::vector<osi3::TrafficLight*> toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor, const pugi::xml_document& xodr);
 
-	osi3::CameraSensorView* toOSICamera(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);
-	osi3::LidarSensorView* toOSILidar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);
-	osi3::RadarSensorView* toOSIRadar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData);
+	std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> toOSI(carla::client::Vehicle::LightState lightState);
 
-	carla::SharedPtr<carla::client::Vehicle> getParentVehicle(carla::SharedPtr<carla::client::Actor> actor);
+	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState);
+
+	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
+	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
+	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
+
+	carla::SharedPtr<carla::client::Vehicle> getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first
@@ -158,3 +169,5 @@ namespace CarlaUtility {
 		return std::pair(add_first, rem_first);
 	}
 };
+
+#endif !CARLAUTILITY_H
