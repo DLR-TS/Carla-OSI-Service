@@ -297,17 +297,19 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign);
 	}
 
-	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
 	auto lanes = mapTruth->mutable_lane();
 	auto topology = map->GetTopology();
-	//TODO Junctions need extra handling when converting to OSI (lane pairing holds more than two lanes)
+
 	std::set<carla::road::JuncId> junctions;
 	for (auto endpoints : topology) {
 		if (endpoints.first->IsJunction() && endpoints.second->IsJunction()) {
 			auto junction = endpoints.first->GetJunction();
 
 			auto id = junction->GetId();
-			//TODO OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+
+			//TOCHECK simplification of data is ok
+			//OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+
 			if (junctions.count(id)) {
 				//This junction has already been parsed
 				continue;
@@ -315,14 +317,18 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 			junctions.insert(id);
 			auto lane = lanes->Add();
-			lane->set_allocated_id(CarlaUtility::toOSI(id));
+			lane->set_allocated_id(CarlaUtility::toOSI(id, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
 
 			auto classification = lane->mutable_classification();
 			classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
 
 			for (auto path : junction->GetWaypoints()) {
+				// OSI lane_pairing needs an antecessor/successor pair
 				auto pair = classification->add_lane_pairing();
-				//TODO finish implementation
+				auto inBound = path.first;
+				auto outBound = path.second;
+				pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inBound->GetRoadId(), inBound->GetLaneId()));
+				pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outBound->GetRoadId(), outBound->GetLaneId()));
 			}
 
 		}
@@ -331,7 +337,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			auto lane = lanes->Add();
 			auto roadId = endpoints.first->GetRoadId();
 			auto laneId = endpoints.first->GetLaneId();
-			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId));
+			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
 
 			auto classification = lane->mutable_classification();
 
@@ -340,7 +346,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_DRIVING);
 
 				//get all waypoints until the lane's end, approximately 10cm apart. osi3::Lane::Classification expects its centerline have a deviation of at most 5cm when followed linearly
-				//TODO reduce number of waypoints - especially straight segments offer a more sparse representation
+				//TOCHECK Optimization reduce number of waypoints - especially straight segments offer a more sparse representation
 				auto waypoints = endpoints.first->GetNextUntilLaneEnd(0.1f);
 				if (waypoints.size()) {
 					classification->set_centerline_is_driving_direction(true);
@@ -368,28 +374,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				// A NonDriving lane. Intersections and Driving have already been handled
 				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_NONDRIVING);
 			}
-
-			// OSI lane_pairing needs an antecessor/successor pair
-			//TODO a lookup in OpenDrive file might be more accurate and prevent doubled entries
-			auto prev = endpoints.first->GetPrevious(0.1f);
-			auto next = endpoints.second->GetNext(0.1f);
-			for (size_t p = 0; p < prev.size(); p++)
-				for (size_t n = 0; n < next.size(); n++) {
-					auto pair = classification->add_lane_pairing();
-					if (prev[p]->IsJunction()) {
-						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(prev[p]->GetJunctionId()));
-					}
-					else {
-						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(prev[p]->GetRoadId(), prev[p]->GetLaneId()));
-					}
-					if (next[n]->IsJunction()) {
-						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(next[n]->GetJunctionId()));
-					}
-					else {
-						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(next[n]->GetRoadId(), next[n]->GetLaneId()));
-					}
-				}
-
 
 			//TODO add osi3::LaneBoundary, needs positions of lane boundary markings. Maybe needs a lookup in XODR file
 
