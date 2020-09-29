@@ -168,6 +168,12 @@ namespace CarlaUtility {
 		}
 		return std::pair(add_first, rem_first);
 	}
+
+	/*
+	parsing from carla roadmarking to osi laneboundary
+	*/
+	void parseLaneBoundary(boost::optional<carla::road::element::LaneMarking>, osi3::LaneBoundary*);
+
 };
 
 #endif !CARLAUTILITY_H

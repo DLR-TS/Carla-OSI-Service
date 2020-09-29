@@ -298,6 +298,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	}
 
 	auto lanes = mapTruth->mutable_lane();
+	auto laneboundarys = mapTruth->mutable_lane_boundary();
 	auto topology = map->GetTopology();
 
 	std::set<carla::road::JuncId> junctions;
@@ -375,14 +376,51 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_NONDRIVING);
 			}
 
-			//TODO add osi3::LaneBoundary, needs positions of lane boundary markings. Maybe needs a lookup in XODR file
+			auto leftLaneMarking = endpoints.first->GetLeftLaneMarking();
+			auto rightLaneMarking = endpoints.first->GetRightLaneMarking();
 
+			switch (leftLaneMarking->type){
+			case carla::road::element::LaneMarking::Type::BottsDots:
+			case carla::road::element::LaneMarking::Type::Broken:
+			case carla::road::element::LaneMarking::Type::BrokenBroken:
+			case carla::road::element::LaneMarking::Type::BrokenSolid:
+			case carla::road::element::LaneMarking::Type::Curb:
+			case carla::road::element::LaneMarking::Type::Grass:
+			case carla::road::element::LaneMarking::Type::Other:
+			case carla::road::element::LaneMarking::Type::Solid:
+			case carla::road::element::LaneMarking::Type::SolidBroken:
+			case carla::road::element::LaneMarking::Type::SolidSolid:
+				{
+				auto leftLaneBoundary = laneboundarys->Add();
+				CarlaUtility::parseLaneBoundary(leftLaneMarking, leftLaneBoundary);
+				classification->add_left_lane_boundary_id->set_value(leftLaneBoundary->id.value);
+				}
+				break;
+			case carla::road::element::LaneMarking::Type::None:
+			}
+
+			switch (rightLaneMarking->type) {
+			case carla::road::element::LaneMarking::Type::BottsDots:
+			case carla::road::element::LaneMarking::Type::Broken:
+			case carla::road::element::LaneMarking::Type::BrokenBroken:
+			case carla::road::element::LaneMarking::Type::BrokenSolid:
+			case carla::road::element::LaneMarking::Type::Curb:
+			case carla::road::element::LaneMarking::Type::Grass:
+			case carla::road::element::LaneMarking::Type::Other:
+			case carla::road::element::LaneMarking::Type::Solid:
+			case carla::road::element::LaneMarking::Type::SolidBroken:
+			case carla::road::element::LaneMarking::Type::SolidSolid:
+			{
+				auto rightLaneBoundary = laneboundarys->Add();
+				CarlaUtility::parseLaneBoundary(rightLaneMarking, rightLaneBoundary);
+				classification->add_right_lane_boundary_id->set_value(rightLaneBoundary->id.value);
+			}
+			break;
+			case carla::road::element::LaneMarking::Type::None:
+			}
 		}
 	}
-
-
-
-	}
+}
 
 osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 {
