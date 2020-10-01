@@ -377,47 +377,16 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 
 			auto leftLaneMarking = endpoints.first->GetLeftLaneMarking();
+			auto leftLaneBoundary = laneboundarys->Add();
+			CarlaUtility::parseLaneBoundary(leftLaneMarking, leftLaneBoundary);
+			//connect laneboundary with lane via id
+			classification->add_left_lane_boundary_id()->set_value(leftLaneBoundary->id().value());
+
 			auto rightLaneMarking = endpoints.first->GetRightLaneMarking();
-
-			switch (leftLaneMarking->type){
-			case carla::road::element::LaneMarking::Type::BottsDots:
-			case carla::road::element::LaneMarking::Type::Broken:
-			case carla::road::element::LaneMarking::Type::BrokenBroken:
-			case carla::road::element::LaneMarking::Type::BrokenSolid:
-			case carla::road::element::LaneMarking::Type::Curb:
-			case carla::road::element::LaneMarking::Type::Grass:
-			case carla::road::element::LaneMarking::Type::Other:
-			case carla::road::element::LaneMarking::Type::Solid:
-			case carla::road::element::LaneMarking::Type::SolidBroken:
-			case carla::road::element::LaneMarking::Type::SolidSolid:
-				{
-				auto leftLaneBoundary = laneboundarys->Add();
-				CarlaUtility::parseLaneBoundary(leftLaneMarking, leftLaneBoundary);
-				classification->add_left_lane_boundary_id->set_value(leftLaneBoundary->id.value);
-				}
-				break;
-			case carla::road::element::LaneMarking::Type::None:
-			}
-
-			switch (rightLaneMarking->type) {
-			case carla::road::element::LaneMarking::Type::BottsDots:
-			case carla::road::element::LaneMarking::Type::Broken:
-			case carla::road::element::LaneMarking::Type::BrokenBroken:
-			case carla::road::element::LaneMarking::Type::BrokenSolid:
-			case carla::road::element::LaneMarking::Type::Curb:
-			case carla::road::element::LaneMarking::Type::Grass:
-			case carla::road::element::LaneMarking::Type::Other:
-			case carla::road::element::LaneMarking::Type::Solid:
-			case carla::road::element::LaneMarking::Type::SolidBroken:
-			case carla::road::element::LaneMarking::Type::SolidSolid:
-			{
-				auto rightLaneBoundary = laneboundarys->Add();
-				CarlaUtility::parseLaneBoundary(rightLaneMarking, rightLaneBoundary);
-				classification->add_right_lane_boundary_id->set_value(rightLaneBoundary->id.value);
-			}
-			break;
-			case carla::road::element::LaneMarking::Type::None:
-			}
+			auto rightLaneBoundary = laneboundarys->Add();
+			CarlaUtility::parseLaneBoundary(rightLaneMarking, rightLaneBoundary);
+			//connect laneboundary with lane via id
+			classification->add_right_lane_boundary_id()->set_value(rightLaneBoundary->id().value());
 		}
 	}
 }
