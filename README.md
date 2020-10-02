@@ -18,3 +18,8 @@ carla 0.9.9.4
 catch2
 cmake-conan 0.15
 open-simulation-interface
+
+## Fix for current osi problems
+
+Either don't build protobuffer as shared library or copy libprotobufd.dll and libprotocd.dll in cache folder from bin to lib\open-simulation-interface since the generation of pb.cc and pb.h files is not working right now.
+ToDo: Fix this issue

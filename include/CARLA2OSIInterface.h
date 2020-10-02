@@ -159,8 +159,6 @@ private:
 	\return success indicator
 	*/
 	int receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand);
-
-
 };
 
 #endif CARLAINTERFACE_H

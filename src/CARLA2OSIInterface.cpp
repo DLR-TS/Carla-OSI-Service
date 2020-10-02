@@ -377,8 +377,98 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign);
 	}
 
-	//TODO might be able to get lanes using map->GetTopology() and next_until_lane_end and previous_until_lane_start
+	auto lanes = mapTruth->mutable_lane();
+	auto laneboundarys = mapTruth->mutable_lane_boundary();
+	auto topology = map->GetTopology();
 
+	std::set<carla::road::JuncId> junctions;
+	for (auto endpoints : topology) {
+		if (endpoints.first->IsJunction() && endpoints.second->IsJunction()) {
+			auto junction = endpoints.first->GetJunction();
+
+			auto id = junction->GetId();
+
+			//TOCHECK simplification of data is ok
+			//OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+
+			if (junctions.count(id)) {
+				//This junction has already been parsed
+				continue;
+			}
+
+			junctions.insert(id);
+			auto lane = lanes->Add();
+			lane->set_allocated_id(CarlaUtility::toOSI(id, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
+
+			auto classification = lane->mutable_classification();
+			classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
+
+			for (auto path : junction->GetWaypoints()) {
+				// OSI lane_pairing needs an antecessor/successor pair
+				auto pair = classification->add_lane_pairing();
+				auto inBound = path.first;
+				auto outBound = path.second;
+				pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inBound->GetRoadId(), inBound->GetLaneId()));
+				pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outBound->GetRoadId(), outBound->GetLaneId()));
+			}
+
+		}
+		else {
+			// A lane that is not a junction. Waypoints of endpoint pair map to a OSI lane
+			auto lane = lanes->Add();
+			auto roadId = endpoints.first->GetRoadId();
+			auto laneId = endpoints.first->GetLaneId();
+			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
+
+			auto classification = lane->mutable_classification();
+
+			if (carla::road::Lane::LaneType::Driving == endpoints.first->GetType()) {
+				// centerline is only defined for lanes of type driving, except for junctions
+				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_DRIVING);
+
+				//get all waypoints until the lane's end, approximately 10cm apart. osi3::Lane::Classification expects its centerline have a deviation of at most 5cm when followed linearly
+				//TOCHECK Optimization reduce number of waypoints - especially straight segments offer a more sparse representation
+				auto waypoints = endpoints.first->GetNextUntilLaneEnd(0.1f);
+				if (waypoints.size()) {
+					classification->set_centerline_is_driving_direction(true);
+				}
+				else {
+					// endpoints.first was not the start point (?)
+					waypoints = endpoints.second->GetNextUntilLaneEnd(0.1f);
+					//DEBUG
+					std::cout << "Encountered a lane defined in reversed direction" << std::endl;
+					classification->set_centerline_is_driving_direction(false);
+
+					//switch endpoints so we don't have to test the direction again
+					auto tmp = endpoints.first;
+					endpoints.first = endpoints.second;
+					endpoints.second = tmp;
+				}
+				//translate waypoints to OSI centerline
+				auto centerline = classification->mutable_centerline();
+				for (auto waypoint : waypoints) {
+					auto location = waypoint->GetTransform().location;
+					centerline->AddAllocated(CarlaUtility::toOSI(location));
+				}
+			}
+			else {
+				// A NonDriving lane. Intersections and Driving have already been handled
+				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_NONDRIVING);
+			}
+
+			auto leftLaneMarking = endpoints.first->GetLeftLaneMarking();
+			auto leftLaneBoundary = laneboundarys->Add();
+			CarlaUtility::parseLaneBoundary(leftLaneMarking, leftLaneBoundary);
+			//connect laneboundary with lane via id
+			classification->add_left_lane_boundary_id()->set_value(leftLaneBoundary->id().value());
+
+			auto rightLaneMarking = endpoints.first->GetRightLaneMarking();
+			auto rightLaneBoundary = laneboundarys->Add();
+			CarlaUtility::parseLaneBoundary(rightLaneMarking, rightLaneBoundary);
+			//connect laneboundary with lane via id
+			classification->add_right_lane_boundary_id()->set_value(rightLaneBoundary->id().value());
+		}
+	}
 }
 
 osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()

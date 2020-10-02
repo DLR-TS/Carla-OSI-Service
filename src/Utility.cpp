@@ -745,3 +745,60 @@ carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObje
 	}
 	return state;
 }
+
+void CarlaUtility::parseLaneBoundary(boost::optional<carla::road::element::LaneMarking> laneMarking, osi3::LaneBoundary* laneBoundary) {
+	auto laneBoundaryClassification = laneBoundary->mutable_classification();
+	switch (laneMarking->color) {
+	case carla::road::element::LaneMarking::Color::White:
+		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_WHITE);
+		break;
+	case carla::road::element::LaneMarking::Color::Yellow:
+		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_YELLOW);
+		break;
+	case carla::road::element::LaneMarking::Color::Blue:
+		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_BLUE);
+		break;
+	case carla::road::element::LaneMarking::Color::Green:
+		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_GREEN);
+		break;
+	case carla::road::element::LaneMarking::Color::Red:
+		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_RED);
+		break;
+	case carla::road::element::LaneMarking::Color::Other:
+		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_OTHER);
+		break;
+	}
+	switch (laneMarking->type) {
+	case carla::road::element::LaneMarking::Type::BottsDots:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_BOTTS_DOTS);
+		break;
+	case carla::road::element::LaneMarking::Type::Broken:
+	case carla::road::element::LaneMarking::Type::BrokenBroken:
+	case carla::road::element::LaneMarking::Type::BrokenSolid:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_DASHED_LINE);
+		break;
+	case carla::road::element::LaneMarking::Type::Curb:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_CURB);
+		break;
+	case carla::road::element::LaneMarking::Type::Grass:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_GRASS_EDGE);
+		break;
+	case carla::road::element::LaneMarking::Type::Other:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_OTHER);
+		break;
+	case carla::road::element::LaneMarking::Type::Solid:
+	case carla::road::element::LaneMarking::Type::SolidBroken:
+	case carla::road::element::LaneMarking::Type::SolidSolid:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_SOLID_LINE);
+		break;
+	case carla::road::element::LaneMarking::Type::None:
+		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_UNKNOWN);
+		break;
+	}
+
+	auto boundaryLine = laneBoundary->add_boundary_line();
+	boundaryLine->set_width(laneMarking->width);
+	//TOCHECK Lanechange
+	//laneMarking->lane_change;
+}
+

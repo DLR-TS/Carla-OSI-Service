@@ -136,6 +136,11 @@ namespace CarlaUtility {
 
 	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState);
 
+	/*
+	parsing from carla roadmarking to osi laneboundary
+	*/
+	void parseLaneBoundary(boost::optional<carla::road::element::LaneMarking>, osi3::LaneBoundary*);
+
 	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
@@ -170,6 +175,7 @@ namespace CarlaUtility {
 		}
 		return std::pair(add_first, rem_first);
 	}
+
 };
 
 #endif !CARLAUTILITY_H
