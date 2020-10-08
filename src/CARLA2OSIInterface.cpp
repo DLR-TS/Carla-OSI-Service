@@ -324,7 +324,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		switch (mapObject.semantic_tag)
 		{
 		default:
-		case 3u:
 			//will be set to other if no other tag is available
 		case 4u://pedestrian
 		case 6u://road line
@@ -333,6 +332,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		case 10u://vehicles
 		case 12u://traffic signs
 			std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.semantic_tag << std::endl;
+			//no break by design
+		case 3u://other
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
 			break;
 		case 1u://buildings
