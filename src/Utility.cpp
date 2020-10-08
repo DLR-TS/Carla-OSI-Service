@@ -266,6 +266,7 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 			if (0 < id.length() && id == signal.attribute("id").as_string()) {
 
 				//TODO parse traffic lights from OpenDRIVE xml description
+				//exact positioning
 
 				return osiTrafficLights;
 			}
