@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 #include "CARLA2OSIInterface.h"
-
+#include "grpc_proto_files/base_interface/BaseInterface.grpc.bp.h"
+#include "grpc_proto_files/base_interface/BaseInterface.pb.h"
 
 void mainLoop();
 

@@ -55,8 +55,9 @@ include(${CMAKE_CURRENT_LIST_DIR}/CMake_FetchContent_Overrides.cmake OPTIONAL)
 
 # use CMake FetchContent Module to fetch LibCarla_client using our custom FetchLibCarla_client.cmake script
 include(FetchLibCarla_client)
-fetch_carla_and_non_conan_dependencies()# always use release build of carla client
 
+# use our FetchGRPC.cmake module to add gRPC
+include(FetchGRPC)
 
 
 ##main project
@@ -73,7 +74,7 @@ set_property(TARGET carla-osi-lib PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
 target_include_directories(carla-osi-lib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 
 # link to conan managed dependencies
-target_link_libraries(carla-osi-lib PUBLIC ${CONAN_LIBS})
+target_link_libraries(carla-osi-lib PUBLIC CONAN_PKG::protobuf CONAN_PKG::yaml-cpp)
 
 # CARLA is not managed by conan, thus it is added here when enabled
 target_link_libraries(carla-osi-lib PUBLIC LibCarla::LibCarla_client)
@@ -90,6 +91,42 @@ else()
 	message(STATUS "Will build static library for OSI")
 endif(BUILD_SHARED_LIBS)
 
+## generate grpc code
+# gRPC can handle relative files
+set(COSIMA_GRPC_PROTO_FILES
+	grpc_proto_files/base_interface/BaseInterface.proto
+)
+#string(REPLACE ".proto" ".grpc.pb.cc" COSIMA_GRPC_SRCS ${COSIMA_GRPC_PROTO_FILES})
+#string(REPLACE ".proto" ".grpc.pb.h" COSIMA_GRPC_HDRS ${COSIMA_GRPC_PROTO_FILES})
+#string(REPLACE ".proto" "_mock.grpc.pb.h" COSIMA_GRPC_MOCK_HDRS ${COSIMA_GRPC_PROTO_FILES})
+#string(REPLACE ".proto" ".pb.cc" COSIMA_PROTO_SRCS ${COSIMA_GRPC_PROTO_FILES})
+#string(REPLACE ".proto" ".pb.h" COSIMA_PROTO_HDRS ${COSIMA_GRPC_PROTO_FILES})
+# using a loop to convert to absolute output file paths
+foreach(PROTO_FILE ${COSIMA_GRPC_PROTO_FILES})
+	#get_filename_component(PROTO_FILE ${PROTO_FILE} NAME)
+	string(REPLACE ".proto" ".grpc.pb.cc" OUT ${PROTO_FILE})
+	set(COSIMA_GRPC_SRCS
+		${COSIMA_GRPC_SRCS} ${CMAKE_BINARY_DIR}/gens/${OUT})
+	string(REPLACE ".proto" ".grpc.pb.h" OUT ${PROTO_FILE})
+	set(COSIMA_GRPC_HDRS
+		${COSIMA_GRPC_HDRS} ${CMAKE_BINARY_DIR}/gens/${OUT})
+	string(REPLACE ".proto" "_mock.grpc.pb.h" OUT ${PROTO_FILE})
+	set(COSIMA_GRPC_MOCK_HDRS
+		${COSIMA_GRPC_MOCK_HDRS} ${CMAKE_BINARY_DIR}/gens/${OUT})
+	string(REPLACE ".proto" ".pb.cc" OUT ${PROTO_FILE})
+	set(COSIMA_PROTO_SRCS
+		${COSIMA_PROTO_SRCS} ${CMAKE_BINARY_DIR}/gens/${OUT})
+	string(REPLACE ".proto" ".pb.h" OUT ${PROTO_FILE})
+	set(COSIMA_PROTO_HDRS
+		${COSIMA_PROTO_HDRS} ${CMAKE_BINARY_DIR}/gens/${OUT})
+endforeach()
+
+# add grpc dependency
+set(_gRPC_PROTO_GENS_DIR ${CMAKE_BINARY_DIR}/gens)
+protobuf_generate_grpc_cpp(${COSIMA_GRPC_PROTO_FILES})
+add_library(carla-osi-grpc-lib ${COSIMA_PROTO_SRCS} ${COSIMA_GRPC_SRCS})
+target_link_libraries(carla-osi-grpc-lib PUBLIC grpc++)
+target_include_directories(carla-osi-grpc-lib BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
 
 find_package(Catch2 REQUIRED)
 add_executable(test_carla-osi ${TESTFILES})
@@ -101,8 +138,11 @@ include(Catch)
 catch_discover_tests(test_carla-osi)
 
 add_executable (CARLA-OSI_client "${CMAKE_CURRENT_LIST_DIR}/src/CARLA-OSI.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA-OSI.h")
-target_link_libraries(CARLA-OSI_client PUBLIC carla-osi-lib ${CONAN_LIBS})
+target_link_libraries(CARLA-OSI_client PUBLIC carla-osi-lib CONAN_PKG::yaml-cpp)
 target_include_directories(CARLA-OSI_client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
+target_link_libraries(CARLA-OSI_client PUBLIC carla-osi-grpc-lib)
+# public include of target carla-osi-grpc-lib is supposed to propagate, but is missing...
+target_include_directories(CARLA-OSI_client BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
 
 # The import section in conanfile.txt is supposed to do the same, but somehow it stopped working.
 # so far, only boost is needed. Additional globbing expressions can be added if needed

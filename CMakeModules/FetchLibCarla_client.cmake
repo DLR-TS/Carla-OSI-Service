@@ -155,3 +155,5 @@ function(fetch_carla_and_non_conan_dependencies)
 	# includes of link libraries somehow don't propagate. Also misuse SYSTEM switch to hide compiler warnings
 	target_include_directories(LibCarla_and_deps SYSTEM INTERFACE ${BOOST_INCLUDE_PATH} ${RPCLIB_INCLUDE_PATH} ${ZLIB_INCLUDE_PATH} ${LIBPNG_INCLUDE_PATH} ${RECAST_INCLUDE_PATH})
 endfunction()
+
+fetch_carla_and_non_conan_dependencies()

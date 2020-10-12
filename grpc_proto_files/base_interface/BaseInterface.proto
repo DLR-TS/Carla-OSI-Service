@@ -1,0 +1,61 @@
+syntax = "proto3";
+package CoSiMa_rpc;
+
+service BaseInterface {
+	rpc GetIntValue(String) returns (Int32) {}
+	rpc GetBoolValue(String) returns (Bool) {}
+	rpc GetFloatValue(String) returns (Float) {}
+	rpc GetDoubleValue(String) returns (Double) {}
+	rpc GetStringValue(String) returns (String) {}
+
+	rpc SetIntValue(NamedInt32) returns (Int32) {}
+	rpc SetBoolValue(NamedBool) returns (Int32) {}
+	rpc SetFloatValue(NamedFloat) returns (Int32) {}
+	rpc SetDoubleValue(NamedDouble) returns (Int32) {}
+	rpc SetStringValue(NamedString) returns (Int32) {}
+}
+
+message Int32 {
+	int32 value = 1;
+}
+
+message NamedInt32 {
+	string name = 1;
+	int32 value = 2;
+}
+
+message Bool {
+	bool value = 1;
+}
+
+message NamedBool {
+	string name = 1;
+	bool value = 2;
+}
+
+message Float {
+	float value = 1;
+}
+
+message NamedFloat {
+	string name = 1;
+	float value = 2;
+}
+
+message Double {
+	double value = 1;
+}
+
+message NamedDouble {
+	string name = 1;
+	double value = 2;
+}
+
+message String {
+	string value = 1;
+}
+
+message NamedString {
+	string name = 1;
+	string value = 2;
+}

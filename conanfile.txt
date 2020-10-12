@@ -1,8 +1,5 @@
 [requires]
-protobuf/3.9.1@bincrafters/stable
-protoc_installer/3.9.1@bincrafters/stable
-# protobuf from conan center has issues (see comment in generator section below)
-#protobuf/3.9.1
+protobuf/3.11.4
 yaml-cpp/0.6.3
 catch2/2.12.1
 FakeIt/2.0.5@gasuketsu/stable
@@ -14,19 +11,20 @@ boost/1.72.0
 zlib/1.2.11
 # wanted by Carla (wants 1.2.37, but conan only has newer versions)
 libpng/1.6.37
+# requirement of grpc on windows (see https://github.com/grpc/grpc/blob/v1.31.0/BUILDING.md#windows)
+nasm/2.14
 
 
 [generators]
 cmake
-# cmake_find_package generates an incompatible Findprotobuf.cmake. Waiting for https://github.com/conan-io/conan-center-index/pull/2488
-#cmake_find_package
-#cmake_paths
+cmake_find_package
+cmake_paths
 
 [options]
 boost:shared=True
 boost:error_code_header_only=True
 protobuf:lite=False
-#protobuf:shared=True
+protobuf:shared=False
 protobuf:with_zlib=True
 
 [imports]
