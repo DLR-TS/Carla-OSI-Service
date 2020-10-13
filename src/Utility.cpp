@@ -254,58 +254,74 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 {
 	std::vector<osi3::TrafficLight*> osiTrafficLights;
 
-	//TODO OSI defines a traffic light as an actual bulb. Therefore, red, yellow and green are three separate traffic lights
+	//OSI defines a traffic light as an actual bulb. Therefore, red, yellow and green are three separate traffic lights
+	auto baseTransform = actor->GetTransform();
+	float yawDegree = baseTransform.rotation.yaw;
+	double yaw = yawDegree * M_PI / 180;
 
+	//Values extracted from Carla model OpenDrive Traffic Light
+	std::map<int, carla::geom::Location> bulbInfos;
+	//Difference between lightulbs is about 35 cm
+	carla::geom::Location greenLightLocationDiff;
+	greenLightLocationDiff.x = -599;
+	greenLightLocationDiff.y = 50;
+	greenLightLocationDiff.z = 522;	
+	carla::geom::Location yellowLightLocationDiff;
+	yellowLightLocationDiff.x = -599;
+	yellowLightLocationDiff.y = 50;
+	yellowLightLocationDiff.z = 557;
+	carla::geom::Location redLightLocationDiff;
+	greenLightLocationDiff.x = -599;
+	greenLightLocationDiff.y = 50;
+	greenLightLocationDiff.z = 592;
 
-	//find corresponding traffic light in xodr file
-	auto opendrive = xodr.child("OpenDRIVE");
-	for (auto road = opendrive.child("road"); road; road.next_sibling("road")) {
-		// This node traversal needs no error handling because pugiXML never returns null, but empty nodes which return false as boolean.
-		for (auto signal = road.child("signals").child("signal"); signal; signal.next_sibling("signal")) {
-			std::string id = actor->GetSignId();
-			if (0 < id.length() && id == signal.attribute("id").as_string()) {
+	bulbInfos.insert({0, greenLightLocationDiff});
+	bulbInfos.insert({1, yellowLightLocationDiff});
+	bulbInfos.insert({2, redLightLocationDiff});
 
-				//TODO parse traffic lights from OpenDRIVE xml description
-				//exact positioning
+	// create three traffic lights using information available in Carla
+	for (auto info : bulbInfos)
+	{
+		//apply yaw to location vector
+		float x = info.second.x * std::cos(yaw) - info.second.y * std::sin(yaw);
+		float y = info.second.x * std::sin(yaw) + info.second.y * std::cos(yaw);
+		//combine base vector and added vector from base to lightbulb
+		carla::geom::Location bulbLocation;
+		bulbLocation.x = x + baseTransform.location.x;
+		bulbLocation.y = y + baseTransform.location.y;
+		bulbLocation.z = baseTransform.location.z;
 
-				return osiTrafficLights;
-			}
+		osi3::TrafficLight* trafficLightBulb = new osi3::TrafficLight();
+		trafficLightBulb->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
+
+		auto base = trafficLightBulb->mutable_base();
+		base->set_allocated_position(CarlaUtility::toOSI(bulbLocation));
+		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
+		//TODO assure rotation is applied local
+		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
+		base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
+
+		auto classification = trafficLightBulb->mutable_classification();
+		switch (info.first) {
+		case 0:
+			classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_GREEN);
+			classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+			break;
+		case 1:
+			classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_YELLOW);
+			classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+			break;
+		case 2:
+			classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_RED);
+			classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+			break;
+		default:
+			classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_OTHER);
+			classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_OFF);
 		}
+		classification->set_icon(osi3::TrafficLight_Classification_Icon_ICON_NONE);
+		osiTrafficLights.push_back(trafficLightBulb);
 	}
-
-	// sign id not found
-	// create a single dummy traffic light using information available in Carla
-	osi3::TrafficLight * dummy = new osi3::TrafficLight();
-	dummy->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
-
-	auto base = dummy->mutable_base();
-	auto transform = actor->GetTransform();
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
-	//TODO assure rotation is applied local
-	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
-	base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
-
-	auto classification = dummy->mutable_classification();
-	switch (actor->GetState()) {
-	case carla::rpc::TrafficLightState::Red:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_RED);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
-		break;
-	case carla::rpc::TrafficLightState::Yellow:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_YELLOW);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
-		break;
-	case carla::rpc::TrafficLightState::Green:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_GREEN);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
-		break;
-	default:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_OTHER);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_OFF);
-	}
-	classification->set_icon(osi3::TrafficLight_Classification_Icon_ICON_NONE);
-
 	return osiTrafficLights;
 }
 
