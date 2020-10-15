@@ -300,6 +300,12 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		//TODO assure rotation is applied local
 		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
 		base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
+		osi3::Dimension3d* dimension = new osi3::Dimension3d();
+		//bulbs have circa 30 centimeter diameter
+		dimension->set_height(30);
+		dimension->set_length(30);
+		dimension->set_width(30);
+		base->set_allocated_dimension(dimension);
 
 		auto classification = trafficLightBulb->mutable_classification();
 		switch (info.first) {
