@@ -1,23 +1,14 @@
 #include "CARLA2OSIInterface.h"
 
-int CARLA2OSIInterface::readConfiguration(CARLA2OSIInterfaceConfig& config) {
-	this->host = config.host;
-	this->port = config.port;
-	this->transactionTimeout = std::chrono::duration<double>(config.transactionTimeout);
-	this->deltaSeconds = config.deltaSeconds;
-
-	return 0;
-}
-
-int CARLA2OSIInterface::initialise() {
+int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
 	this->client = std::make_unique<carla::client::Client>(host, port);
-	this->client->SetTimeout(transactionTimeout);
+	this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
 	this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
 
 	//assure server is in synchronous mode
 	auto settings = world->GetSettings();
-	settings.fixed_delta_seconds = this->deltaSeconds;
+	settings.fixed_delta_seconds = deltaSeconds;
 	settings.synchronous_mode = true;
 	this->world->ApplySettings(settings);
 
@@ -48,6 +39,8 @@ double CARLA2OSIInterface::doStep() {
 		throw std::exception("No world");
 	}
 
+	auto preStepTimestamp = world->GetSnapshot().GetTimestamp();
+
 	// track actors added/removed by simulation interfaces
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
 	auto worldActors = world->GetActors();
@@ -63,7 +56,7 @@ double CARLA2OSIInterface::doStep() {
 		std::inserter(removedActors, removedActors.begin())
 	);
 
-	world->Tick(this->transactionTimeout);
+	world->Tick(client->GetTimeout());
 	//world->WaitForTick(this->transactionTimeout);
 
 	// track actors added/removed by Carla
@@ -110,7 +103,8 @@ double CARLA2OSIInterface::doStep() {
 		}
 	}
 
-	return this->deltaSeconds;
+	// only accurate if using fixed time step, as activated during initialise()
+	return world->GetSnapshot().GetTimestamp().delta_seconds;
 }
 
 int CARLA2OSIInterface::getIntValue(std::string base_name) {
@@ -155,7 +149,7 @@ int CARLA2OSIInterface::setDoubleValue(std::string base_name, double value) {
 
 int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value) {
 	auto prefix = getPrefix(base_name);
-	if (0 < prefix.length() && 2 + prefix.length() < base_name.length()) {
+	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
 		// variable has only a prefix and no name
 		std::cerr << "CARLA2OSIInterface::setStringValue: Tried to set a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
 		//TODO do we desire variables that have only a prefix and no name?
@@ -229,7 +223,7 @@ std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 {
 	// a prefix is surrounded by '#'
 	if (2 < name.size() && '#' == name.front()) {
-		std::string_view prefix = name.substr(1, name.find('#', 1));
+		std::string_view prefix = name.substr(1, name.find('#', 1) - 1);
 		return prefix;
 	}
 	return std::string_view();

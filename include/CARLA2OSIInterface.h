@@ -54,28 +54,8 @@
 #include "sl45_motioncommand.pb.h"
 #include "sl45_vehiclecommunicationdata.pb.h"
 
-/**
-* \var host
-* host name or ip
-* \var port
-* port
-* \var transactionTimeout
-* transaction timeout in seconds
-* \var deltaSeconds
-* simulation time delta per tick
-*/
-struct CARLA2OSIInterfaceConfig {
-public:
-	std::string host;
-	uint16_t port;
-	double transactionTimeout;
-	double deltaSeconds;
-};
-
 class CARLA2OSIInterface
 {
-	std::string host;
-	uint16_t port;
 	std::unique_ptr<carla::client::World> world;
 	std::unique_ptr<carla::client::Client> client;
 	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role
@@ -84,8 +64,6 @@ class CARLA2OSIInterface
 	std::map<std::string, std::string> varName2MessageMap;
 	// contains all actor ids reported by Carla
 	std::set<carla::ActorId> activeActors;
-	carla::time_duration transactionTimeout;
-	double deltaSeconds;
 	std::shared_ptr<osi3::GroundTruth> mapTruth;
 	// OpenDRIVE xml representation of the map
 	pugi::xml_document xodr;
@@ -98,21 +76,23 @@ public:
 			auto settings = world->GetSettings();
 			settings.synchronous_mode = false;
 			world->ApplySettings(settings);
-			world->Tick(transactionTimeout);
+			world->Tick(client->GetTimeout());
 		}
 	};
 
 	/**
-	Read configuration for this base simulator interface.
-	\param config the decoding struct
-	\return success status
+	* initialise the interface with the given parameters and connect to the carla server
+	* \var host
+	* host name or ip of the carla server
+	* \var port
+	* port of the carla server
+	* \var transactionTimeout
+	* transaction timeout in seconds
+	* \var deltaSeconds
+	* simulation time delta per tick
+	* \return Success status.
 	*/
-	virtual int readConfiguration(CARLA2OSIInterfaceConfig& config);
-	/**
-	Connect with host/port information from corresponding fields
-	\return Success status.
-	*/
-	virtual int initialise();
+	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds);
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
 	\return Time in seconds advanced during step

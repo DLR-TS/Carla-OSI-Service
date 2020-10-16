@@ -1,0 +1,32 @@
+syntax = "proto3";
+// see TODO at message Empty in BaseInterface.proto
+//import "google/protobuf/Empty.proto";
+import "grpc_proto_files/base_interface/BaseInterface.proto";
+
+package CoSiMa.rpc;
+
+service CARLAInterface {
+	rpc GetIntValue(String) returns (Int32) {}
+	rpc GetBoolValue(String) returns (Bool) {}
+	rpc GetFloatValue(String) returns (Float) {}
+	rpc GetDoubleValue(String) returns (Double) {}
+	rpc GetStringValue(String) returns (String) {}
+
+	rpc SetIntValue(NamedInt32) returns (Int32) {}
+	rpc SetBoolValue(NamedBool) returns (Int32) {}
+	rpc SetFloatValue(NamedFloat) returns (Int32) {}
+	rpc SetDoubleValue(NamedDouble) returns (Int32) {}
+	rpc SetStringValue(NamedString) returns (Int32) {}
+
+	//TODO
+	rpc DoStep(Empty) returns (Double) {}
+
+	rpc SetConfig(CarlaConfig) returns (Int32) {}
+}
+
+message CarlaConfig {
+	string carla_host = 1;
+	int32 carla_port = 2;
+	double transaction_timeout = 3;
+	double delta_seconds = 4;
+}

@@ -68,26 +68,26 @@ add_subdirectory("test")
 
 
 #create library target
-add_library(carla-osi-lib ${CARLA_OSI_LIB_SOURCE} ${CARLA_OSI_LIB_INCLUDES})
-# carla-osi-lib exports no symbols, thereby preventing linking of its dll on windows. Force export of all global symbols
-set_property(TARGET carla-osi-lib PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
-target_include_directories(carla-osi-lib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
+add_library(CARLA_OSI_Lib ${CARLA_OSI_LIB_SOURCE} ${CARLA_OSI_LIB_INCLUDES})
+# CARLA_OSI_Lib exports no symbols, thereby preventing linking of its dll on windows. Force export of all global symbols
+set_property(TARGET CARLA_OSI_Lib PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
+target_include_directories(CARLA_OSI_Lib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 
 # link to conan managed dependencies
-target_link_libraries(carla-osi-lib PUBLIC CONAN_PKG::protobuf CONAN_PKG::yaml-cpp)
+target_link_libraries(CARLA_OSI_Lib PUBLIC CONAN_PKG::protobuf CONAN_PKG::yaml-cpp)
 
 # CARLA is not managed by conan, thus it is added here when enabled
-target_link_libraries(carla-osi-lib PUBLIC LibCarla::LibCarla_client)
+target_link_libraries(CARLA_OSI_Lib PUBLIC LibCarla::LibCarla_client)
 
 # OSI is not managed by conan, thus it is added here
 # OSI has differently named targets for static and shared build
 if(BUILD_SHARED_LIBS)
 	# By default, OSI exports no symbols when building a dll, preventing linking to the shared library on windows. Force export of all global symbols
 	set_property(TARGET open_simulation_interface PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
-	target_link_libraries(carla-osi-lib PUBLIC open_simulation_interface)
+	target_link_libraries(CARLA_OSI_Lib PUBLIC open_simulation_interface)
 	message(STATUS "Will build shared library for OSI")
 else()
-	target_link_libraries(carla-osi-lib PUBLIC open_simulation_interface_static)
+	target_link_libraries(CARLA_OSI_Lib PUBLIC open_simulation_interface_static)
 	message(STATUS "Will build static library for OSI")
 endif(BUILD_SHARED_LIBS)
 
@@ -95,6 +95,7 @@ endif(BUILD_SHARED_LIBS)
 # gRPC can handle relative files
 set(COSIMA_GRPC_PROTO_FILES
 	grpc_proto_files/base_interface/BaseInterface.proto
+	grpc_proto_files/base_interface/CARLAInterface.proto
 )
 #string(REPLACE ".proto" ".grpc.pb.cc" COSIMA_GRPC_SRCS ${COSIMA_GRPC_PROTO_FILES})
 #string(REPLACE ".proto" ".grpc.pb.h" COSIMA_GRPC_HDRS ${COSIMA_GRPC_PROTO_FILES})
@@ -124,25 +125,30 @@ endforeach()
 # add grpc dependency
 set(_gRPC_PROTO_GENS_DIR ${CMAKE_BINARY_DIR}/gens)
 protobuf_generate_grpc_cpp(${COSIMA_GRPC_PROTO_FILES})
-add_library(carla-osi-grpc-lib ${COSIMA_PROTO_SRCS} ${COSIMA_GRPC_SRCS})
-target_link_libraries(carla-osi-grpc-lib PUBLIC grpc++)
-target_include_directories(carla-osi-grpc-lib BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
+add_library(CARLA_OSI_gRPC_Lib ${COSIMA_PROTO_SRCS} ${COSIMA_GRPC_SRCS})
+target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC grpc++)
+target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
+
+# gRPC service logic library, separated from CARLA_OSI_Client to be testalble with catch2
+add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
+target_link_libraries(CARLA_OSI_gRPC_ServiceLib PUBLIC CARLA_OSI_gRPC_Lib CARLA_OSI_Lib)
+target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
 find_package(Catch2 REQUIRED)
-add_executable(test_carla-osi ${TESTFILES})
-target_include_directories(test_carla-osi PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
-target_link_libraries(test_carla-osi carla-osi-lib Catch2::Catch2)
+add_executable(Test_CARLA_OSI ${TESTFILES})
+target_include_directories(Test_CARLA_OSI PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_link_libraries(Test_CARLA_OSI Catch2::Catch2 CARLA_OSI_Lib CARLA_OSI_gRPC_ServiceLib)
 
 include(CTest)
 include(Catch)
-catch_discover_tests(test_carla-osi)
+catch_discover_tests(Test_CARLA_OSI)
 
-add_executable (CARLA-OSI_client "${CMAKE_CURRENT_LIST_DIR}/src/CARLA-OSI.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA-OSI.h")
-target_link_libraries(CARLA-OSI_client PUBLIC carla-osi-lib CONAN_PKG::yaml-cpp)
-target_include_directories(CARLA-OSI_client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
-target_link_libraries(CARLA-OSI_client PUBLIC carla-osi-grpc-lib)
-# public include of target carla-osi-grpc-lib is supposed to propagate, but is missing...
-target_include_directories(CARLA-OSI_client BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
+add_executable (CARLA_OSI_Client "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_Client.cpp")
+target_link_libraries(CARLA_OSI_Client PUBLIC CARLA_OSI_Lib)
+target_include_directories(CARLA_OSI_Client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
+target_link_libraries(CARLA_OSI_Client PUBLIC CARLA_OSI_gRPC_ServiceLib)
+# public include of target CARLA_OSI_gRPC_Lib is supposed to propagate, but is missing...
+target_include_directories(CARLA_OSI_Client BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
 
 # The import section in conanfile.txt is supposed to do the same, but somehow it stopped working.
 # so far, only boost is needed. Additional globbing expressions can be added if needed

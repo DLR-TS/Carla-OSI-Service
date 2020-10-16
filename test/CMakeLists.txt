@@ -3,5 +3,6 @@ ${CMAKE_CURRENT_LIST_DIR}/tests-main.cpp
 
 ${CMAKE_CURRENT_LIST_DIR}/tests-CARLA2OSIInterface.cpp>
 ${CMAKE_CURRENT_LIST_DIR}/tests-CARLAUtility.cpp>
+${CMAKE_CURRENT_LIST_DIR}/tests-CARLA-OSI.cpp>
 
 PARENT_SCOPE)

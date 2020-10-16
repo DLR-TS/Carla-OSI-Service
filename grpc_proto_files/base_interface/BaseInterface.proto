@@ -1,5 +1,9 @@
 syntax = "proto3";
-package CoSiMa_rpc;
+// see TODO at message Empty below
+//import "google/protobuf/Empty.proto";
+
+
+package CoSiMa.rpc;
 
 service BaseInterface {
 	rpc GetIntValue(String) returns (Int32) {}
@@ -13,6 +17,15 @@ service BaseInterface {
 	rpc SetFloatValue(NamedFloat) returns (Int32) {}
 	rpc SetDoubleValue(NamedDouble) returns (Int32) {}
 	rpc SetStringValue(NamedString) returns (Int32) {}
+
+	//TODO
+	rpc DoStep(Empty) returns (Double) {}
+}
+
+// replacement for "google/protobuf/Empty.proto", because it's compiled content is not found (error C2039: "descriptor_table_google_2fprotobuf_2fEmpty_2eproto": Ist kein Element von "`global namespace'")
+//TODO find out why "google/protobuf/Empty.proto" cannot be found and use it instead
+message Empty {
+	// empty by design
 }
 
 message Int32 {
