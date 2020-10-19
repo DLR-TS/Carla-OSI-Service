@@ -560,6 +560,13 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 			//a osi3::TrafficLight describes a single bulb of a traffic light
 
 			auto bulbs = CarlaUtility::toOSI(trafficLight, xodr);
+			//add converted bulbs to ground truth
+			for (auto* bulb : bulbs) {
+				auto* trafficLight = groundTruth->add_traffic_light();
+				trafficLight->set_allocated_id(bulb->mutable_id());
+				trafficLight->set_allocated_classification(bulb->mutable_classification());
+				trafficLight->set_allocated_base(bulb->mutable_base());
+			}
 		}
 	}
 
