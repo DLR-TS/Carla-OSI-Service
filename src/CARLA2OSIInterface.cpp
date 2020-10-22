@@ -708,7 +708,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 
 	//Velocity
 	if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
-		actor->SetVelocity(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
+		actor->SetTargetVelocity(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
 	}
 
 	//Acceleration can not be set in CARLA
@@ -722,7 +722,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 		const auto orientationRate = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
 
 		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
-		actor->SetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
+		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
 	}
 
 	//Acceleration can not be set in CARLA
@@ -798,7 +798,7 @@ int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motion
 
 		//y is upward in CARLA
 		carla::geom::Vector3D velocity(angle_x * velocityTotal, 0, angle_z * velocityTotal);
-		actor->SetVelocity(velocity);
+		actor->SetTargetVelocity(velocity);
 	}
 
 	//Acceleration can not be set in CARLA

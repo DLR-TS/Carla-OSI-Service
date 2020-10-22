@@ -263,17 +263,17 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 	std::map<int, carla::geom::Location> bulbInfos;
 	//Difference between lightulbs is about 35 cm
 	carla::geom::Location greenLightLocationDiff;
-	greenLightLocationDiff.x = -599;
-	greenLightLocationDiff.y = 50;
-	greenLightLocationDiff.z = 522;	
+	greenLightLocationDiff.x = -5.99f;
+	greenLightLocationDiff.y = 0.50f;
+	greenLightLocationDiff.z = 5.22f;	
 	carla::geom::Location yellowLightLocationDiff;
-	yellowLightLocationDiff.x = -599;
-	yellowLightLocationDiff.y = 50;
-	yellowLightLocationDiff.z = 557;
+	yellowLightLocationDiff.x = -5.99f;
+	yellowLightLocationDiff.y = 0.50f;
+	yellowLightLocationDiff.z = 5.57f;
 	carla::geom::Location redLightLocationDiff;
-	greenLightLocationDiff.x = -599;
-	greenLightLocationDiff.y = 50;
-	greenLightLocationDiff.z = 592;
+	greenLightLocationDiff.x = -5.99f;
+	greenLightLocationDiff.y = 0.50f;
+	greenLightLocationDiff.z = 5.92f;
 
 	bulbInfos.insert({0, greenLightLocationDiff});
 	bulbInfos.insert({1, yellowLightLocationDiff});
@@ -302,9 +302,9 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
 		osi3::Dimension3d* dimension = new osi3::Dimension3d();
 		//bulbs have circa 30 centimeter diameter
-		dimension->set_height(30);
-		dimension->set_length(30);
-		dimension->set_width(30);
+		dimension->set_height(0.30f);
+		dimension->set_length(0.30f);
+		dimension->set_width(0.30f);
 		base->set_allocated_dimension(dimension);
 
 		auto classification = trafficLightBulb->mutable_classification();

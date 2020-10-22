@@ -10,7 +10,7 @@ endif(NOT COMMAND FetchContent_Declare)
 
 # Which version of LibCarla should get fetched? Variable is also needed by Carla itself to generate Version.h
 if(NOT DEFINED CARLA_VERSION)# don't overwrite if already defined
-	set(CARLA_VERSION 0.9.9.4 )
+	set(CARLA_VERSION 0.9.10.1 )
 endif()
 
 # LibCarla itself
@@ -39,7 +39,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   libRPC
   GIT_REPOSITORY https://github.com/carla-simulator/rpclib.git
-  GIT_TAG v2.2.1_c2
+  GIT_TAG v2.2.1_c3
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla/Build
