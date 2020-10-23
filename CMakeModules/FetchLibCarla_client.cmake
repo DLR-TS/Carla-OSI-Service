@@ -129,8 +129,28 @@ function(fetch_carla_and_non_conan_dependencies)
 	FetchContent_GetProperties(LibCarla_client)
 	if(NOT libcarla_client_POPULATED)
 		FetchContent_Populate(LibCarla_client)
+
+		# Set library version as would be reported by carla's build system to silence version mismatch warnings when we are using the same library version
+		find_package(Git QUIET)
+		if(GIT_FOUND AND EXISTS "${libcarla_client_SOURCE_DIR}/.git")
+			execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --always
+							WORKING_DIRECTORY ${libcarla_client_SOURCE_DIR}
+							RESULT_VARIABLE GIT_CARLA_VERSION_RESULT
+							OUTPUT_VARIABLE GIT_CARLA_VERSION)
+			if(NOT GIT_CARLA_VERSION_RESULT EQUAL "0")
+				message(STATUS "git describe --tags --dirty --always failed to provide the LibCarla_client version as reported by carla's build system")
+			else()
+				#remove trailing newline from output
+				string(REGEX REPLACE "\n$" "" GIT_CARLA_VERSION "${GIT_CARLA_VERSION}")
+				message(STATUS "Using '${GIT_CARLA_VERSION}' as LibCarla_client version identifier, as reported by git")
+				set(CARLA_VERSION ${GIT_CARLA_VERSION})
+			endif()
+		endif()
+
 		add_subdirectory("${libcarla_client_SOURCE_DIR}/LibCarla/cmake" "${libcarla_client_BINARY_DIR}/LibCarla" EXCLUDE_FROM_ALL)
 	endif()
+
+
 		
 	# Carla changes its library name when including the RSS component in a build
 	if(TARGET carla_client_rss)
