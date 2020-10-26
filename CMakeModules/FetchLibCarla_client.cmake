@@ -8,16 +8,16 @@ if(NOT COMMAND FetchContent_Declare)
 	include(FetchContent)
 endif(NOT COMMAND FetchContent_Declare)
 
-# Which version of LibCarla should get fetched? Variable is also needed by Carla itself to generate Version.h
-if(NOT DEFINED CARLA_VERSION)# don't overwrite if already defined
-	set(CARLA_VERSION 0.9.10.1 )
-endif()
 
 # LibCarla itself
 FetchContent_Declare(
   LibCarla_client
-  GIT_REPOSITORY https://github.com/carla-simulator/carla.git
-  GIT_TAG ${CARLA_VERSION}
+  # original repository
+  #GIT_REPOSITORY https://github.com/carla-simulator/carla.git
+  # forked repository with OSI-specific additions for SETLevel4to5
+  GIT_REPOSITORY git@gitlab.dlr.de:setlevel4to5/carla-osi.git
+  # Branch or tag to checkout, e.g. 0.9.10.1 or master
+  GIT_TAG carla-osi-0.9.10 # OSI-specific branch in fork
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla
@@ -131,6 +131,7 @@ function(fetch_carla_and_non_conan_dependencies)
 		FetchContent_Populate(LibCarla_client)
 
 		# Set library version as would be reported by carla's build system to silence version mismatch warnings when we are using the same library version
+		# Needed to generate Version.h
 		find_package(Git QUIET)
 		if(GIT_FOUND AND EXISTS "${libcarla_client_SOURCE_DIR}/.git")
 			execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --always
