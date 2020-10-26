@@ -126,7 +126,7 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla:
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	//TODO Carla doesn't seem to offer information needed for osi3::StationaryObject::Classification. Using default instance
-	auto classification=prop->mutable_classification();//creates default instance as side-effect
+	auto classification = prop->mutable_classification();//creates default instance as side-effect
 	classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
 	//TODO fill with information from OpenDRIVE file, if available
 
@@ -265,19 +265,19 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 	carla::geom::Location greenLightLocationDiff;
 	greenLightLocationDiff.x = -5.99f;
 	greenLightLocationDiff.y = 0.50f;
-	greenLightLocationDiff.z = 5.22f;	
+	greenLightLocationDiff.z = 5.22f;
 	carla::geom::Location yellowLightLocationDiff;
 	yellowLightLocationDiff.x = -5.99f;
 	yellowLightLocationDiff.y = 0.50f;
 	yellowLightLocationDiff.z = 5.57f;
 	carla::geom::Location redLightLocationDiff;
-	greenLightLocationDiff.x = -5.99f;
-	greenLightLocationDiff.y = 0.50f;
-	greenLightLocationDiff.z = 5.92f;
+	redLightLocationDiff.x = -5.99f;
+	redLightLocationDiff.y = 0.50f;
+	redLightLocationDiff.z = 5.92f;
 
-	bulbInfos.insert({0, greenLightLocationDiff});
-	bulbInfos.insert({1, yellowLightLocationDiff});
-	bulbInfos.insert({2, redLightLocationDiff});
+	bulbInfos.insert({ 0, greenLightLocationDiff });
+	bulbInfos.insert({ 1, yellowLightLocationDiff });
+	bulbInfos.insert({ 2, redLightLocationDiff });
 
 	// create three traffic lights using information available in Carla
 	for (auto info : bulbInfos)
@@ -289,7 +289,7 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		carla::geom::Location bulbLocation;
 		bulbLocation.x = x + baseTransform.location.x;
 		bulbLocation.y = y + baseTransform.location.y;
-		bulbLocation.z = baseTransform.location.z;
+		bulbLocation.z = info.second.z + baseTransform.location.z;
 
 		osi3::TrafficLight* trafficLightBulb = new osi3::TrafficLight();
 		trafficLightBulb->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
