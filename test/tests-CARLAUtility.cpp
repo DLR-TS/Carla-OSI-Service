@@ -7,8 +7,11 @@
 #include <carla/client/Actor.h>
 #include <carla/client/BlueprintLibrary.h>
 #include <carla/client/Client.h>
+#include <carla/client/Map.h>
 #include <carla/client/World.h>
 #include <carla/geom/Transform.h>
+
+#include <carla/Debug.h>
 
 TEST_CASE("Two way difference", "[TwoWayDifference][Utility]") {
 	SECTION("All empty") {
@@ -302,4 +305,84 @@ TEST_CASE("Carla GetStationaryObject", "[Carla][Utility][!hide][RequiresCarlaSer
 		REQUIRE(0 < stationaryMapObject.id);
 	}
 	std::cout << stationaryMapObjects.size() << std::endl;
+}
+
+//This test draws bounding boxes around the traffic light bulbs and requires visual verification using the CARLA spectator. It is therefore hidden by default
+//Also, the map '04_atCity_AF_DLR_Braunschweig_Prio1_ROD_offset' has to be present on the server. (Can be changed to another OpenDRIVE-based map that uses the default traffic lights)
+TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCarlaServer]") {
+	// carla server
+	std::string host = "localhost";
+	uint16_t port = 2000u;
+	double transactionTimeout = 30;
+	auto timeout = std::chrono::duration<double>(transactionTimeout);
+	std::string targetMapName = "2020-05-04_atCity_AF_DLR_Braunschweig_Prio1_ROD_offset";
+	//std::string targetMapName = "Town10HD";
+
+	auto client = std::make_unique<carla::client::Client>(host, port);
+	client->SetTimeout(timeout);
+	auto world = client->GetWorld();
+	if (world.GetMap()->GetName() != targetMapName) {
+		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world '" + targetMapName + "'" << std::endl;
+		world = client->LoadWorld(targetMapName);
+	}
+	/*else
+	{
+		world = client->ReloadWorld();
+	}*/
+	world.Tick(timeout);
+	pugi::xml_document xodr;
+	auto result = xodr.load_string(world.GetMap()->GetOpenDrive().c_str());
+
+	//Get current list of actors
+	auto actors = world.GetSnapshot();
+	//std::cout << "Actor count: " << actors.size() << std::endl;
+	CHECK(0 < actors.size());
+
+	//filter for traffic lights
+	std::vector<carla::client::ActorSnapshot> trafficLightActorSnapshots;
+	std::copy_if(actors.begin(), actors.end(), std::back_inserter(trafficLightActorSnapshots),
+		[&world](auto actor) {
+		return "traffic.traffic_light" == world.GetActor(actor.id)->GetTypeId();
+	});
+
+	//define bounding box colors
+	carla::client::DebugHelper::Color red(255, 0, 0);
+	carla::client::DebugHelper::Color yellow(255, 255, 0);
+	carla::client::DebugHelper::Color green(0, 255, 0);
+	auto debug = world.MakeDebugHelper();
+
+	//Will not draw traffic light bulb bounding boxes without any traffic lights in the map
+	CHECK(0 < trafficLightActorSnapshots.size());
+
+	for (auto& trafficLightActor : trafficLightActorSnapshots) {
+		auto trafficLight = boost::dynamic_pointer_cast<const carla::client::TrafficLight>(world.GetActor(trafficLightActor.id));
+		auto osiTrafficLight = CarlaUtility::toOSI(trafficLight, xodr);
+
+		//std::cout << "Bulb group" << std::endl;
+		CHECK(1 < osiTrafficLight.size());
+
+		for (auto& bulb : osiTrafficLight) {
+			auto bbox = CarlaUtility::toCarla(&bulb->base().dimension(), &bulb->base().position());
+			auto orientation = CarlaUtility::toCarla(&bulb->base().orientation());
+
+			// draw box in the respective color
+			switch (bulb->classification().color())
+			{
+			case osi3::TrafficLight_Classification_Color_COLOR_GREEN:
+				debug.DrawBox(bbox, orientation, 0.1f, green, 60.f);
+				//std::cout << "Green bulb bbox: " << bbox.location.x << "," << bbox.location.y << "," << bbox.location.z << " " << bbox.extent.x << "," << bbox.extent.y << "," << bbox.extent.z << std::endl;
+				break;
+			case osi3::TrafficLight_Classification_Color_COLOR_YELLOW:
+				debug.DrawBox(bbox, orientation, 0.1f, yellow, 60.f);
+				//std::cout << "Yellow bulb bbox: " << bbox.location.x << "," << bbox.location.y << "," << bbox.location.z << " " << bbox.extent.x << "," << bbox.extent.y << "," << bbox.extent.z << std::endl;
+				break;
+			default:
+				debug.DrawBox(bbox, orientation, 0.1f, red, 60.f);
+				//std::cout << "Red bulb bbox: " << bbox.location.x << "," << bbox.location.y << "," << bbox.location.z << " " << bbox.extent.x << "," << bbox.extent.y << "," << bbox.extent.z << std::endl;
+				break;
+			}
+		}
+	}
+
+	//carla->initialise(host, port, transactionTimeout, deltaSeconds);
 }
