@@ -769,9 +769,10 @@ carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObje
 	return state;
 }
 
-void CarlaUtility::parseLaneBoundary(boost::optional<carla::road::element::LaneMarking> laneMarking, osi3::LaneBoundary* laneBoundary) {
+std::unique_ptr<osi3::LaneBoundary> CarlaUtility::parseLaneBoundary(carla::road::element::LaneMarking laneMarking) {
+	auto laneBoundary = std::make_unique<osi3::LaneBoundary>();
 	auto laneBoundaryClassification = laneBoundary->mutable_classification();
-	switch (laneMarking->color) {
+	switch (laneMarking.color) {
 	case carla::road::element::LaneMarking::Color::White:
 		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_WHITE);
 		break;
@@ -791,7 +792,7 @@ void CarlaUtility::parseLaneBoundary(boost::optional<carla::road::element::LaneM
 		laneBoundaryClassification->set_color(osi3::LaneBoundary_Classification_Color_COLOR_OTHER);
 		break;
 	}
-	switch (laneMarking->type) {
+	switch (laneMarking.type) {
 	case carla::road::element::LaneMarking::Type::BottsDots:
 		laneBoundaryClassification->set_type(osi3::LaneBoundary_Classification_Type::LaneBoundary_Classification_Type_TYPE_BOTTS_DOTS);
 		break;
@@ -820,8 +821,9 @@ void CarlaUtility::parseLaneBoundary(boost::optional<carla::road::element::LaneM
 	}
 
 	auto boundaryLine = laneBoundary->add_boundary_line();
-	boundaryLine->set_width(laneMarking->width);
+	boundaryLine->set_width(laneMarking.width);
 	//TOCHECK Lanechange
 	//laneMarking->lane_change;
+	return laneBoundary;
 }
 

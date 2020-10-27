@@ -139,7 +139,7 @@ namespace CarlaUtility {
 	/*
 	parsing from carla roadmarking to osi laneboundary
 	*/
-	void parseLaneBoundary(boost::optional<carla::road::element::LaneMarking>, osi3::LaneBoundary*);
+	std::unique_ptr<osi3::LaneBoundary> parseLaneBoundary(carla::road::element::LaneMarking);
 
 	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);

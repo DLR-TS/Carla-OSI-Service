@@ -452,16 +452,20 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 
 			auto leftLaneMarking = endpoints.first->GetLeftLaneMarking();
-			auto leftLaneBoundary = laneboundarys->Add();
-			CarlaUtility::parseLaneBoundary(leftLaneMarking, leftLaneBoundary);
-			//connect laneboundary with lane via id
-			classification->add_left_lane_boundary_id()->set_value(leftLaneBoundary->id().value());
+			if (leftLaneMarking) {
+				auto leftLaneBoundary = CarlaUtility::parseLaneBoundary(leftLaneMarking.get());
+				//connect laneboundary with lane via id
+				classification->add_left_lane_boundary_id()->set_value(leftLaneBoundary->id().value());
+				laneboundarys->AddAllocated(leftLaneBoundary.release());
+			}
 
 			auto rightLaneMarking = endpoints.first->GetRightLaneMarking();
-			auto rightLaneBoundary = laneboundarys->Add();
-			CarlaUtility::parseLaneBoundary(rightLaneMarking, rightLaneBoundary);
-			//connect laneboundary with lane via id
-			classification->add_right_lane_boundary_id()->set_value(rightLaneBoundary->id().value());
+			if (rightLaneMarking) {
+				auto rightLaneBoundary = CarlaUtility::parseLaneBoundary(rightLaneMarking.get());
+				//connect laneboundary with lane via id
+				classification->add_right_lane_boundary_id()->set_value(rightLaneBoundary->id().value());
+				laneboundarys->AddAllocated(rightLaneBoundary.release());
+			}
 		}
 	}
 }
