@@ -274,7 +274,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	for (auto& mapObject : world->GetStationaryMapObjects()) {
 
 		//TODO don't parse RoadMarkings as stationary object but add them to their lane
-		if (mapObject.semantic_tag == 6u) {
+		if (mapObject.semantic_tag == carla::rpc::CityObjectLabel::RoadLines) {
 			roadMarkings.push_back(std::move(mapObject));
 			continue;
 		}
@@ -296,51 +296,57 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		//TODO Carla doesn't seem to offer much information needed for osi3::StationaryObject::Classification.
 		auto classification = stationaryObject->mutable_classification();//creates default instance as side-effect
 
-		//From Tagger.h
-		/*enum class ECityObjectLabel : uint8
-		{
-			None = 0u,
-			Buildings = 1u,
-			Fences = 2u,
-			Other = 3u,
-			Pedestrians = 4u,
-			Poles = 5u,
-			RoadLines = 6u,
-			Roads = 7u,
-			Sidewalks = 8u,
-			TrafficSigns = 12u,
-			Vegetation = 9u,
-			Vehicles = 10u,
-			Walls = 11u,
-		};*/
 		// Use the first tag that is not categorized as none or other
+
+		carla::rpc::CityObjectLabel label = mapObject.semantic_tag;
 
 		switch (mapObject.semantic_tag)
 		{
 		default:
 			//will be set to other if no other tag is available
-		case 4u://pedestrian
-		case 6u://road line
-		case 7u://road
-		case 8u://sidewalks
-		case 10u://vehicles
-		case 12u://traffic signs
-			std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.semantic_tag << std::endl;
+		case carla::rpc::CityObjectLabel::Pedestrians:
+		case carla::rpc::CityObjectLabel::RoadLines://road line
+		case carla::rpc::CityObjectLabel::Roads://road
+		case carla::rpc::CityObjectLabel::Sidewalks://sidewalks, also includes a possibly delimiting curb, traffic islands (the walkable part), and pedestrian zones
+		case carla::rpc::CityObjectLabel::Ground:
+		case carla::rpc::CityObjectLabel::Water:
+		case carla::rpc::CityObjectLabel::RailTrack:
+		case carla::rpc::CityObjectLabel::Static:
+		case carla::rpc::CityObjectLabel::Terrain://Grass, ground-level vegetation, soil or sand. These areas are not meant to be driven on. This label includes a possibly delimiting curb.
+			//std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.semantic_tag << std::endl;
 			//no break by design
-		case 3u://other
+		case carla::rpc::CityObjectLabel::Other://other
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
 			break;
-		case 1u://buildings
+		case carla::rpc::CityObjectLabel::Buildings://buildings
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BUILDING);
 			break;
-		case 2u://fences
+		case carla::rpc::CityObjectLabel::Fences:
+		case carla::rpc::CityObjectLabel::GuardRail:
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BARRIER);
-		case 5u://poles
+			break;
+		case carla::rpc::CityObjectLabel::Poles://poles
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_POLE);
-		case 9u://vegetation
+			break;
+		case carla::rpc::CityObjectLabel::Vegetation://vegetation, also includes trees (cannot differentiate from StationaryObject_Classification_Type_TYPE_VEGETATION)
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_VEGETATION);
-		case 11u://walls
+			break;
+		case carla::rpc::CityObjectLabel::Walls://walls
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_WALL);
+			break;
+		case carla::rpc::CityObjectLabel::Bridge:
+			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BRIDGE);
+			break;
+		case carla::rpc::CityObjectLabel::None://should have no collision, also should not be returned as part of stationaryObject
+		case carla::rpc::CityObjectLabel::Sky:
+			//unmapped
+			break;
+		case carla::rpc::CityObjectLabel::Dynamic://should be parsed as osi3::MovingObject
+		case carla::rpc::CityObjectLabel::Vehicles://vehicles should be mapped to osi3::MovingObject, even though the corresponding StationaryObject returned by Carla will never move
+		case carla::rpc::CityObjectLabel::TrafficSigns://traffic signs without their poles are part of osi3::TrafficSign
+		case carla::rpc::CityObjectLabel::TrafficLight://traffic light boxes without their poles are part of osi3::TrafficLight
+			//TODO Parse as respective Type (see previous comments)
+			break;
 		}
 
 		//TODO mapObject.name is not the model name
