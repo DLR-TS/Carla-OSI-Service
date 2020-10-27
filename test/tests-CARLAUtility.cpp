@@ -277,10 +277,15 @@ TEST_CASE("Carla Prop Bounding Box", "[Carla][Utility][!hide][RequiresCarlaServe
 	transform.rotation.yaw += 45;
 	auto propActor2 = world->SpawnActor(*propBlueprint, transform);
 
+	//returns position, extent and rotation in world coordinates
 	auto bbox2 = world->GetActorBoundingBox(propActor2->GetId());
 
 
-	REQUIRE(bbox == bbox2);
+	REQUIRE(bbox.extent == bbox2.extent);
+	//REQUIRE((bbox.location + transform.GetForwardVector()) == bbox2.location);
+	REQUIRE(bbox.rotation.roll == bbox2.rotation.roll);
+	REQUIRE(Approx(bbox.rotation.yaw + 45) == bbox2.rotation.yaw);
+	REQUIRE(bbox.rotation.pitch== bbox2.rotation.pitch);
 }
 
 //TODO move to CARLA
