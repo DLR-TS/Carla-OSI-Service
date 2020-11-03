@@ -22,11 +22,19 @@
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service {
 
+#pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;
 	const std::string server_address;
 	const std::chrono::milliseconds transaction_timeout;
 	std::unique_ptr<std::thread> server_thread;
 	CARLA2OSIInterface carlaInterface;
+#pragma endregion
+
+
+	#pragma region fields for the Carla OSI Interface
+	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
+	std::map<std::string, std::string> varName2MessageMap;
+	#pragma endregion fields for the Carla OSI Interface
 
 public:
 
@@ -43,9 +51,9 @@ public:
 			server_thread->join();
 	};
 
-	void StartServer(const bool nonBlocking = false);
+	virtual void StartServer(const bool nonBlocking = false);
 
-	void StopServer();
+	virtual void StopServer();
 
 	virtual grpc::Status SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response) override;
 
@@ -54,7 +62,15 @@ public:
 	virtual grpc::Status GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::Bytes* response) override;
 	virtual grpc::Status SetStringValue(grpc::ServerContext* context, const CoSiMa:: rpc::NamedBytes* request, CoSiMa::rpc::Int32* response) override;
 
+private:
+	// separate prefix, sourrounded by '#', from the given variable name
+	virtual std::string_view getPrefix(std::string_view base_name);
 
+	virtual int deserializeAndSet(std::string base_name, std::string message);
+	virtual std::string getAndSerialize(std::string base_name);
+
+	// generate a SensorView that holds only ground truth. Can be used as input for osi3::SensorView generating OSI sensors;
+	virtual std::shared_ptr<osi3::SensorView> getSensorViewGroundTruth();
 };
 
 #endif // !COSIMA_H

@@ -4,6 +4,8 @@
 #include <charconv>
 #include <variant>
 #include <string>
+#include <mutex>
+#include <shared_mutex>
 
 #include "Utility.h"
 
@@ -57,27 +59,37 @@
 
 class CARLA2OSIInterface
 {
+	typedef std::variant<std::shared_ptr<osi3::SensorView>, std::shared_ptr<osi3::FeatureData>, std::shared_ptr<osi3::TrafficCommand>> cachedOSIMessageType;
+
 	std::unique_ptr<carla::client::World> world;
 	std::unique_ptr<carla::client::Client> client;
-	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role
+	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role. Role names are used as variable name to identify OSI messages
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
-	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
-	std::map<std::string, std::string> varName2MessageMap;
-	// contains all actor ids reported by Carla
+	std::shared_mutex actorRole2IDMap_mutex;
+	// contains OSI messages (values) for variable names / actor roles (keys) that can not always be retrieved, such as the sensor messages, which originate from CARLA sensor events and don't have to occur on every tick. 
+	std::map<std::string, cachedOSIMessageType> varName2MessageMap;
+	std::shared_mutex varName2MessageMap_mutex;
+	// contains all actor ids reported by Carla during the last tick
 	std::set<carla::ActorId> activeActors;
-	std::shared_ptr<osi3::GroundTruth> mapTruth;
-	// OpenDRIVE xml representation of the map
+	// ground truth basis created during initialise(), contains all ground truth fields that won't change during the simulation (roads and lanes, buildings, ...)
+	std::unique_ptr<osi3::GroundTruth> staticMapTruth;
+	// latest world ground truth, calculated during doStep()
+	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
+	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	pugi::xml_document xodr;
 
 public:
 
 	~CARLA2OSIInterface() {
 		if (world) {
+			// prevent destruction during grpc accesses
+			std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
 			//Unfreeze the server and Unreal Editor, useful for development
 			auto settings = world->GetSettings();
 			settings.synchronous_mode = false;
 			world->ApplySettings(settings);
 			world->Tick(client->GetTimeout());
+			std::cout << "CARLA2OSIInterface: Disabled synchronous mode of Carla server" << std::endl;
 		}
 	};
 
@@ -94,24 +106,32 @@ public:
 	* \return Success status.
 	*/
 	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds);
+
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
 	\return Time in seconds advanced during step
 	*/
 	virtual double doStep();
 
-	virtual int getIntValue(std::string base_name);
-	virtual bool getBoolValue(std::string base_name);
-	virtual float getFloatValue(std::string base_name);
-	virtual double getDoubleValue(std::string base_name);
-	virtual std::string getStringValue(std::string base_name);
+	/**
+	Retrieve ground truth message generated during last step
+	\return Latest world state as osi3::GroundTruth
+	*/
+	virtual std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
-	virtual int setIntValue(std::string base_name, int value);
-	virtual int setBoolValue(std::string base_name, bool value);
-	virtual int setFloatValue(std::string base_name, float value);
-	virtual int setDoubleValue(std::string base_name, double value);
-	virtual int setStringValue(std::string base_name, std::string value);
+	/**
+	Retrieve CARLA Sensor output from the sensor with the given role name. Messages are cached and updated during a sensor's tick.
+	\param sensor_role_name Role attribute of the carla::client::Sensor
+	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
+	*/
+	virtual std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
 
+	/**
+	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
+	\param actorId
+	\return success indicator
+	*/
+	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
 private:
 
 	std::string_view getPrefix(std::string_view name);
@@ -119,7 +139,8 @@ private:
 	// prepare a GroundTruth object with values from the current map which won't change 
 	//TODO return type
 	void parseStationaryMapObjects();
-	osi3::GroundTruth* parseWorldToGroundTruth();
+	// parse CARLA world to update latestGroundTruth. Called during doStep()
+	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 
@@ -127,12 +148,6 @@ private:
 	void sendTrafficCommand(carla::ActorId actorId);
 
 	//input
-	/**
-	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
-	\param actorId
-	\return success indicator
-	*/
-	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
 
 	/**
 	Read motion command message from ego vehicle and update position, rotation and velocity of CARLA actor.

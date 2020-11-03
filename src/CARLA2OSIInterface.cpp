@@ -12,20 +12,6 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 	settings.synchronous_mode = true;
 	this->world->ApplySettings(settings);
 
-	//performing a tick does the same
-	////get all actors and their role (if set)
-	//auto actors = world->GetActors();
-	//std::cout << "Actor count at init: " << actors->size() << std::endl;
-	//for each (auto actor in *actors)
-	//{
-	//	activeActors.insert(actor->GetId());
-	//	auto attributes = actor->GetAttributes();
-	//	for each (auto attribute in attributes) {
-	//		if ("role_name" == attribute.GetId() && !attribute.GetValue().empty()) {
-	//			actorRole2IDMap.try_emplace(attribute.GetValue(), actor->GetId());
-	//		}
-	//	}
-
 	parseStationaryMapObjects();
 
 	// perform a tick to fill actor and message lists
@@ -76,147 +62,65 @@ double CARLA2OSIInterface::doStep() {
 		std::inserter(removedActors, removedActors.end()));
 
 	//TODO implement reactions
-	for (auto removedActor : removedActors) {
-		if (actorRole2IDMap.right.count(removedActor)) {
-			actorRole2IDMap.right.erase(removedActor);
+	{//mutex scope
+		// using a unique lock - access not limited to read
+		std::unique_lock lock(actorRole2IDMap_mutex);
+		for (auto removedActor : removedActors) {
+			if (actorRole2IDMap.right.count(removedActor)) {
+				actorRole2IDMap.right.erase(removedActor);
+			}
+			activeActors.erase(removedActor);
 		}
-		activeActors.erase(removedActor);
-	}
-	for (auto addedActor : addedActors) {
-		activeActors.insert(addedActor);
-		auto actor = world->GetActor(addedActor);
-		auto attributes = actor->GetAttributes();
-		for (auto attribute : attributes) {
-			if ("role_name" == attribute.GetId()) {
-				if (!std::empty(attribute.GetValue())) {
-					auto value = boost::bimap<std::string, carla::ActorId>::value_type(attribute.GetValue(), addedActor);
-					actorRole2IDMap.insert(value);
+		for (auto addedActor : addedActors) {
+			activeActors.insert(addedActor);
+			auto actor = world->GetActor(addedActor);
+			auto attributes = actor->GetAttributes();
+			for (auto attribute : attributes) {
+				if ("role_name" == attribute.GetId()) {
+					if (!std::empty(attribute.GetValue())) {
+						auto value = boost::bimap<std::string, carla::ActorId>::value_type(attribute.GetValue(), addedActor);
+						actorRole2IDMap.insert(value);
 
-					// if actor is of type sensor, add sensor update listener to receive latest sensor data
-					if (0 == actor->GetTypeId().rfind("sensor.", 0)) {
-						auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
-						sensor->Listen([this, sensor](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData); });
+						// if actor is of type sensor, add sensor update listener to receive latest sensor data
+						if (0 == actor->GetTypeId().rfind("sensor.", 0)) {
+							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
+							sensor->Listen([this, sensor](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData); });
+						}
 					}
+					break;
 				}
-				break;
 			}
 		}
 	}
+
+	latestGroundTruth = parseWorldToGroundTruth();
 
 	// only accurate if using fixed time step, as activated during initialise()
 	return world->GetSnapshot().GetTimestamp().delta_seconds;
 }
 
-int CARLA2OSIInterface::getIntValue(std::string base_name) {
-	return 0;
-};
+std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTruth()
+{
+	return latestGroundTruth;
+}
 
-bool CARLA2OSIInterface::getBoolValue(std::string base_name) {
-	return true;
-};
-
-float CARLA2OSIInterface::getFloatValue(std::string base_name) {
-	return 0.0;
-};
-
-double CARLA2OSIInterface::getDoubleValue(std::string base_name) {
-	return 0.0;
-};
-
-std::string CARLA2OSIInterface::getStringValue(std::string base_name) {
-	if (varName2MessageMap.count(base_name)) {
-		return varName2MessageMap[base_name];
+std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)
+{
+	// mutex scope
+	// using a shared lock - read only access
+	std::shared_lock lock(varName2MessageMap_mutex);
+	auto iter = varName2MessageMap.find(role);
+	if (varName2MessageMap.end() == iter) {
+		std::string functionName(__FUNCTION__);
+		return nullptr;
 	}
-
-	return "";
-};
-
-int CARLA2OSIInterface::setIntValue(std::string base_name, int value) {
-	return 0;
-};
-
-int CARLA2OSIInterface::setBoolValue(std::string base_name, bool value) {
-	return 0;
-};
-
-int CARLA2OSIInterface::setFloatValue(std::string base_name, float value) {
-	return 0;
-};
-
-int CARLA2OSIInterface::setDoubleValue(std::string base_name, double value) {
-	return 0;
-};
-
-int CARLA2OSIInterface::setStringValue(std::string base_name, std::string value) {
-	auto prefix = getPrefix(base_name);
-	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
-		// variable has only a prefix and no name
-		std::cerr << "CARLA2OSIInterface::setStringValue: Tried to set a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
-		//TODO do we desire variables that have only a prefix and no name?
-		return -2;
+	auto sensorView = std::get_if<std::shared_ptr<osi3::SensorView>>(&iter->second);
+	if (nullptr == sensorView || !*sensorView) {
+		std::string functionName(__FUNCTION__);
+		std::cerr << functionName + ": role '" + role + "' is not a SensorView" << std::endl;
+		return nullptr;
 	}
-
-	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-	if (0 != varName.rfind("OSMP", 0)) {
-		// OSMP variable names begin with 'OSMP', so this is not an OSMP variable
-		std::cerr << "CARLA2OSIInterface::setStringValue: '" << base_name << "' is not an OSMP variable." << std::endl;
-		return -4;
-	}
-
-	// find index, surrounded by [], at the variable name's back, if existent
-	uint64_t index = 0;//indices in OSMP variable names start at 1 -> value 0 indicates variable has no index
-	if (']' == varName.back()) {
-		int i = varName.rfind('[');
-		auto indexView = varName.substr(i + 1, varName.length() - (i + 2));
-		auto[ptr, errorCode] = std::from_chars(indexView.data(), indexView.data() + indexView.size(), index);
-
-		switch (errorCode)
-		{
-		case std::errc::invalid_argument:
-			std::cerr << "CARLA2OSIInterface::setStringValue: '" << indexView << "' is not an valid OSMP variable index (name='" << base_name << "')." << std::endl;
-			return -5;
-		case std::errc::result_out_of_range:
-			std::cerr << "CARLA2OSIInterface::setStringValue: '" << indexView << "' is out of range (name='" << base_name << "')." << std::endl;
-			return -6;
-		default:
-			break;
-		}
-	}
-
-	//find variable target/type
-	if (actorRole2IDMap.left.count(base_name)) {
-		auto actor = world->GetActor(actorRole2IDMap.left.at(base_name));
-
-		//TODO update Carla actor and store merged serialized OSI message in varName2MessageMap
-	}
-	else if (std::string::npos != varName.find("MotionCommand")) {
-		// parse as MotionCommand and apply to ego vehicle
-		setlevel4to5::MotionCommand motionCommand;
-		if (!motionCommand.ParseFromString(value)) {
-			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
-			return -322;
-		}
-
-		receiveMotionCommand(motionCommand);
-	}
-	else if (std::string::npos != varName.find("TrafficUpdate")) {
-		// parse as TrafficUpdate and apply
-		osi3::TrafficUpdate trafficUpdate;
-		if (!trafficUpdate.ParseFromString(value)) {
-			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
-			return -322;
-		}
-
-		receiveTrafficUpdate(trafficUpdate);
-	}
-	else {
-		//Cache unmapped messages so they can be retrieved as input
-		//TODO how to map base_name for retrieval as input?
-		varName2MessageMap[base_name] = value;
-	}
-
-
-	return 0;
+	return *sensorView;
 }
 
 std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
@@ -244,16 +148,16 @@ osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 
 void CARLA2OSIInterface::parseStationaryMapObjects()
 {
-	mapTruth = std::make_shared<osi3::GroundTruth>();
+	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 
 	carla::SharedPtr<carla::client::Map> map = world->GetMap();
 
-	mapTruth->set_map_reference(map->GetName());
+	staticMapTruth->set_map_reference(map->GetName());
 
 	//parse OpenDRIVE for retrieving information dropped in Carla
 	auto result = xodr.load_string(map->GetOpenDrive().c_str());
 
-	auto stationaryObjects = mapTruth->mutable_stationary_object();
+	auto stationaryObjects = staticMapTruth->mutable_stationary_object();
 	//TODO parse map parts that won't change during simulation
 
 	// Static props apparently aren't part of the actor list, so this list is empty
@@ -263,9 +167,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		auto bbox = world->GetActorBoundingBox(prop->GetId());
 		// parse as StationaryObject
 		stationaryObjects->AddAllocated(CarlaUtility::toOSI(prop, bbox));
-
-		//DEBUG
-		std::cout << "Got an Actor of type 'static.prop.*'" << prop->GetDisplayId() << std::endl;
 	}
 	//TODO maybe parse Road Objects Record of OpenDrive file, if present - corresponds to OSI's StationaryObject
 
@@ -280,7 +181,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		}
 		//TODO Skip meshes of roads and sidewalks, but not curbs
 
-		auto stationaryObject = mapTruth->add_stationary_object();
+		auto stationaryObject = staticMapTruth->add_stationary_object();
 		//TODO maybe keep a mapping of really unique actor FName to generated id
 		// id of stationaryMapObject is generated per call of world->GetStationaryMapObjects and is always equal to the array index. Thus it is not really an identifier and cannot be mapped back to Unreal/Carla
 		stationaryObject->set_allocated_id(CarlaUtility::toOSI(mapObject.id, CarlaUtility::CarlaUniqueID_e::StationaryMapObject));
@@ -353,12 +254,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		stationaryObject->set_model_reference(mapObject.name);
 	}
 
-	auto landmarks = map->GetAllLandmarks();
-	for each(auto landmark in landmarks) {
-		//DEBUG
-		std::cout << landmark->GetName() << " " << landmark->GetId() << " " << landmark->GetRoadId() << " " << landmark->GetType() << std::endl;
-	}
-
 	auto traffic = world->GetActors()->Filter("traffic.*");
 #ifdef WIN32
 	//auto trafficLight = traffic->Filter("traffic.traffic_light");
@@ -371,15 +266,15 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto trafficSigns = traffic->Filter("!traffic.traffic_light");
 #endif
 
-	auto OSITrafficSigns = mapTruth->mutable_traffic_sign();
+	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	for (auto trafficSign : *trafficSigns) {
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
 		auto OSITrafficSign = CarlaUtility::toOSI(carlaTrafficSign, xodr);
 		OSITrafficSigns->AddAllocated(OSITrafficSign);
 	}
 
-	auto lanes = mapTruth->mutable_lane();
-	auto laneboundarys = mapTruth->mutable_lane_boundary();
+	auto lanes = staticMapTruth->mutable_lane();
+	auto laneboundarys = staticMapTruth->mutable_lane_boundary();
 	auto topology = map->GetTopology();
 
 	std::set<carla::road::JuncId> junctions;
@@ -437,7 +332,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 					// endpoints.first was not the start point (?)
 					waypoints = endpoints.second->GetNextUntilLaneEnd(0.1f);
 					//DEBUG
-					std::cout << "Encountered a lane defined in reversed direction" << std::endl;
+					std::cout << __FUNCTION__ << " DEBUG: Encountered a lane defined in reversed direction" << std::endl;
 					classification->set_centerline_is_driving_direction(false);
 
 					//switch endpoints so we don't have to test the direction again
@@ -474,17 +369,18 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 		}
 	}
-}
+	}
 
-osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
+std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 {
 
 	// lanes and lane boundaries are part of the map, which shouldn't change during simulation and can be preparsed during init
-	// use mapTruth as a base for every new groundTruth message that already contains unchanging fields
-	osi3::GroundTruth* groundTruth = new osi3::GroundTruth();
-	groundTruth->MergeFrom(*mapTruth);
+	// use staticMapTruth as a base for every new groundTruth message that already contains unchanging fields
+	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
+	groundTruth->MergeFrom(*staticMapTruth);
 
-	for each (auto actor in *world->GetActors()) {
+	auto worldActors = world->GetActors();
+	for each (auto actor in *worldActors) {
 		auto typeID = actor->GetTypeId();
 
 		//based on blueprint vehicle.*
@@ -580,13 +476,21 @@ osi3::GroundTruth* CARLA2OSIInterface::parseWorldToGroundTruth()
 		}
 	}
 
-
-
 	return groundTruth;
 }
 
 void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
 {
+	if (!world) {
+		// Local world object has been destroyed and thus probably also the CARLA OSI interface, but client is still sending
+		// Stop listening to this sensor
+		sensor->Stop();
+		return;
+	}
+	if (world->GetId() != sensor->GetWorld().GetId()) {
+		std::cerr << __FUNCTION__ << ": received event for wrong world" << std::endl;
+		return;
+	}
 
 	std::unique_ptr<osi3::SensorView> sensorView = std::make_unique<osi3::SensorView>();
 
@@ -613,11 +517,20 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
 	else {
-		std::cerr << "CARLA2OSIInterface.sensorEventAction called for unsupported sensor type" << std::endl;
+		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
-	auto varName = actorRole2IDMap.right.at(sensor->GetId());
-	varName2MessageMap[varName] = sensorView->SerializeAsString();
+	{//Mutex scope
+		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
+		auto iter = actorRole2IDMap.right.find(sensor->GetId());
+		if (iter != actorRole2IDMap.right.end()) {
+			std::string varName = iter->second;
+			varName2MessageMap[varName] = std::move(sensorView);
+		}
+		else {
+			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
+		}
+	}
 }
 
 void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
@@ -683,8 +596,12 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
 	}
 
-	auto varName = actorRole2IDMap.right.at(ActorId);
-	varName2MessageMap[varName] = trafficCommand->SerializeAsString();
+	{// mutex scope
+		//using a scoped mutex - locking multiple mutexes could cause deadlock
+		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
+		auto varName = actorRole2IDMap.right.at(ActorId);
+		varName2MessageMap[varName] = std::move(trafficCommand);
+	}
 
 	delete timestamp;
 }
@@ -756,13 +673,18 @@ int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motion
 
 	//TODO MotionCommand has no id field -> verify message applies to ego vehicle
 
-	//TODO how to safely retrieve the ego vehicle? 
-	// ego vehicle in Carla usually is named 'hero'
-	if (0 == actorRole2IDMap.left.count("hero")) {
-		return -100;
+	carla::SharedPtr<carla::client::Actor> actor;
+	{// mutex scope
+		// using shared lock - read only access
+		std::shared_lock lock(actorRole2IDMap_mutex);
+		//TODO how to safely retrieve the ego vehicle? 
+		// ego vehicle in Carla usually is named 'hero'
+		if (0 == actorRole2IDMap.left.count("hero")) {
+			return -100;
+		}
+		auto actorId = actorRole2IDMap.left.at("hero");
+		actor = world->GetActor(actorId);
 	}
-	auto actorId = actorRole2IDMap.left.at("hero");
-	auto actor = world->GetActor(actorId);
 	//From OSI documentation:
 	// The motion command comprises of the trajectory the vehicle should
 	// follow on, as well as the current dynamic state which contains
