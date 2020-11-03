@@ -51,8 +51,8 @@ public:
 
 	//Only overriding Set/GetString and DoStep because other methods aren't supported by the Carla2OSI interface (yet?)
 	virtual grpc::Status DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response) override;
-	virtual grpc::Status GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::String* response) override;
-	virtual grpc::Status SetStringValue(grpc::ServerContext* context, const CoSiMa:: rpc::NamedString* request, CoSiMa::rpc::Int32* response) override;
+	virtual grpc::Status GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::Bytes* response) override;
+	virtual grpc::Status SetStringValue(grpc::ServerContext* context, const CoSiMa:: rpc::NamedBytes* request, CoSiMa::rpc::Int32* response) override;
 
 
 };

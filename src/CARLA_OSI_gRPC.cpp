@@ -40,13 +40,13 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiM
 	return grpc::Status::OK;
 }
 
-grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::String * request, CoSiMa::rpc::String * response)
+grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::String * request, CoSiMa::rpc::Bytes * response)
 {
 	response->set_value(carlaInterface.getStringValue(request->value()));
 	return grpc::Status::OK;
 }
 
-grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::NamedString * request, CoSiMa::rpc::Int32 * response)
+grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::NamedBytes * request, CoSiMa::rpc::Int32 * response)
 {
 	response->set_value(carlaInterface.setStringValue(request->name(), request->value()));
 	return grpc::Status::OK;
