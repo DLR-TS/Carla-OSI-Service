@@ -1,4 +1,5 @@
 ﻿#include "CARLA_OSI_gRPC.h"
+#include <limits.h>
 
 void CARLA_OSI_client::StartServer(const bool nonBlocking)
 {
@@ -7,6 +8,8 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 	grpc::ServerBuilder builder;
 	builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 	builder.RegisterService(this);
+	// try to use unlimited message size
+	builder.SetMaxMessageSize(INT_MAX);
 	server = builder.BuildAndStart();
 	std::cout << "Server listening on " << server_address << std::endl;
 	if (!nonBlocking) {

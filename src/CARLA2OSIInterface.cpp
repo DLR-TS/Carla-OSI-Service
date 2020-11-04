@@ -114,13 +114,13 @@ std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::s
 		std::string functionName(__FUNCTION__);
 		return nullptr;
 	}
-	auto sensorView = std::get_if<std::shared_ptr<osi3::SensorView>>(&iter->second);
-	if (nullptr == sensorView || !*sensorView) {
+	auto sensorViewPtr = std::get_if<std::shared_ptr<osi3::SensorView>>(&iter->second);
+	if (nullptr == sensorViewPtr || !*sensorViewPtr) {
 		std::string functionName(__FUNCTION__);
 		std::cerr << functionName + ": role '" + role + "' is not a SensorView" << std::endl;
 		return nullptr;
 	}
-	return *sensorView;
+	return *sensorViewPtr;
 }
 
 std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
@@ -154,7 +154,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	staticMapTruth->set_map_reference(map->GetName());
 
-	//parse OpenDRIVE for retrieving information dropped in Carla
+	// parse OpenDRIVE for retrieving information dropped in Carla
 	auto result = xodr.load_string(map->GetOpenDrive().c_str());
 
 	auto stationaryObjects = staticMapTruth->mutable_stationary_object();
@@ -215,7 +215,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		case carla::rpc::CityObjectLabel::Static:
 		case carla::rpc::CityObjectLabel::Terrain://Grass, ground-level vegetation, soil or sand. These areas are not meant to be driven on. This label includes a possibly delimiting curb.
 			//std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.semantic_tag << std::endl;
-			//no break by design
+			// no break by design
 		case carla::rpc::CityObjectLabel::Other://other
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
 			break;
@@ -369,7 +369,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 		}
 	}
-	}
+}
 
 std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 {
