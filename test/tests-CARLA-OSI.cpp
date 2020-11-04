@@ -23,33 +23,52 @@ std::unique_ptr<grpc::ClientContext> CreateDeadlinedClientContext(double transac
 	return context;
 }
 
-TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer]") {
+carla::client::World TryLoadWorld(std::shared_ptr<const carla::client::Client> client, std::string carlaMap){
+		auto maps = client->GetAvailableMaps();
+	auto world = client->GetWorld();
+	if (!std::any_of(maps.begin(), maps.end(), [&maps, &carlaMap](auto map) {return carlaMap.compare(map) == 0; })) {
+		// no map with name given in carlaMap - use Town10HD as fallback
+		carlaMap = "Town10HD";
+	}
+	if (world.GetMap()->GetName().rfind(carlaMap.substr(0, 4), 0) == std::string::npos) {
+		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world '" << carlaMap << "'" << std::endl;
+		world = client->LoadWorld(carlaMap);
+	}
+	else {
+		//make sure to remove actors added for previous tests
+		world = client->ReloadWorld();
+	}
+	world.WaitForTick(std::chrono::seconds(45));
+}
+
+TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer][gRPC]") {
 
 	std::string gRPCHost = "localhost:51425";
-	CoSiMa::rpc::CARLAInterface::Stub stub(grpc::CreateChannel(gRPCHost, grpc::InsecureChannelCredentials()));
+	grpc::ChannelArguments channelArgs;
+	// disable client message size limits
+	channelArgs.SetMaxSendMessageSize(-1);
+	channelArgs.SetMaxReceiveMessageSize(-1);
+	CoSiMa::rpc::CARLAInterface::Stub stub(grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs));
 
 	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
 	CARLA_OSI_client server(gRPCHost);
 
-	const double transactionTimeout = 20;
+	const double transactionTimeout = 25;
 
 	server.StartServer(true);
 
-	SECTION("Supported rpcs") {
-		const double deltaSeconds = 1 / 60.0;
-		const uint16_t carlaPort = 2000u;
-		const std::string carlaHost = "localhost";
+	const double deltaSeconds = 1 / 60.0;
+	const uint16_t carlaPort = 2000u;
+	const std::string carlaHost = "localhost";
+	std::string carlaMap = "Town01";
 
-		//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
-		auto timeout = std::chrono::duration<double>(transactionTimeout);
-		auto client = std::make_unique<carla::client::Client>(carlaHost, carlaPort);
-		client->SetTimeout(timeout);
-		auto world = client->GetWorld();
-		if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
-			std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
-			world = client->LoadWorld("Town10HD");
-			world.WaitForTick(std::chrono::seconds(45));
-		}
+	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
+	auto timeout = std::chrono::duration<double>(transactionTimeout);
+	auto client = std::make_shared<carla::client::Client>(carlaHost, carlaPort);
+	client->SetTimeout(timeout);
+	auto world = TryLoadWorld(client, carlaMap);
+
+	SECTION("Supported rpcs") {
 
 		CoSiMa::rpc::CarlaConfig config;
 		config.set_carla_host(carlaHost);
@@ -65,34 +84,109 @@ TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarla
 		REQUIRE(status.ok());
 		REQUIRE(0 == response.value());
 
-		osi3::SensorView someSensorView;
-		std::string serializedData = someSensorView.SerializeAsString();
-		std::string baseName = "#prefix#OSMPSensorViewOut";
-		CoSiMa::rpc::NamedString namedString;
-		namedString.set_name(baseName);
-		namedString.set_value(serializedData);
-		response.Clear();
+		SECTION("No actors needed") {
 
-		status = stub.SetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), namedString, &response);
+			// simulate an unmapped sensor view input passed through this base interface
+			osi3::SensorView someSensorView;
+			std::string serializedData = someSensorView.SerializeAsString();
+			std::string baseName = "#prefix#OSMPSensorViewOut";
+			CoSiMa::rpc::NamedBytes namedString;
+			namedString.set_name(baseName);
+			namedString.set_value(serializedData);
+			response.Clear();
 
-		REQUIRE(status.ok());
-		REQUIRE(0 == response.value());
+			// write into cache
+			status = stub.SetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), namedString, &response);
 
-		CoSiMa::rpc::String rpcBaseName, responseString;
-		rpcBaseName.set_value(baseName);
+			if (!status.ok()) {
+				std::cout << status.error_message() << std::endl;
+			}
+			REQUIRE(status.ok());
+			REQUIRE(0 == response.value());
 
-		status = stub.GetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), rpcBaseName, &responseString);
+			// read previous message from cache
+			CoSiMa::rpc::String rpcBaseName;
+			CoSiMa::rpc::Bytes responseString;
+			rpcBaseName.set_value(baseName);
 
-		REQUIRE(status.ok());
-		REQUIRE(0 == responseString.value().compare(serializedData));
+			status = stub.GetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), rpcBaseName, &responseString);
 
-		CoSiMa::rpc::Empty empty;
-		CoSiMa::rpc::Double responseDouble;
+			if (!status.ok()) {
+				std::cout << status.error_message() << std::endl;
+			}
+			CHECK(status.ok());
+			CHECK(0 == responseString.value().compare(serializedData));
 
-		status = stub.DoStep(CreateDeadlinedClientContext(transactionTimeout).get(), empty, &responseDouble);
+			// check tick length
+			CoSiMa::rpc::Empty empty;
+			CoSiMa::rpc::Double responseDouble;
 
-		REQUIRE(status.ok());
-		REQUIRE(deltaSeconds == Approx(responseDouble.value()));
+			status = stub.DoStep(CreateDeadlinedClientContext(transactionTimeout).get(), empty, &responseDouble);
+
+			if (!status.ok()) {
+				std::cout << status.error_message() << std::endl;
+			}
+			REQUIRE(status.ok());
+			REQUIRE(deltaSeconds == Approx(responseDouble.value()));
+
+			// request a ground truth message
+			baseName = "#anotherPrefix#OSMPGroundTruthInit";
+			rpcBaseName.set_value(baseName);
+			responseString.Clear();
+
+			status = stub.GetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), rpcBaseName, &responseString);
+
+			if (!status.ok()) {
+				std::cerr << status.error_message() << std::endl;
+			}
+			REQUIRE(status.ok());
+			REQUIRE(0 < responseString.value().size());
+		}
+		SECTION("Spawn some actors to test functionality") {
+			// Spawn a rgb camera sensor
+			std::string role = "#arbitraryPrefix#OSMPSensorView";
+			auto bpLibrary = world.GetBlueprintLibrary();
+			auto iter = bpLibrary->Find("sensor.camera.rgb");
+			auto cameraSensor = *iter;
+			cameraSensor.SetAttribute("role_name", role);
+			auto sensorLocation = carla::geom::Location(0, 0, 500);
+			auto sensorRotation = carla::geom::Rotation(-90, 0, 0);
+			world.SpawnActor(cameraSensor, carla::geom::Transform(sensorLocation, sensorRotation));
+			CoSiMa::rpc::String rpcBaseName;
+			CoSiMa::rpc::Bytes response;
+			rpcBaseName.set_value(role);
+
+			// no sensor output available yet, because the sensor had no time to tick
+			auto status = stub.GetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), rpcBaseName, &response);
+
+			if (!status.ok()) {
+				std::cout << status.error_message() << std::endl;
+			}
+			CHECK(status.ok());
+			CHECK(response.value().size() == 0);
+
+			// perform tick to get sensor output
+			CoSiMa::rpc::Empty empty;
+			CoSiMa::rpc::Double responseDouble;
+
+			status = stub.DoStep(CreateDeadlinedClientContext(transactionTimeout).get(), empty, &responseDouble);
+
+			if (!status.ok()) {
+				std::cout << status.error_message() << std::endl;
+			}
+			REQUIRE(status.ok());
+			REQUIRE(deltaSeconds == Approx(responseDouble.value()));
+
+			// get sensor output
+			response.Clear();
+			status = stub.GetStringValue(CreateDeadlinedClientContext(transactionTimeout * 1000).get(), rpcBaseName, &response);
+
+			if (!status.ok()) {
+				std::cout << status.error_message() << std::endl;
+			}
+			CHECK(status.ok());
+			CHECK(response.value().size() >= 0);
+		}
 	}
 
 	SECTION("Unsupported rpcs") {
