@@ -94,6 +94,7 @@ endif(BUILD_SHARED_LIBS)
 ## generate grpc code
 # gRPC can handle relative files
 set(COSIMA_GRPC_PROTO_FILES
+	grpc_proto_files/CoSiMaMessages.proto
 	grpc_proto_files/base_interface/BaseInterface.proto
 	grpc_proto_files/base_interface/CARLAInterface.proto
 )

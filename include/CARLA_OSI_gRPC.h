@@ -16,11 +16,13 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/security/server_credentials.h>
 
+#include "grpc_proto_files/base_interface/BaseInterface.grpc.pb.h"
+#include "grpc_proto_files/base_interface/BaseInterface.pb.h"
 #include "grpc_proto_files/base_interface/CARLAInterface.grpc.pb.h"
 #include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
 
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
-class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service {
+class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
 
 #pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;

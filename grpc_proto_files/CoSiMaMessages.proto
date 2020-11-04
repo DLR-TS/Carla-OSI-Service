@@ -1,0 +1,67 @@
+syntax = "proto3";
+//TODO fix import; see TODO near message Empty
+//import "google/protobuf/Empty.proto";
+
+package CoSiMa.rpc;
+
+// replacement for "google/protobuf/Empty.proto", because it's compiled content is not found (error C2039: "descriptor_table_google_2fprotobuf_2fEmpty_2eproto": Ist kein Element von "`global namespace'")
+//TODO find out why "google/protobuf/Empty.proto" cannot be found and use it instead
+message Empty {
+	// empty by design
+}
+
+message Int32 {
+	int32 value = 1;
+}
+
+message NamedInt32 {
+	string name = 1;
+	int32 value = 2;
+}
+
+message Bool {
+	bool value = 1;
+}
+
+message NamedBool {
+	string name = 1;
+	bool value = 2;
+}
+
+message Float {
+	float value = 1;
+}
+
+message NamedFloat {
+	string name = 1;
+	float value = 2;
+}
+
+message Double {
+	double value = 1;
+}
+
+message NamedDouble {
+	string name = 1;
+	double value = 2;
+}
+
+message String {
+	string value = 1;
+}
+
+message NamedString {
+	string name = 1;
+	// from documentation: A string must always contain UTF-8 encoded or 7-bit ASCII text, and cannot be longer than 232.
+	string value = 2;
+}
+
+message Bytes {
+    bytes value = 1;
+}
+
+message NamedBytes {
+	string name = 1;
+	// maps to std::string in c++
+	bytes value = 2;
+}

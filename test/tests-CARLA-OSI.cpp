@@ -23,8 +23,8 @@ std::unique_ptr<grpc::ClientContext> CreateDeadlinedClientContext(double transac
 	return context;
 }
 
-carla::client::World TryLoadWorld(std::shared_ptr<const carla::client::Client> client, std::string carlaMap){
-		auto maps = client->GetAvailableMaps();
+carla::client::World TryLoadWorld(std::shared_ptr<const carla::client::Client> client, std::string carlaMap) {
+	auto maps = client->GetAvailableMaps();
 	auto world = client->GetWorld();
 	if (!std::any_of(maps.begin(), maps.end(), [&maps, &carlaMap](auto map) {return carlaMap.compare(map) == 0; })) {
 		// no map with name given in carlaMap - use Town10HD as fallback
@@ -39,6 +39,7 @@ carla::client::World TryLoadWorld(std::shared_ptr<const carla::client::Client> c
 		world = client->ReloadWorld();
 	}
 	world.WaitForTick(std::chrono::seconds(45));
+	return world;
 }
 
 TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer][gRPC]") {
@@ -48,7 +49,9 @@ TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarla
 	// disable client message size limits
 	channelArgs.SetMaxSendMessageSize(-1);
 	channelArgs.SetMaxReceiveMessageSize(-1);
-	CoSiMa::rpc::CARLAInterface::Stub stub(grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs));
+	auto channel = grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs);
+	CoSiMa::rpc::BaseInterface::Stub stub(channel);
+	CoSiMa::rpc::CARLAInterface::Stub carlaConfigStub(channel);
 
 	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
 	CARLA_OSI_client server(gRPCHost);
@@ -79,7 +82,7 @@ TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarla
 
 
 		// timeout multiplied by 2 - parsing of stationary map objects takes some time
-		auto status = stub.SetConfig(CreateDeadlinedClientContext(transactionTimeout * 2).get(), config, &response);
+		auto status = carlaConfigStub.SetConfig(CreateDeadlinedClientContext(transactionTimeout * 2).get(), config, &response);
 
 		REQUIRE(status.ok());
 		REQUIRE(0 == response.value());

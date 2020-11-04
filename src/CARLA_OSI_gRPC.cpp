@@ -7,7 +7,8 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 		server->Shutdown(std::chrono::system_clock::now() + transaction_timeout);
 	grpc::ServerBuilder builder;
 	builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
-	builder.RegisterService(this);
+	builder.RegisterService(static_cast<CoSiMa::rpc::BaseInterface::Service*>(this));
+	builder.RegisterService(static_cast<CoSiMa::rpc::CARLAInterface::Service*>(this));
 	// try to use unlimited message size
 	builder.SetMaxMessageSize(INT_MAX);
 	server = builder.BuildAndStart();
