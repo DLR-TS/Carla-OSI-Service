@@ -1,5 +1,7 @@
 ﻿#include "CARLA_OSI_gRPC.h"
+
 #include <limits.h>
+#include "Utility.h"
 
 void CARLA_OSI_client::StartServer(const bool nonBlocking)
 {
@@ -33,6 +35,12 @@ void CARLA_OSI_client::StopServer()
 
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const CoSiMa::rpc::CarlaConfig * config, CoSiMa::rpc::Int32 * response)
 {
+	//TODO
+	for (auto& sensorViewExtra : config->sensor_view_extras()) {
+		CoSiMa::rpc::SensorViewSensorMountingPosition mountingPosition;
+		mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
+		sensorMountingPositionMap.insert({ sensorViewExtra.prefixed_fmu_variable_name(), mountingPosition });
+	}
 	response->set_value(
 		carlaInterface.initialise(config->carla_host(), config->carla_port(), config->transaction_timeout(), config->delta_seconds()));
 	return grpc::Status::OK;
@@ -66,7 +74,25 @@ std::string_view CARLA_OSI_client::getPrefix(std::string_view name)
 	return std::string_view();
 }
 
-int CARLA_OSI_client::deserializeAndSet(std::string base_name, std::string message) {
+uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
+{
+	if (']' == osmp_name.back()) {
+		size_t index = osmp_name.rfind('[');
+		//if brackets sourround something, try to parse as index
+		if (std::string_view::npos != index && index < osmp_name.size() - 2) {
+			auto chars = osmp_name.substr(index + 1, osmp_name.size() - 1);
+			uint32_t value = 0;
+			// parse as uint32_t
+			auto result = std::from_chars(chars.data(), chars.data() + chars.size(), value);
+			if (result.ec != std::errc::invalid_argument && result.ec != std::errc::result_out_of_range) {
+				return value;
+			}
+		}
+	}
+	return 0;
+}
+
+int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
 	auto prefix = getPrefix(base_name);
 	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
 		// variable has only a prefix and no name
@@ -110,7 +136,7 @@ int CARLA_OSI_client::deserializeAndSet(std::string base_name, std::string messa
 	return 0;
 }
 
-std::string CARLA_OSI_client::getAndSerialize(std::string base_name) {
+std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	auto prefix = getPrefix(base_name);
 	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
 	std::shared_ptr<const grpc::protobuf::Message> message;
@@ -126,7 +152,7 @@ std::string CARLA_OSI_client::getAndSerialize(std::string base_name) {
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
 	if (std::string::npos != varName.rfind("OSMPSensorViewGroundTruth", 0)) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
-		message = getSensorViewGroundTruth();
+		message = getSensorViewGroundTruth(base_name);
 	}
 	else if (std::string::npos != varName.rfind("OSMPSensorView", 0)) {
 		// OSMPSensorViewIn
@@ -158,7 +184,7 @@ std::string CARLA_OSI_client::getAndSerialize(std::string base_name) {
 	}
 }
 
-std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth() {
+std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(const std::string& varName) {
 	// create empty sensor view
 	auto sensorView = std::make_shared<osi3::SensorView>();
 	// create empty ground truth as part of sensor view
@@ -166,5 +192,44 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth() {
 	// copy latest ground truth into previously created ground truth
 	groundTruth->MergeFrom(*carlaInterface.getLatestGroundTruth());
 
+	// if defined, set sensor mounting positions
+	auto iter = sensorMountingPositionMap.find(varName);
+	if (sensorMountingPositionMap.end() != iter) {
+		copyMountingPositions(iter->second, sensorView);
+	}
+
+	// find or generate id for the named sensor
+	auto id = sensorIds.find(varName);
+	if (sensorIds.end() != id) {
+		sensorView->mutable_sensor_id()->set_value(id->second);
+	}
+	else {
+		CarlaUtility::IDUnion sensorId;
+		//TODO make sure the type is not defiend in CarlaUtility::CarlaUniqueID_e
+		sensorId.type = 100;
+		sensorId.id = sensorIds.size() + 1;
+		sensorIds[varName] = sensorId.value;
+		sensorView->mutable_sensor_id()->set_value(sensorId.value);
+	}
+
 	return sensorView;
+}
+
+void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to)
+{
+	for (int i = 0; i < from.generic_sensor_mounting_position_size(); i++) {
+		to->add_generic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(i));
+	}
+	for (int i = 0; i < from.radar_sensor_mounting_position_size(); i++) {
+		to->add_radar_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.radar_sensor_mounting_position(i));
+	}
+	for (int i = 0; i < from.lidar_sensor_mounting_position_size(); i++) {
+		to->add_lidar_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.lidar_sensor_mounting_position(i));
+	}
+	for (int i = 0; i < from.camera_sensor_mounting_position_size(); i++) {
+		to->add_camera_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.camera_sensor_mounting_position(i));
+	}
+	for (int i = 0; i < from.ultrasonic_sensor_mounting_position_size(); i++) {
+		to->add_ultrasonic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(i));
+	}
 }

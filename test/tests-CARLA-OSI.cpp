@@ -42,7 +42,7 @@ carla::client::World TryLoadWorld(std::shared_ptr<const carla::client::Client> c
 	return world;
 }
 
-TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer][gRPC]") {
+TEST_CASE("CARLA_OSI_Client", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer][gRPC]") {
 
 	std::string gRPCHost = "localhost:51425";
 	grpc::ChannelArguments channelArgs;
@@ -217,4 +217,78 @@ TEST_CASE("CARLAInterface", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarla
 		CHECK_FALSE(stub.GetFloatValue(CreateDeadlinedClientContext(transactionTimeout).get(), request, &rpcFloat).ok());
 		CHECK_FALSE(stub.GetDoubleValue(CreateDeadlinedClientContext(transactionTimeout).get(), request, &rpcDouble).ok());
 	}
+}
+
+TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer][gRPC][MountingPosition]") {
+	// mock a sensorView with SensorView input and preconfigured mounting position
+
+	std::string gRPCHost = "localhost:51425";
+	grpc::ChannelArguments channelArgs;
+	// disable client message size limits
+	channelArgs.SetMaxSendMessageSize(-1);
+	channelArgs.SetMaxReceiveMessageSize(-1);
+	auto channel = grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs);
+	CoSiMa::rpc::BaseInterface::Stub stub(channel);
+	CoSiMa::rpc::CARLAInterface::Stub carlaConfigStub(channel);
+
+	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
+	CARLA_OSI_client server(gRPCHost);
+
+	const double transactionTimeout = 2500;
+
+	server.StartServer(true);
+
+	const double deltaSeconds = 1 / 60.0;
+	const uint16_t carlaPort = 2000u;
+	const std::string carlaHost = "localhost";
+	std::string carlaMap = "Town01";
+
+	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
+	auto timeout = std::chrono::duration<double>(transactionTimeout);
+	auto client = std::make_shared<carla::client::Client>(carlaHost, carlaPort);
+	client->SetTimeout(timeout);
+	auto world = TryLoadWorld(client, carlaMap);
+
+	//prefixed fmu SensorView variable name
+	std::string baseName = "#prefix#OSMPSensorViewGroundTruth";
+
+	CoSiMa::rpc::CarlaConfig config;
+	config.set_carla_host(carlaHost);
+	config.set_carla_port(carlaPort);
+	config.set_transaction_timeout(transactionTimeout);
+	config.set_delta_seconds(deltaSeconds);
+	auto extras = config.add_sensor_view_extras();
+	extras->set_prefixed_fmu_variable_name(baseName);
+	auto mountingPosition = extras->mutable_sensor_mounting_position()->add_generic_sensor_mounting_position();
+	auto position = mountingPosition->mutable_position();
+	position->set_x(1.2);
+	position->set_y(-0.34);
+	position->set_z(.56);
+	auto response = CoSiMa::rpc::Int32();
+
+
+	// timeout multiplied by 2 - parsing of stationary map objects takes some time
+	auto status = carlaConfigStub.SetConfig(CreateDeadlinedClientContext(transactionTimeout * 2).get(), config, &response);
+
+	REQUIRE(status.ok());
+	REQUIRE(0 == response.value());
+
+	CoSiMa::rpc::String rpcBaseName;
+	rpcBaseName.set_value(baseName);
+	CoSiMa::rpc::Bytes serializedResponse;
+
+	status = stub.GetStringValue(CreateDeadlinedClientContext(transactionTimeout).get(), rpcBaseName, &serializedResponse);
+
+	REQUIRE(status.ok());
+	REQUIRE(0 < serializedResponse.value().size());
+
+	osi3::SensorView sensorViewGroundTruth;
+	sensorViewGroundTruth.ParseFromString(serializedResponse.value());
+
+	CHECK(sensorViewGroundTruth.has_sensor_id());
+	CHECK(0 < sensorViewGroundTruth.sensor_id().value());
+	REQUIRE(1 == sensorViewGroundTruth.generic_sensor_view_size());
+	REQUIRE(position->x() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().x());
+	REQUIRE(position->y() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().y());
+	REQUIRE(position->z() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().z());
 }
