@@ -406,6 +406,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			}
 
 			auto attributes = vehicle->mutable_vehicle_attributes();
+			auto frontAxle = attributes->mutable_bbcenter_to_front();
+			auto rearAxle = attributes->mutable_bbcenter_to_rear();
 
 			for (auto attribute : vehicleActor->GetAttributes()) {
 				//TODO verify/improve object type mapping
@@ -426,19 +428,33 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				else if ("number_of_wheels" == attribute.GetId()) {
 					attributes->set_number_wheels(attribute.As<int>());
 				}
+				else if ("wheel_radius" == attribute.GetId()) {
+					attributes->set_radius_wheel(attribute.As<float>());
+				}
+				else if ("bbcenter_to_front_x" == attribute.GetId()) {
+					frontAxle->set_x(attribute.As<float>());
+				}
+				else if ("bbcenter_to_front_y" == attribute.GetId()) {
+					frontAxle->set_y(attribute.As<float>());
+				}
+				else if ("bbcenter_to_front_z" == attribute.GetId()) {
+					frontAxle->set_z(attribute.As<float>());
+				}
+				else if ("bbcenter_to_rear_x" == attribute.GetId()) {
+					rearAxle->set_x(attribute.As<float>());
+				}
+				else if ("bbcenter_to_rear_y" == attribute.GetId()) {
+					rearAxle->set_y(attribute.As<float>());
+				}
+				else if ("bbcenter_to_rear_z" == attribute.GetId()) {
+					rearAxle->set_z(attribute.As<float>());
+				}
 			}
 
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
 
-			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
-			auto[dimension, location] = CarlaUtility::toOSI(vehicleActor->GetBoundingBox());
-			vehicle->mutable_base()->set_allocated_dimension(dimension.release());
-
-			//TODO Bounding box to rear/front offsets
-
 			//TODO ground clearance
-			//TODO wheel radius
 
 
 
