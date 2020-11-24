@@ -135,16 +135,58 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla:
 	return prop;
 }
 
-osi3::BaseMoving * CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
 {
-	osi3::BaseMoving* base = new osi3::BaseMoving();
-
+	auto base = std::make_unique<osi3::BaseMoving>();
 	auto transform = actor->GetTransform();
+	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
+	// but bounding boxes only exist for Vehicle and Walker specializations
 	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
 	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
 
-	//TODO actor bounding box
-	//base->set_allocated_dimension
+	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
+}
+
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Walker> actor)
+{
+	auto base = std::make_unique<osi3::BaseMoving>();
+	auto transform = actor->GetTransform();
+	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
+	//TODO verify relation of bouding box origin and actor.GetLocation() for Walkers
+	auto bbox = actor->GetBoundingBox();
+	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
+	auto[dimension, location] = CarlaUtility::toOSI(actor->GetBoundingBox());
+	base->set_allocated_dimension(dimension.release());
+	transform.location += bbox.location;
+	//TODO libCarla_client has no arithmetics for rotations - assume bbox is not rotated
+	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
+	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+
+	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
+}
+
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> actor)
+{
+	auto base = std::make_unique<osi3::BaseMoving>();
+	auto transform = actor->GetTransform();
+	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
+	auto bbox = actor->GetBoundingBox();
+	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
+	auto[dimension, location] = CarlaUtility::toOSI(bbox);
+	base->set_allocated_dimension(dimension.release());
+	transform.location += bbox.location;
+	//TODO libCarla_client has no arithmetics for rotations, but
+	// vehicle bounding boxes shouldn't be rotated
+	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
+	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+
+
+	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
+}
+
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const carla::SharedPtr<const carla::client::Actor> actor, std::unique_ptr<osi3::BaseMoving> base)
+{
+	auto transform = actor->GetTransform();
 
 	//TODO determine contour on z-plane
 	//auto contour = base->mutable_base_polygon();
@@ -159,7 +201,6 @@ osi3::BaseMoving * CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const ca
 
 	//TODO Carla has no rotational acceleration
 	//base->set_allocated_orientation_acceleration
-
 
 	return base;
 }

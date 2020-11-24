@@ -15,6 +15,7 @@
 #include <carla/client/TrafficLight.h>
 #include <carla/client/TrafficSign.h>
 #include <carla/client/Vehicle.h>
+#include <carla/client/Walker.h>
 #include <carla/geom/BoundingBox.h>
 #include <carla/geom/Rotation.h>
 #include <carla/geom/Transform.h>
@@ -128,7 +129,11 @@ namespace CarlaUtility {
 
 	// Only specialized actors have a bounding box, therefore it has to be passed as additional argument
 	osi3::StationaryObject* toOSI(const carla::SharedPtr<const carla::client::Actor> actor, carla::geom::BoundingBox& bbox);
-	osi3::BaseMoving* toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
+	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
+	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Walker> walker);
+	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> vehicle);
+	// common part of above methods
+	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving_common(const carla::SharedPtr<const carla::client::Actor> actor, std::unique_ptr<osi3::BaseMoving> base);
 	osi3::TrafficSign* toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor, const pugi::xml_document& xodr);
 	std::vector<osi3::TrafficLight*> toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor, const pugi::xml_document& xodr);
 
@@ -174,7 +179,7 @@ namespace CarlaUtility {
 			add_first = std::copy(first2, last2, add_first);
 		}
 		return std::pair(add_first, rem_first);
-	}
+	};
 
 };
 

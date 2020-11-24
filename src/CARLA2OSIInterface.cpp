@@ -386,10 +386,10 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 		//based on blueprint vehicle.*
 		if (typeID.rfind("vehicle", 0) == 0) {
 			auto vehicle = groundTruth->add_moving_object();
-			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+			auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 
 			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
-			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
+			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(vehicleActor).release());
 
 			auto classification = vehicle->mutable_vehicle_classification();
 			classification->set_has_trailer(false);
@@ -446,14 +446,10 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 		}
 		else if (typeID.rfind("walker.pedestrian", 0) == 0) {
 			auto pedestrian = groundTruth->add_moving_object();
-			auto walkerActor = boost::static_pointer_cast<carla::client::Walker>(actor);
+			auto walkerActor = boost::static_pointer_cast<const carla::client::Walker>(actor);
 
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
-			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor));
-
-			// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
-			auto[dimension, location] = CarlaUtility::toOSI(walkerActor->GetBoundingBox());
-			pedestrian->mutable_base()->set_allocated_dimension(dimension.release());
+			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor).release());
 
 			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
 			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
