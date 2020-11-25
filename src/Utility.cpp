@@ -333,7 +333,7 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		bulbLocation.z = info.second.z + baseTransform.location.z;
 
 		osi3::TrafficLight* trafficLightBulb = new osi3::TrafficLight();
-		trafficLightBulb->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
+		trafficLightBulb->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), info.first, CarlaUniqueID_e::ActorID));
 
 		auto base = trafficLightBulb->mutable_base();
 		base->set_allocated_position(CarlaUtility::toOSI(bulbLocation));

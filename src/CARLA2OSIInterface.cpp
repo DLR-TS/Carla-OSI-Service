@@ -388,6 +388,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto vehicle = groundTruth->add_moving_object();
 			auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 
+			vehicle->set_allocated_id(CarlaUtility::toOSI(vehicleActor->GetId()));
 			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
 			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(vehicleActor).release());
 
@@ -464,6 +465,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto pedestrian = groundTruth->add_moving_object();
 			auto walkerActor = boost::static_pointer_cast<const carla::client::Walker>(actor);
 
+			pedestrian->set_allocated_id(CarlaUtility::toOSI(walkerActor->GetId());
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
 			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor).release());
 
@@ -479,11 +481,9 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 
 			auto bulbs = CarlaUtility::toOSI(trafficLight, xodr);
 			//add converted bulbs to ground truth
+			auto trafficLights = groundTruth->mutable_traffic_light();
 			for (auto* bulb : bulbs) {
-				auto* trafficLight = groundTruth->add_traffic_light();
-				trafficLight->set_allocated_id(bulb->mutable_id());
-				trafficLight->set_allocated_classification(bulb->mutable_classification());
-				trafficLight->set_allocated_base(bulb->mutable_base());
+				trafficLights->AddAllocated(bulb);
 			}
 		}
 	}
