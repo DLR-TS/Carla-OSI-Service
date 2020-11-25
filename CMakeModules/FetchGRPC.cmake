@@ -65,7 +65,7 @@ if(NOT grpc_POPULATED)
 	endif()
 	add_subdirectory(${grpc_SOURCE_DIR} ${grpc_BINARY_DIR} EXCLUDE_FROM_ALL)
 	if(BUILD_SHARED_LIBS_TMP)
-		set(BUILD_SHARED_LIBS False)
+		set(BUILD_SHARED_LIBS True)
 	endif()
 	message(STATUS "Added gRPC subdirectory (${grpc_SOURCE_DIR}).")
 
