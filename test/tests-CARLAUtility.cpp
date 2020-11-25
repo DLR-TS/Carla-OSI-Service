@@ -392,7 +392,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 	//carla->initialise(host, port, transactionTimeout, deltaSeconds);
 }
 
-TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer]") {
+TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDebugStuff]") {
 	//NOT a test of a utility function, but of additional data needed from the carla server
 	auto client = std::make_unique<carla::client::Client>("localhost", 2000u);
 	auto transactionTimeout = std::chrono::duration<double>(60);
