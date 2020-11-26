@@ -77,7 +77,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	auto blueprintLibrary = world.GetBlueprintLibrary();
 	auto propBlueprint = blueprintLibrary->Find("vehicle.dodge_charger.police");
 	auto recommendedSpawnPoints = world.GetMap()->GetRecommendedSpawnPoints();
-	auto randomLocation = recommendedSpawnPoints.at(recommendedSpawnPoints.size()/2);
+	auto randomLocation = recommendedSpawnPoints.at(recommendedSpawnPoints.size() / 2);
 	auto actor = world.SpawnActor(*propBlueprint, randomLocation);
 	auto vehicle = boost::static_pointer_cast<carla::client::Vehicle>(actor);
 	auto bbox = vehicle->GetBoundingBox();
@@ -126,9 +126,13 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 
 	auto groundTruth = carla->getLatestGroundTruth();
 	bool foundTestVehicleInGroundTruth = false;
+	CarlaUtility::IDUnion expectedOSIId{ 1ULL << (/*16 + */32) | actor->GetId() };
+	REQUIRE(actor->GetId() == expectedOSIId.id);
+	REQUIRE(CarlaUtility::CarlaUniqueID_e::ActorID == expectedOSIId.type);
+	REQUIRE(0 == expectedOSIId.special);
 	REQUIRE(0 < groundTruth->moving_object_size());
 	for (auto& movingObject : groundTruth->moving_object()) {
-		if (movingObject.has_id() && movingObject.id().value() == (1 << (16 + 32) | actor->GetId())) {
+		if (movingObject.has_id() && movingObject.id().value() == expectedOSIId.value) {
 			foundTestVehicleInGroundTruth = true;
 			REQUIRE(movingObject.has_base());
 			auto base = movingObject.base();

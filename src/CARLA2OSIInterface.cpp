@@ -436,7 +436,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					frontAxle->set_x(attribute.As<float>());
 				}
 				else if ("bbcenter_to_front_y" == attribute.GetId()) {
-					frontAxle->set_y(attribute.As<float>());
+					// y-axis has to be flipped
+					frontAxle->set_y(-attribute.As<float>());
 				}
 				else if ("bbcenter_to_front_z" == attribute.GetId()) {
 					frontAxle->set_z(attribute.As<float>());
@@ -445,7 +446,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					rearAxle->set_x(attribute.As<float>());
 				}
 				else if ("bbcenter_to_rear_y" == attribute.GetId()) {
-					rearAxle->set_y(attribute.As<float>());
+					// y-axis has to be flipped
+					rearAxle->set_y(-attribute.As<float>());
 				}
 				else if ("bbcenter_to_rear_z" == attribute.GetId()) {
 					rearAxle->set_z(attribute.As<float>());
@@ -465,7 +467,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto pedestrian = groundTruth->add_moving_object();
 			auto walkerActor = boost::static_pointer_cast<const carla::client::Walker>(actor);
 
-			pedestrian->set_allocated_id(CarlaUtility::toOSI(walkerActor->GetId());
+			pedestrian->set_allocated_id(CarlaUtility::toOSI(walkerActor->GetId()));
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
 			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor).release());
 
