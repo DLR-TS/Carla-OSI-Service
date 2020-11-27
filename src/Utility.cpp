@@ -868,3 +868,53 @@ std::unique_ptr<osi3::LaneBoundary> CarlaUtility::parseLaneBoundary(carla::road:
 	return laneBoundary;
 }
 
+osi3::MovingObject_VehicleClassification_Type CarlaUtility::ParseVehicleType(const std::string & value)
+{
+	if (std::string::npos != value.find("OTHER")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_OTHER;
+	}
+	if (std::string::npos != value.find("SMALL_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR;
+	}
+	if (std::string::npos != value.find("COMPACT_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR;
+	}
+	if (std::string::npos != value.find("MEDIUM_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR;
+	}
+	if (std::string::npos != value.find("LUXURY_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR;
+	}
+	if (std::string::npos != value.find("DELIVERY_VAN")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN;
+	}
+	if (std::string::npos != value.find("HEAVY_TRUCK")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_HEAVY_TRUCK;
+	}
+	if (std::string::npos != value.find("SEMITRAILER")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_SEMITRAILER;
+	}
+	if (std::string::npos != value.find("TRAILER")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_TRAILER;
+	}
+	if (std::string::npos != value.find("MOTORBIKE")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE;
+	}
+	if (std::string::npos != value.find("BICYCLE")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE;
+	}
+	if (std::string::npos != value.find("BUS")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_BUS;
+	}
+	if (std::string::npos != value.find("TRAM")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_TRAM;
+	}
+	if (std::string::npos != value.find("TRAIN")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_TRAIN;
+	}
+	if (std::string::npos != value.find("WHEELCHAIR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_WHEELCHAIR;
+	}
+	return osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN;
+}
+

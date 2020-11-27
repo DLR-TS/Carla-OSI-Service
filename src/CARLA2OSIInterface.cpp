@@ -412,19 +412,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 
 			for (auto attribute : vehicleActor->GetAttributes()) {
 				//TODO verify/improve object type mapping
-				if ("object_type" == attribute.GetId()) {
-					auto value = attribute.GetValue();
-					if (std::string::npos != value.find("bicycle")) {
-						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE);
-					}
-					else if (std::string::npos != value.find("motorbike")
-						|| std::string::npos != value.find("moped")) {
-						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE);
-					}
-					else {
-						//TODO extend object type mapping
-						classification->set_type(osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR);
-					}
+				if ("object_type" == attribute.GetId() || "osi_vehicle_type" == attribute.GetId()) {
+					classification->set_type(CarlaUtility::ParseVehicleType(attribute.GetValue()));
 				}
 				else if ("number_of_wheels" == attribute.GetId()) {
 					attributes->set_number_wheels(attribute.As<int>());
@@ -453,11 +442,13 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					rearAxle->set_z(attribute.As<float>());
 				}
 			}
+			//TODO ground clearance
 
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
 
-			//TODO ground clearance
+			//
+
 
 
 

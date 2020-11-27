@@ -146,12 +146,16 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 			REQUIRE(osiRotation.pitch == transform.rotation.pitch);
 			REQUIRE(osiRotation.yaw == transform.rotation.yaw);
 			REQUIRE(osiRotation.roll == transform.rotation.roll);
+			REQUIRE(movingObject.has_vehicle_classification());
+			auto classification = movingObject.vehicle_classification();
+			REQUIRE(classification.has_type());
+			REQUIRE(osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN != classification.type());
 			REQUIRE(movingObject.has_vehicle_attributes());
 			auto attributes = movingObject.vehicle_attributes();
 			REQUIRE(CarlaUtility::toCarla(&attributes.bbcenter_to_front()) == bbcenter_to_front);
 			REQUIRE(CarlaUtility::toCarla(&attributes.bbcenter_to_rear()) == bbcenter_to_rear);
 			REQUIRE(attributes.has_number_wheels());
-			REQUIRE(4 == attributes.number_wheels());
+			REQUIRE(((4 == attributes.number_wheels()) || (2 == attributes.number_wheels())));
 			REQUIRE(attributes.has_radius_wheel());
 			REQUIRE(Approx(wheel_radius) == attributes.radius_wheel());
 		}
