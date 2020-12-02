@@ -172,7 +172,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	std::vector<carla::rpc::StationaryMapObject> roadMarkings;
 
-	for (auto& mapObject : world->GetStationaryMapObjects()) {
+	auto stationaryMapObjects = world->GetStationaryMapObjects();
+	for (auto& mapObject : stationaryMapObjects) {
 
 		//TODO don't parse RoadMarkings as stationary object but add them to their lane
 		if (mapObject.semantic_tag == carla::rpc::CityObjectLabel::RoadLines) {
@@ -379,6 +380,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
 	groundTruth->MergeFrom(*staticMapTruth);
 
+	auto map = world->GetMap();
 	auto worldActors = world->GetActors();
 	for each (auto actor in *worldActors) {
 		auto typeID = actor->GetTypeId();
@@ -396,7 +398,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			classification->set_has_trailer(false);
 
 			// Get closest waypoint to determine current lane
-			auto waypoint = world->GetMap()->GetWaypoint(vehicleActor->GetLocation());
+			auto waypoint = map->GetWaypoint(vehicleActor->GetLocation());
 			//TODO vehicle might be on more than one lane
 			auto laneIDs = vehicle->mutable_assigned_lane_id();
 			if (waypoint->IsJunction()) {
