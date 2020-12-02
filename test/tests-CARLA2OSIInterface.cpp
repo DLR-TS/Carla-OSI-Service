@@ -56,7 +56,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 5;
+	double transactionTimeout = 25;
 	// delta seconds (1/framerate)
 	double deltaSeconds = (1.0 / 60);
 
@@ -65,30 +65,39 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	auto client = std::make_unique<carla::client::Client>(host, port);
 	client->SetTimeout(timeout);
 	auto world = client->GetWorld();
-	if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
-		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
-		world = client->LoadWorld("Town10HD");
-		world.WaitForTick(std::chrono::seconds(45));
-	}
-	else {
-		//clear world
-		world = client->ReloadWorld();
-	}
+	//if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
+	//	std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
+	//	world = client->LoadWorld("Town10HD");
+	//	world.WaitForTick(std::chrono::seconds(45));
+	//}
+	//else {
+	//	//clear world
+	//	world = client->ReloadWorld();
+	//}
+	world = client->LoadWorld("2020-05-04_atCity_AF_DLR_Braunschweig_Prio1_ROD_offset");
+	world.WaitForTick(std::chrono::seconds(45));
 
 	//spawn vehicles
 	auto blueprintLibrary = world.GetBlueprintLibrary();
 	auto vehicleBlueprints = blueprintLibrary->Filter("vehicle.*");
 	auto recommendedSpawnPoints = world.GetMap()->GetRecommendedSpawnPoints();
+	uint32_t fails = 0;
 	for (size_t i = 0; i < vehicleBlueprints->size() && i < recommendedSpawnPoints.size(); i++) {
 		auto vehicleBlueprint = vehicleBlueprints->at(i);
-		auto actor = world.SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(i));
+		try {
+			auto actor = world.SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(i));
+		}
+		catch (std::exception e) {
+			std::cout << "Spawn failed: " << e.what() << std::endl;
+			fails++;
+		}
 	}
 
 	// compare ground truth to vehicles
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
 	carla->initialise(host, port, transactionTimeout, deltaSeconds);
 	auto groundTruth = carla->getLatestGroundTruth();
-	REQUIRE(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) == groundTruth->moving_object_size());
+	REQUIRE(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) == groundTruth->moving_object_size() + fails);
 	for (auto& movingObject : groundTruth->moving_object()) {
 		auto actor = world.GetActor(movingObject.id().value());
 		auto vehicle = boost::static_pointer_cast<carla::client::Vehicle>(actor);
@@ -133,7 +142,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 			}
 		}
 		CHECK(0 < wheel_radius);
-	
+
 		REQUIRE(0 < groundTruth->moving_object_size());
 		CarlaUtility::IDUnion expectedOSIId{ 1ULL << (/*16 + */32) | actor->GetId() };
 		REQUIRE(actor->GetId() == expectedOSIId.id);
@@ -163,6 +172,25 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		REQUIRE(((4 == attributes.number_wheels()) || (2 == attributes.number_wheels())));
 		REQUIRE(attributes.has_radius_wheel());
 		REQUIRE(Approx(wheel_radius) == attributes.radius_wheel());
+		switch (classification.type()) {
+			// types with a defined default value
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_BUS:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_HEAVY_TRUCK:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_SEMITRAILER:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_TRAILER:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE:
+		case osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE:
+			REQUIRE(0 <= attributes.ground_clearance());
+			break;
+			// everything else
+		default:
+			break;
+		}
 	}
 }
 

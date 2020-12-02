@@ -277,9 +277,16 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto lanes = staticMapTruth->mutable_lane();
 	auto laneboundarys = staticMapTruth->mutable_lane_boundary();
 	auto topology = map->GetTopology();
+	std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
 
 	std::set<carla::road::JuncId> junctions;
 	for (auto endpoints : topology) {
+		////DEBUG
+		//std::cout << "Current endpoint pair:" << std::endl <<
+		//	"RoadId: " << endpoints.first->GetRoadId() << " LaneId: " << endpoints.first->GetLaneId() << " SectionId: " << endpoints.first->GetSectionId()
+		//	<< std::endl <<
+		//	"RoadId: " << endpoints.second->GetRoadId() << " LaneId: " << endpoints.second->GetLaneId() << " SectionId: " << endpoints.second->GetSectionId()
+		//	<< std::endl;
 		if (endpoints.first->IsJunction() && endpoints.second->IsJunction()) {
 			auto junction = endpoints.first->GetJunction();
 
@@ -370,6 +377,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 		}
 	}
+	std::cout << "Finished parsing of topology" << std::endl;
 }
 
 std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
@@ -412,7 +420,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto frontAxle = attributes->mutable_bbcenter_to_front();
 			auto rearAxle = attributes->mutable_bbcenter_to_rear();
 
-			for (auto attribute : vehicleActor->GetAttributes()) {
+			for (auto& attribute : vehicleActor->GetAttributes()) {
 				//TODO verify/improve object type mapping
 				if ("object_type" == attribute.GetId() || "osi_vehicle_type" == attribute.GetId()) {
 					classification->set_type(CarlaUtility::ParseVehicleType(attribute.GetValue()));
@@ -422,6 +430,9 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				}
 				else if ("wheel_radius" == attribute.GetId()) {
 					attributes->set_radius_wheel(attribute.As<float>());
+				}
+				else if ("ground_clearance" == attribute.GetId()) {
+					attributes->set_ground_clearance(attribute.As<float>());
 				}
 				else if ("bbcenter_to_front_x" == attribute.GetId()) {
 					frontAxle->set_x(attribute.As<float>());
