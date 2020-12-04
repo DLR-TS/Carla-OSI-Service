@@ -97,7 +97,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
 	carla->initialise(host, port, transactionTimeout, deltaSeconds);
 	auto groundTruth = carla->getLatestGroundTruth();
-	REQUIRE(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) == groundTruth->moving_object_size() + fails);
+	CHECK(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) == groundTruth->moving_object_size() + fails);
 	for (auto& movingObject : groundTruth->moving_object()) {
 		auto actor = world.GetActor(movingObject.id().value());
 		auto vehicle = boost::static_pointer_cast<carla::client::Vehicle>(actor);
