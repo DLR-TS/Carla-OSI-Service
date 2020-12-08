@@ -1,5 +1,7 @@
 #include "CARLA2OSIInterface.h"
 
+#include <execution>
+
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
 	this->client = std::make_unique<carla::client::Client>(host, port);
@@ -276,27 +278,30 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	auto lanes = staticMapTruth->mutable_lane();
 	auto laneboundarys = staticMapTruth->mutable_lane_boundary();
-	const auto topology = map->GetTopology();
-	std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
+	auto topology = map->GetTopology();
 	lanes->Reserve(topology.size());
+	std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
 
-	std::set<carla::road::JuncId> junctions;
-	for (const auto&[laneStart, laneEnd] : topology) {
+	// use a vector as replacement for a python-zip-like view, as boost::combine() (boost version 1.72) cannot
+	// be used with execution policies and ranges-v3 (with similar ranges::views::zip) requires at least 
+	// Visual Studio 2019 on Windows
+	std::vector<std::pair<carla::client::Map::TopologyList::value_type*, std::unique_ptr<osi3::Lane>>> combined(topology.size());
+	for (size_t i = 0; i < topology.size(); i++) {
+		combined[i].first = &topology[i];
+		combined[i].second = std::make_unique<osi3::Lane>();
+	}
+
+	std::for_each(std::execution::par, combined.begin(), combined.end(), [&](auto& pair){
+		auto&[endpoints, lane] = pair;
+		auto&[laneStart, laneEnd] = *endpoints;
 		if (laneStart->IsJunction() && laneEnd->IsJunction()) {
 			auto junction = laneStart->GetJunction();
 
 			auto id = junction->GetId();
 
-			//TOCHECK simplification of data is ok
-			//OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+			// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+			// => store all lanes that form this junction
 
-			if (junctions.count(id)) {
-				//This junction has already been parsed
-				continue;
-			}
-
-			junctions.insert(id);
-			auto lane = lanes->Add();
 			lane->set_allocated_id(CarlaUtility::toOSI(id, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
 
 			auto classification = lane->mutable_classification();
@@ -316,7 +321,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		}
 		else {
 			// A lane that is not a junction. Waypoints of endpoint pair map to a OSI lane
-			auto lane = lanes->Add();
+			//auto lane = lanes->Add();
 			auto roadId = laneStart->GetRoadId();
 			auto laneId = laneStart->GetLaneId();
 			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
@@ -374,6 +379,22 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				laneboundarys->AddAllocated(rightLaneBoundary.release());
 			}
 		}
+	}
+	);
+
+	// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+	// => remove duplicates
+	std::set<uint64_t> junctionIds;
+	for (auto& zipped : combined){
+		auto&[_, lane] = zipped;
+		if (osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION == lane->classification().type()) {
+			if (junctionIds.count(lane->id().value())) {
+				continue;
+			}
+			junctionIds.insert(lane->id().value());
+		}
+		//lanes->Add(std::move(lane));
+		lanes->AddAllocated(lane.release());
 	}
 	std::cout << "Finished parsing of topology" << std::endl;
 }
