@@ -272,7 +272,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	for (auto trafficSign : *trafficSigns) {
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
-		auto OSITrafficSign = CarlaUtility::toOSI(carlaTrafficSign, xodr);
+		auto OSITrafficSign = CarlaUtility::toOSI(carlaTrafficSign/*, xodr*/);
 		OSITrafficSigns->AddAllocated(OSITrafficSign);
 	}
 
@@ -504,7 +504,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			//TODO parse carla::client::TrafficLight as a set of osi3::TrafficLight
 			//a osi3::TrafficLight describes a single bulb of a traffic light
 
-			auto bulbs = CarlaUtility::toOSI(trafficLight, xodr);
+			auto bulbs = CarlaUtility::toOSI(trafficLight/*, xodr*/);
 			//add converted bulbs to ground truth
 			auto trafficLights = groundTruth->mutable_traffic_light();
 			for (auto* bulb : bulbs) {

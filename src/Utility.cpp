@@ -205,7 +205,7 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 	return base;
 }
 
-osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor, const pugi::xml_document& xodr)
+osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor/*, const pugi::xml_document& xodr*/)
 {
 	osi3::TrafficSign* sign = new osi3::TrafficSign();
 
@@ -291,7 +291,7 @@ osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::clien
 	return sign;
 }
 
-std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor, const  pugi::xml_document& xodr)
+std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor/*, const  pugi::xml_document& xodr*/)
 {
 	std::vector<osi3::TrafficLight*> osiTrafficLights;
 

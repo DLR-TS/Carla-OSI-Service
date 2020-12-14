@@ -102,6 +102,7 @@ set(COSIMA_GRPC_PROTO_FILES
 )
 add_library(CARLA_OSI_gRPC_Lib ${COSIMA_GRPC_PROTO_FILES})
 generate_grpc_cpp(TARGET CARLA_OSI_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} lib/open-simulation-interface)
+# CALRA_OSI_gRPC_Lib depends on OSI because it reuses some messages as submessage (at least for sensor mounting positions)
 if(BUILD_SHARED_LIBS)
 	target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC open_simulation_interface)
 else()

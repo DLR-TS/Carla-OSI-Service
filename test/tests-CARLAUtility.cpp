@@ -335,8 +335,8 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 		world = client->ReloadWorld();
 	}*/
 	world.Tick(timeout);
-	pugi::xml_document xodr;
-	auto result = xodr.load_string(world.GetMap()->GetOpenDrive().c_str());
+	//pugi::xml_document xodr;
+	//auto result = xodr.load_string(world.GetMap()->GetOpenDrive().c_str());
 
 	//Get current list of actors
 	auto actors = world.GetSnapshot();
@@ -361,7 +361,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 
 	for (auto& trafficLightActor : trafficLightActorSnapshots) {
 		auto trafficLight = boost::dynamic_pointer_cast<const carla::client::TrafficLight>(world.GetActor(trafficLightActor.id));
-		auto osiTrafficLight = CarlaUtility::toOSI(trafficLight, xodr);
+		auto osiTrafficLight = CarlaUtility::toOSI(trafficLight/*, xodr*/);
 
 		//std::cout << "Bulb group" << std::endl;
 		CHECK(1 < osiTrafficLight.size());
