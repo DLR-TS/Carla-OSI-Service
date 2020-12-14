@@ -11,6 +11,7 @@
 #include <carla/client/Actor.h>
 #include <carla/client/Junction.h>
 #include <carla/client/LightState.h>
+#include <carla/client/Map.h>
 #include <carla/client/Sensor.h>
 #include <carla/client/TrafficLight.h>
 #include <carla/client/TrafficSign.h>
@@ -150,8 +151,14 @@ namespace CarlaUtility {
 
 	/*
 	parsing from carla roadmarking to osi laneboundary
+
+	some lane marking types define double lines, resulting in two lane boundaries
 	*/
-	std::unique_ptr<osi3::LaneBoundary> parseLaneBoundary(carla::road::element::LaneMarking);
+	std::pair<std::unique_ptr<osi3::LaneBoundary::Classification>, std::unique_ptr<osi3::LaneBoundary::Classification>>
+		parseLaneBoundary(const carla::road::element::LaneMarking&);
+	// \return tuple consisting of osi boundaries, left_lane_boundary_id, right_lane_boundary_id
+	std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>,uint64_t, uint64_t> parseLaneBoundary(
+		carla::client::Map::TopologyList::value_type laneSection);
 
 	osi3::MovingObject_VehicleClassification_Type ParseVehicleType(const std::string& typeName);
 

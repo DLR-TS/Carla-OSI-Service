@@ -153,6 +153,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 
 	carla::SharedPtr<carla::client::Map> map = world->GetMap();
+	const carla::road::Map& roadMap = map->GetMap();
 
 	staticMapTruth->set_map_reference(map->GetName());
 
@@ -277,7 +278,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	}
 
 	auto lanes = staticMapTruth->mutable_lane();
-	auto laneboundarys = staticMapTruth->mutable_lane_boundary();
+	auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
 	auto topology = map->GetTopology();
 	lanes->Reserve(topology.size());
 	std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
@@ -285,15 +286,20 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	// use a vector as replacement for a python-zip-like view, as boost::combine() (boost version 1.72) cannot
 	// be used with execution policies and ranges-v3 (with similar ranges::views::zip) requires at least 
 	// Visual Studio 2019 on Windows
-	std::vector<std::pair<carla::client::Map::TopologyList::value_type*, std::unique_ptr<osi3::Lane>>> combined(topology.size());
+	using zip_type = std::vector<std::tuple<carla::client::Map::TopologyList::value_type*, std::unique_ptr<osi3::Lane>, google::protobuf::RepeatedPtrField<osi3::LaneBoundary>>>;
+	zip_type combined(topology.size());
 	for (size_t i = 0; i < topology.size(); i++) {
-		combined[i].first = &topology[i];
-		combined[i].second = std::make_unique<osi3::Lane>();
+		std::get<0>(combined[i]) = &topology[i];
+		std::get<1>(combined[i]) = std::make_unique<osi3::Lane>();
 	}
 
-	std::for_each(std::execution::par, combined.begin(), combined.end(), [&](auto& pair){
-		auto&[endpoints, lane] = pair;
+	// execute in parallel to increase performance for large maps
+	std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
+		auto&[endpoints, lane, boundaries] = tuple;
 		auto&[laneStart, laneEnd] = *endpoints;
+		// The same as laneStart, but represented as carla::road type
+		auto roadStart = laneStart->GetWaypoint();
+		auto roadEnd = laneEnd->GetWaypoint();
 		if (laneStart->IsJunction() && laneEnd->IsJunction()) {
 			auto junction = laneStart->GetJunction();
 
@@ -373,36 +379,71 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 					auto location = waypoint->GetTransform().location;
 					centerline->AddAllocated(CarlaUtility::toOSI(location));
 				}
+
+				// add neighbouring lanes
+				for (auto& neighbouringLane : { laneStart->GetLeft(), laneStart->GetRight() }) {
+					if (neighbouringLane) {
+						classification->mutable_left_adjacent_lane_id()->AddAllocated(
+							neighbouringLane->IsJunction() ?
+							CarlaUtility::toOSI(neighbouringLane->GetId(), CarlaUtility::JuncID) :
+							CarlaUtility::toOSI(neighbouringLane->GetRoadId(),
+								neighbouringLane->GetLaneId(),
+								neighbouringLane->GetSectionId(),
+								CarlaUtility::RoadIDLaneID));
+					}
+				}
+
 			}
 			else {
 				// A NonDriving lane. Intersections and Driving have already been handled
 				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_NONDRIVING);
 			}
 
-			auto leftLaneMarking = laneStart->GetLeftLaneMarking();
-			if (leftLaneMarking) {
-				auto leftLaneBoundary = CarlaUtility::parseLaneBoundary(leftLaneMarking.get());
-				//connect laneboundary with lane via id
-				classification->add_left_lane_boundary_id()->set_value(leftLaneBoundary->id().value());
-				laneboundarys->AddAllocated(leftLaneBoundary.release());
+			//add antecesseor/successor pairs
+			for (auto& inbound : roadMap.GetPredecessors(roadStart)) {
+				for (auto& outbound : roadMap.GetSuccessors(roadEnd)) {
+					auto pair = classification->add_lane_pairing();
+
+					if (roadMap.IsJunction(inbound.road_id)) {
+						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound.road_id, CarlaUtility::JuncID));
+					}
+					else {
+						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound.road_id,
+							inbound.lane_id, inbound.section_id, CarlaUtility::RoadIDLaneID));
+					}
+
+					if (roadMap.IsJunction(inbound.road_id)) {
+						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound.road_id, CarlaUtility::JuncID));
+					}
+					else {
+						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound.road_id,
+							outbound.lane_id, outbound.section_id, CarlaUtility::RoadIDLaneID));
+					}
+				}
 			}
 
-			auto rightLaneMarking = laneStart->GetRightLaneMarking();
-			if (rightLaneMarking) {
-				auto rightLaneBoundary = CarlaUtility::parseLaneBoundary(rightLaneMarking.get());
-				//connect laneboundary with lane via id
-				classification->add_right_lane_boundary_id()->set_value(rightLaneBoundary->id().value());
-				laneboundarys->AddAllocated(rightLaneBoundary.release());
+			// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
+			// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
+			// cases, each lane will define its own side of the lane boundary.
+
+			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = CarlaUtility::parseLaneBoundary(*endpoints);
+			if (0 < left_lane_boundary_id) {
+				classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
 			}
+			if (0 < right_lane_boundary_id) {
+				classification->add_right_lane_boundary_id()->set_value(right_lane_boundary_id);
+			}
+			boundaries.MergeFrom(parsedBoundaries);
 		}
+		//TODO osi3::Lane::Classification::road_condition
 	}
 	);
 
 	// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
 	// => remove duplicates
 	std::set<uint64_t> junctionIds;
-	for (auto& zipped : combined){
-		auto&[_, lane] = zipped;
+	for (auto& zipped : combined) {
+		auto&[_, lane, boundaries] = zipped;
 		if (osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION == lane->classification().type()) {
 			if (junctionIds.count(lane->id().value())) {
 				continue;
