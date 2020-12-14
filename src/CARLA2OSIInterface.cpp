@@ -301,21 +301,36 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 			// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
 			// => store all lanes that form this junction
+			// TODO find and parse all free lane boundaries for this junction
 
-			lane->set_allocated_id(CarlaUtility::toOSI(id, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
+			lane->set_allocated_id(CarlaUtility::toOSI(id, CarlaUtility::CarlaUniqueID_e::JuncID));
 
 			auto classification = lane->mutable_classification();
 			classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
 
 			auto waypoints = junction->GetWaypoints();
 			classification->mutable_lane_pairing()->Reserve(waypoints.size());
-			for (const auto& path : waypoints) {
+			for (const auto&[inbound, outbound] : waypoints) {
 				// OSI lane_pairing needs an antecessor/successor pair
 				auto pair = classification->add_lane_pairing();
-				auto inBound = path.first;
-				auto outBound = path.second;
-				pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inBound->GetRoadId(), inBound->GetLaneId()));
-				pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outBound->GetRoadId(), outBound->GetLaneId()));
+				if (inbound) {
+					if (inbound->IsJunction()) {
+						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound->GetRoadId(), CarlaUtility::JuncID));
+					}
+					else {
+						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound->GetRoadId(),
+							inbound->GetLaneId(), inbound->GetSectionId(), CarlaUtility::RoadIDLaneID));
+					}
+				}
+				if (outbound) {
+					if (outbound->IsJunction()) {
+						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound->GetRoadId(), CarlaUtility::JuncID));
+					}
+					else {
+						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound->GetRoadId(),
+							outbound->GetLaneId(), outbound->GetSectionId(), CarlaUtility::RoadIDLaneID));
+					}
+				}
 			}
 
 		}
@@ -324,7 +339,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			//auto lane = lanes->Add();
 			auto roadId = laneStart->GetRoadId();
 			auto laneId = laneStart->GetLaneId();
-			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
+			auto sectionId = laneStart->GetSectionId();
+			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId, sectionId, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
 
 			auto classification = lane->mutable_classification();
 

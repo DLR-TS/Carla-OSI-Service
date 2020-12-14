@@ -144,10 +144,11 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		CHECK(0 < wheel_radius);
 
 		REQUIRE(0 < groundTruth->moving_object_size());
-		CarlaUtility::IDUnion expectedOSIId{ 1ULL << (/*16 + */32) | actor->GetId() };
-		REQUIRE(actor->GetId() == expectedOSIId.id);
-		REQUIRE(CarlaUtility::CarlaUniqueID_e::ActorID == expectedOSIId.type);
-		REQUIRE(0 == expectedOSIId.special);
+		CarlaUtility::IDUnion expectedOSIId{ 1ULL << (16ULL + 8ULL + 32ULL) | actor->GetId() };
+		CHECK(actor->GetId() == expectedOSIId.id);
+		CHECK(CarlaUtility::CarlaUniqueID_e::ActorID == expectedOSIId.type);
+		CHECK(0 == expectedOSIId.special);
+		CHECK(0 == expectedOSIId.special2);
 		REQUIRE(movingObject.has_base());
 		auto base = movingObject.base();
 		REQUIRE(base.has_position());

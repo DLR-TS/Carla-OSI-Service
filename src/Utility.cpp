@@ -80,7 +80,7 @@ CarlaUtility::CarlaUniqueID_t CarlaUtility::toCarla(const osi3::Identifier* iden
 	case ActorID:
 		return (carla::ActorId) idUnion.id;
 	case RoadIDLaneID:
-		return std::make_pair((carla::road::RoadId)idUnion.id, (carla::road::LaneId)idUnion.special);
+		return std::make_tuple((carla::road::RoadId)idUnion.id, (carla::road::LaneId)idUnion.special, idUnion.special2);
 	case JuncID:
 		return (carla::road::JuncId) idUnion.id;
 	}
@@ -94,16 +94,31 @@ osi3::Identifier * CarlaUtility::toOSI(const uint32_t id, CarlaUtility::CarlaUni
 	return toOSI(id, 0, type);
 }
 
-osi3::Identifier * CarlaUtility::toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, CarlaUniqueID_e type)
+osi3::Identifier * CarlaUtility::toOSI(const uint32_t roadId, const int8_t laneId, CarlaUniqueID_e type) {
+	return toOSI(roadId, laneId, 0u, type);
+}
+
+osi3::Identifier * CarlaUtility::toOSI(const uint32_t roadId, const int8_t laneId, const uint16_t sectionId, CarlaUniqueID_e type)
 {
 	CarlaUtility::IDUnion idUnion;
 	idUnion.type = type;
-	idUnion.id = roadId;
+	idUnion.special2 = sectionId;
 	idUnion.special = (int16_t)laneId;
+	idUnion.id = roadId;
 
 	osi3::Identifier* identifier = new osi3::Identifier();
 	identifier->set_value(idUnion.value);
 	return identifier;
+}
+
+osi3::Identifier * CarlaUtility::toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, const uint16_t sectionId, const RoadIDType_e roadMarkType, CarlaUniqueID_e type)
+{
+	if (-3u < sectionId) {
+		throw std::out_of_range("Section id is too large and cannot be differentiated from road mark id");
+	}
+
+	uint16_t sectionIdWithRoadMarkType = sectionId | ((uint16_t)roadMarkType) << 8u;
+	return toOSI(roadId, laneId, sectionIdWithRoadMarkType, type);
 }
 
 osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
@@ -286,6 +301,9 @@ osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::clien
 		//Unknown as part of OSI ground truth is forbidden
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_OTHER);
 	}
+	else {
+		std::cerr << __FUNCTION__ << ": Encountered traffic sign with unknown mapping (" << actor->GetTypeId() << ")" << std::endl;
+	}
 
 
 	return sign;
@@ -375,28 +393,6 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtility::toOSI(carla::client::Vehicle::LightState vehicleLights)
 {
 	auto lightState = std::make_unique<osi3::MovingObject_VehicleClassification_LightState>();
-
-
-	//from carla::rpc::VehicleLightState::LightState:
-	//
-	//using flag_type = uint32_t;
-	//
-	///// Can be used as flags
-	//enum class LightState : flag_type {
-	//		None = 0,
-	//		Position = 0x1,
-	//		LowBeam = 0x1 << 1,
-	//		HighBeam = 0x1 << 2,
-	//		Brake = 0x1 << 3,
-	//		RightBlinker = 0x1 << 4,
-	//		LeftBlinker = 0x1 << 5,
-	//		Reverse = 0x1 << 6,
-	//		Fog = 0x1 << 7,
-	//		Interior = 0x1 << 8,
-	//		Special1 = 0x1 << 9,  // E.g: sirens
-	//		Special2 = 0x1 << 10,
-	//		All = 0xFFFFFFFF
-	//};
 
 	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Position) {
 		// has no mapping
