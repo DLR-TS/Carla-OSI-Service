@@ -2,6 +2,9 @@
 
 #include <execution>
 
+#include "Utility.h"
+#include "carla_osi/Geometry.h"
+
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
 	this->client = std::make_unique<carla::client::Client>(host, port);
@@ -191,10 +194,10 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		stationaryObject->set_allocated_id(CarlaUtility::toOSI(mapObject.id, CarlaUtility::CarlaUniqueID_e::StationaryMapObject));
 
 		auto base = stationaryObject->mutable_base();
-		auto[dimension, position] = CarlaUtility::toOSI(mapObject.bounding_box);
+		auto[dimension, position] = carla_osi::geometry::toOSI(mapObject.bounding_box);
 		base->set_allocated_dimension(dimension.release());
-		base->set_allocated_position(CarlaUtility::toOSI(mapObject.transform.location));
-		base->set_allocated_orientation(CarlaUtility::toOSI(mapObject.transform.rotation));
+		base->set_allocated_position(carla_osi::geometry::toOSI(mapObject.transform.location));
+		base->set_allocated_orientation(carla_osi::geometry::toOSI(mapObject.transform.rotation));
 
 		//TODO base_polygon
 
@@ -319,6 +322,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			for (const auto&[inbound, outbound] : waypoints) {
 				// OSI lane_pairing needs an antecessor/successor pair
 				auto pair = classification->add_lane_pairing();
+				//TODO this currently adds the wrong waypoints - needed are the predecessors of inbound and the successors of outbound, as used for non-junction roads
 				if (inbound) {
 					if (inbound->IsJunction()) {
 						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound->GetRoadId(), CarlaUtility::JuncID));
@@ -377,7 +381,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				centerline->Reserve(waypoints.size());
 				for (const auto& waypoint : waypoints) {
 					auto location = waypoint->GetTransform().location;
-					centerline->AddAllocated(CarlaUtility::toOSI(location));
+					centerline->AddAllocated(carla_osi::geometry::toOSI(location));
 				}
 
 				// add neighbouring lanes
@@ -722,25 +726,25 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	//BASE
 	if (trafficUpdate.mutable_update()->mutable_base()->has_position()
 		&& trafficUpdate.mutable_update()->mutable_base()->has_orientation()) {
-		auto position = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
-		auto orientation = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
+		auto position = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
+		auto orientation = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
 		actor->SetTransform(carla::geom::Transform(position, orientation));
 	}
 
 	//Velocity
 	if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
-		actor->SetTargetVelocity(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
+		actor->SetTargetVelocity(carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
 	}
 
 	//Acceleration can not be set in CARLA
 	//GetAcceleration() calculates the acceleration with the actor's velocity
 	//if (trafficUpdate.mutable_update()->mutable_base()->has_acceleration()) {
-		//auto acceleration = CarlaUtility::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
+		//auto acceleration = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
 	//}
 
 	//Orientation
 	if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_rate()) {
-		const auto orientationRate = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
+		const auto orientationRate = carla_osi::geometry::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
 
 		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
 		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
@@ -809,8 +813,8 @@ int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motion
 	orientation.set_yaw(motionCommand.current_state().heading_angle());
 
 	//convert to CARLA
-	carla::geom::Location location = CarlaUtility::toCarla(&vector);
-	carla::geom::Rotation rotation = CarlaUtility::toCarla(&orientation);
+	carla::geom::Location location = carla_osi::geometry::toCarla(&vector);
+	carla::geom::Rotation rotation = carla_osi::geometry::toCarla(&orientation);
 
 	actor->SetTransform(carla::geom::Transform(location, rotation));
 

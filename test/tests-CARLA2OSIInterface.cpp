@@ -1,6 +1,8 @@
 #include "catch2/catch.hpp"
 
 #include "CARLA2OSIInterface.h"
+#include "Utility.h"
+#include "carla_osi/Geometry.h"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -8,7 +10,12 @@
 #include <carla/client/BlueprintLibrary.h>
 #include <carla/client/Client.h>
 #include <carla/client/World.h>
+#include <carla/geom/BoundingBox.h>
+#include <carla/geom/Location.h>
+#include <carla/geom/Rotation.h>
 #include <carla/geom/Transform.h>
+#include <carla/geom/Vector2D.h>
+#include <carla/geom/Vector3D.h>
 
 TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
@@ -152,11 +159,11 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		REQUIRE(movingObject.has_base());
 		auto base = movingObject.base();
 		REQUIRE(base.has_position());
-		REQUIRE(CarlaUtility::toCarla(&base.position()) == (vehicle->GetLocation() + bbox.location));
+		REQUIRE(carla_osi::geometry::toCarla(&base.position()) == (vehicle->GetLocation() + bbox.location));
 		REQUIRE(base.has_dimension());
-		REQUIRE(CarlaUtility::toCarla(&base.dimension(), &base.position()).extent == bbox.extent);
+		REQUIRE(carla_osi::geometry::toCarla(&base.dimension(), &base.position()).extent == bbox.extent);
 		REQUIRE(base.has_orientation());
-		auto osiRotation = CarlaUtility::toCarla(&base.orientation());
+		auto osiRotation = carla_osi::geometry::toCarla(&base.orientation());
 		auto transform = vehicle->GetTransform();
 		REQUIRE(osiRotation.pitch == transform.rotation.pitch);
 		REQUIRE(osiRotation.yaw == transform.rotation.yaw);
@@ -167,8 +174,8 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		REQUIRE(osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN != classification.type());
 		REQUIRE(movingObject.has_vehicle_attributes());
 		auto attributes = movingObject.vehicle_attributes();
-		REQUIRE(CarlaUtility::toCarla(&attributes.bbcenter_to_front()) == bbcenter_to_front);
-		REQUIRE(CarlaUtility::toCarla(&attributes.bbcenter_to_rear()) == bbcenter_to_rear);
+		REQUIRE(carla_osi::geometry::toCarla(&attributes.bbcenter_to_front()) == bbcenter_to_front);
+		REQUIRE(carla_osi::geometry::toCarla(&attributes.bbcenter_to_rear()) == bbcenter_to_rear);
 		REQUIRE(attributes.has_number_wheels());
 		REQUIRE(((4 == attributes.number_wheels()) || (2 == attributes.number_wheels())));
 		REQUIRE(attributes.has_radius_wheel());

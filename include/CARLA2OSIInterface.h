@@ -7,8 +7,6 @@
 #include <mutex>
 #include <shared_mutex>
 
-#include "Utility.h"
-
 #include "pugiXML.hpp"
 #include <boost/bimap.hpp>
 #include <boost/foreach.hpp>

@@ -1,6 +1,7 @@
 #include "catch2/catch.hpp"
 
 #include "Utility.h"
+#include "carla_osi/Geometry.h"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -57,7 +58,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
-			osi3::Orientation3d* orientation = CarlaUtility::toOSI(rotation);
+			osi3::Orientation3d* orientation = carla_osi::geometry::toOSI(rotation);
 			REQUIRE(M_PI_4 == orientation->pitch());
 			REQUIRE(M_PI_2 == orientation->yaw());
 			REQUIRE(M_PI == orientation->roll());
@@ -66,7 +67,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 
 		SECTION("Location") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
-			osi3::Vector3d* position = CarlaUtility::toOSI(location);
+			osi3::Vector3d* position = carla_osi::geometry::toOSI(location);
 			REQUIRE(1.2f == position->x());
 			REQUIRE(-3.4f == position->y());
 			REQUIRE(5.6f == position->z());
@@ -75,7 +76,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 
 		SECTION("2D Vector") {
 			carla::geom::Vector2D vector(0.1f, -0.1f);
-			osi3::Vector2d* vector2d = CarlaUtility::toOSI(vector);
+			osi3::Vector2d* vector2d = carla_osi::geometry::toOSI(vector);
 			REQUIRE(0.1f == vector2d->x());
 			REQUIRE(-0.1f == vector2d->y());
 			delete vector2d;
@@ -84,7 +85,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 		SECTION("BoundingBox") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::BoundingBox boundingBox(location, carla::geom::Vector3D(1.f, 2.f, 4.f));
-			auto osiBB = CarlaUtility::toOSI(boundingBox);
+			auto osiBB = carla_osi::geometry::toOSI(boundingBox);
 			REQUIRE(1.2f == osiBB.second->x());
 			REQUIRE(-3.4f == osiBB.second->y());
 			REQUIRE(5.6f == osiBB.second->z());
@@ -151,7 +152,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			orientation.set_pitch(M_PI_4);
 			orientation.set_yaw(M_PI_2);
 			orientation.set_roll(M_PI - M_PI_4);
-			carla::geom::Rotation rotation = CarlaUtility::toCarla(&orientation);
+			carla::geom::Rotation rotation = carla_osi::geometry::toCarla(&orientation);
 			REQUIRE(45.f == rotation.pitch);
 			REQUIRE(-90.f == rotation.yaw);
 			REQUIRE(135.f == rotation.roll);
@@ -162,7 +163,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			position.set_x(0.1);
 			position.set_y(2.3);
 			position.set_z(4.5);
-			carla::geom::Location location = CarlaUtility::toCarla(&position);
+			carla::geom::Location location = carla_osi::geometry::toCarla(&position);
 			REQUIRE(0.1f == location.x);
 			REQUIRE(-2.3f == location.y);
 			REQUIRE(4.5f == location.z);
@@ -172,7 +173,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			osi3::Vector2d vector2d;
 			vector2d.set_x(0.1);
 			vector2d.set_y(-0.1);
-			carla::geom::Vector2D vector = CarlaUtility::toCarla(&vector2d);
+			carla::geom::Vector2D vector = carla_osi::geometry::toCarla(&vector2d);
 			REQUIRE(0.1f == vector.x);
 			REQUIRE(-0.1f == vector.y);
 		}
@@ -186,7 +187,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			dimension.set_length(8.);
 			dimension.set_width(4.);
 			dimension.set_height(10.);
-			carla::geom::BoundingBox boundingBox = CarlaUtility::toCarla(&dimension, &position);
+			carla::geom::BoundingBox boundingBox = carla_osi::geometry::toCarla(&dimension, &position);
 			REQUIRE(0.1f == boundingBox.location.x);
 			REQUIRE(-2.3f == boundingBox.location.y);
 			REQUIRE(4.5f == boundingBox.location.z);
@@ -367,8 +368,8 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 		CHECK(1 < osiTrafficLight.size());
 
 		for (auto& bulb : osiTrafficLight) {
-			auto bbox = CarlaUtility::toCarla(&bulb->base().dimension(), &bulb->base().position());
-			auto orientation = CarlaUtility::toCarla(&bulb->base().orientation());
+			auto bbox = carla_osi::geometry::toCarla(&bulb->base().dimension(), &bulb->base().position());
+			auto orientation = carla_osi::geometry::toCarla(&bulb->base().orientation());
 
 			// draw box in the respective color
 			switch (bulb->classification().color())

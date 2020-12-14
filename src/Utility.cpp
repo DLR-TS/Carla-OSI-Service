@@ -1,75 +1,8 @@
 #include "Utility.h"
 
+#include "carla_osi/Geometry.h"
+
 using ID = CarlaUtility::CarlaUniqueID_t;
-
-carla::geom::Vector3D CarlaUtility::mul(const carla::geom::Vector3D & vector, const float f)
-{
-	return carla::geom::Vector3D(vector.x * f, vector.y * f, vector.z * f);
-}
-
-osi3::Orientation3d* CarlaUtility::toOSI(const carla::geom::Rotation& rotation)
-{
-	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
-	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
-	osi3::Orientation3d* orient = new osi3::Orientation3d();
-	//TODO OSI prefers values in angular range [pi,pi]
-	orient->set_yaw(-rotation.yaw * M_PI / 180.0);
-	orient->set_pitch(rotation.pitch * M_PI / 180.0);
-	orient->set_roll(rotation.roll * M_PI / 180.0);
-	return orient;
-}
-
-std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> CarlaUtility::toOSI(const carla::geom::BoundingBox& boundingBox) {
-	std::unique_ptr<osi3::Dimension3d> dim = std::make_unique<osi3::Dimension3d>();
-	// dimensions are unsigned
-	dim->set_length(boundingBox.extent.x * 2);
-	dim->set_width(boundingBox.extent.y * 2);
-	dim->set_height(boundingBox.extent.z * 2);
-	std::unique_ptr<osi3::Vector3d> vec;
-	vec.reset(CarlaUtility::toOSI(boundingBox.location));
-	return std::pair(std::move(dim), std::move(vec));
-}
-
-osi3::Vector3d* CarlaUtility::toOSI(const carla::geom::Vector3D& location) {
-	//flip y
-	osi3::Vector3d* vec = new osi3::Vector3d();
-	vec->set_x(location.x);
-	vec->set_y(-location.y);
-	vec->set_z(location.z);
-	return vec;
-}
-
-osi3::Vector2d* CarlaUtility::toOSI(const carla::geom::Vector2D& vector) {
-	//flip y
-	osi3::Vector2d* vec = new osi3::Vector2d();
-	vec->set_x(vector.x);
-	vec->set_y(vector.y);
-	return vec;
-}
-
-carla::geom::Rotation CarlaUtility::toCarla(const osi3::Orientation3d* orientation) {
-	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
-	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
-	return carla::geom::Rotation(
-		(float)(orientation->pitch() * 180 * M_1_PI),
-		(float)(orientation->yaw() * -180 * M_1_PI),
-		(float)(orientation->roll() * 180 * M_1_PI));
-}
-
-carla::geom::BoundingBox CarlaUtility::toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position) {
-	carla::geom::Location pos = CarlaUtility::toCarla(position);
-	carla::geom::Vector3D extent((float)(dimension->length() / 2.0), (float)(dimension->width() / 2.0), (float)(dimension->height() / 2.0));
-	return carla::geom::BoundingBox(pos, extent);
-}
-
-carla::geom::Location CarlaUtility::toCarla(const osi3::Vector3d* position) {
-	//flip y
-	return carla::geom::Location((float)position->x(), (float)-position->y(), (float)position->z());
-}
-
-carla::geom::Vector2D CarlaUtility::toCarla(const osi3::Vector2d* position) {
-	return carla::geom::Vector2D((float)position->x(), (float)position->y());
-}
 
 CarlaUtility::CarlaUniqueID_t CarlaUtility::toCarla(const osi3::Identifier* identifier) {
 	//carlaID as lower 32 bits, CarlaUniqueID_t type index as upper 32 bits, as stored in osi3::Identifier * CarlaUtility::toOSI(CarlaUtility::CarlaUniqueID_t carlaID) {
@@ -132,11 +65,11 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla:
 	// The attribute behind the protected field is misused for traffic signs and traffic lights and holds their active area instead
 	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
 	// The bounding box has to be given as argument. To circumvent the described limitation, World::GetActorBoundingBox(ActorId) is added
-	auto[dimension, position] = CarlaUtility::toOSI(bbox);
+	auto[dimension, position] = carla_osi::geometry::toOSI(bbox);
 	base->set_allocated_dimension(dimension.release());
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
 
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
@@ -156,8 +89,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	auto transform = actor->GetTransform();
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	// but bounding boxes only exist for Vehicle and Walker specializations
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -169,13 +102,13 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	//TODO verify relation of bouding box origin and actor.GetLocation() for Walkers
 	auto bbox = actor->GetBoundingBox();
-	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
-	auto[dimension, location] = CarlaUtility::toOSI(actor->GetBoundingBox());
+	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
+	auto[dimension, location] = carla_osi::geometry::toOSI(actor->GetBoundingBox());
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations - assume bbox is not rotated
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -186,14 +119,14 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	auto transform = actor->GetTransform();
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	auto bbox = actor->GetBoundingBox();
-	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in CarlaUtility::toOSI
-	auto[dimension, location] = CarlaUtility::toOSI(bbox);
+	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
+	auto[dimension, location] = carla_osi::geometry::toOSI(bbox);
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations, but
 	// vehicle bounding boxes shouldn't be rotated
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
 
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
@@ -209,10 +142,10 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 
 	// velocity and acceleration as part of ground truth are given in global coordinate system
 	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
-	base->set_allocated_velocity(CarlaUtility::toOSI(actor->GetVelocity()));
-	base->set_allocated_acceleration(CarlaUtility::toOSI(actor->GetAcceleration()));
+	base->set_allocated_velocity(carla_osi::geometry::toOSI(actor->GetVelocity()));
+	base->set_allocated_acceleration(carla_osi::geometry::toOSI(actor->GetAcceleration()));
 	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
-	base->set_allocated_orientation_rate(CarlaUtility::toOSI(carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)));
+	base->set_allocated_orientation_rate(carla_osi::geometry::toOSI(carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)));
 
 	//TODO Carla has no rotational acceleration
 	//base->set_allocated_orientation_acceleration
@@ -229,14 +162,14 @@ osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::clien
 	auto main = sign->mutable_main_sign();
 	auto base = main->mutable_base();
 	//TODO defined bounding box of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
-	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
+	//auto [dimension, position] = carla_osi::geometry::toOSI( actor-> Get BoundingBox() );
 	//base->set_allocated_dimension(dimension);
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
 	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
 	//TODO assure rotation is applied local
 	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
-	base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation));
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	auto classification = main->mutable_classification();
@@ -354,11 +287,11 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		trafficLightBulb->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), info.first, CarlaUniqueID_e::ActorID));
 
 		auto base = trafficLightBulb->mutable_base();
-		base->set_allocated_position(CarlaUtility::toOSI(bulbLocation));
+		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation));
 		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
 		//TODO assure rotation is applied local
 		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
-		base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
+		base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation));
 		osi3::Dimension3d* dimension = new osi3::Dimension3d();
 		//bulbs have circa 30 centimeter diameter
 		dimension->set_height(0.30f);
