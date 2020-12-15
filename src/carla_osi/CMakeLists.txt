@@ -1,6 +1,7 @@
 ﻿#source
 set(CARLA_OSI_LIB_SOURCE ${CARLA_OSI_LIB_SOURCE}
-"${CMAKE_CURRENT_LIST_DIR}/Geometry.cpp"
+${CMAKE_CURRENT_LIST_DIR}/Geometry.cpp
+${CMAKE_CURRENT_LIST_DIR}/Identifiers.cpp
 
 PARENT_SCOPE
 )

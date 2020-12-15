@@ -4,6 +4,7 @@
 
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
+#include "carla_osi/Identifiers.h"
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
@@ -191,7 +192,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		auto stationaryObject = staticMapTruth->add_stationary_object();
 		//TODO maybe keep a mapping of really unique actor FName to generated id
 		// id of stationaryMapObject is generated per call of world->GetStationaryMapObjects and is always equal to the array index. Thus it is not really an identifier and cannot be mapped back to Unreal/Carla
-		stationaryObject->set_allocated_id(CarlaUtility::toOSI(mapObject.id, CarlaUtility::CarlaUniqueID_e::StationaryMapObject));
+		stationaryObject->set_allocated_id(carla_osi::id_mapping::toOSI(mapObject.id, carla_osi::id_mapping::CarlaUniqueID_e::StationaryMapObject));
 
 		auto base = stationaryObject->mutable_base();
 		auto[dimension, position] = carla_osi::geometry::toOSI(mapObject.bounding_box);
@@ -312,7 +313,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			// => store all lanes that form this junction
 			// TODO find and parse all free lane boundaries for this junction
 
-			lane->set_allocated_id(CarlaUtility::toOSI(id, CarlaUtility::CarlaUniqueID_e::JuncID));
+			lane->set_allocated_id(carla_osi::id_mapping::toOSI(id, carla_osi::id_mapping::CarlaUniqueID_e::JuncID));
 
 			auto classification = lane->mutable_classification();
 			classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
@@ -325,20 +326,24 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				//TODO this currently adds the wrong waypoints - needed are the predecessors of inbound and the successors of outbound, as used for non-junction roads
 				if (inbound) {
 					if (inbound->IsJunction()) {
-						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound->GetRoadId(), CarlaUtility::JuncID));
+						pair->set_allocated_antecessor_lane_id(
+							carla_osi::id_mapping::toOSI(inbound->GetRoadId(), carla_osi::id_mapping::JuncID));
 					}
 					else {
-						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound->GetRoadId(),
-							inbound->GetLaneId(), inbound->GetSectionId(), CarlaUtility::RoadIDLaneID));
+						pair->set_allocated_antecessor_lane_id(
+							carla_osi::id_mapping::toOSI(inbound->GetRoadId(),
+								inbound->GetLaneId(), inbound->GetSectionId(), carla_osi::id_mapping::RoadIDLaneID));
 					}
 				}
 				if (outbound) {
 					if (outbound->IsJunction()) {
-						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound->GetRoadId(), CarlaUtility::JuncID));
+						pair->set_allocated_successor_lane_id(
+							carla_osi::id_mapping::toOSI(outbound->GetRoadId(), carla_osi::id_mapping::JuncID));
 					}
 					else {
-						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound->GetRoadId(),
-							outbound->GetLaneId(), outbound->GetSectionId(), CarlaUtility::RoadIDLaneID));
+						pair->set_allocated_successor_lane_id(
+							carla_osi::id_mapping::toOSI(outbound->GetRoadId(),
+								outbound->GetLaneId(), outbound->GetSectionId(), carla_osi::id_mapping::RoadIDLaneID));
 					}
 				}
 			}
@@ -350,7 +355,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			auto roadId = laneStart->GetRoadId();
 			auto laneId = laneStart->GetLaneId();
 			auto sectionId = laneStart->GetSectionId();
-			lane->set_allocated_id(CarlaUtility::toOSI(roadId, laneId, sectionId, CarlaUtility::CarlaUniqueID_e::RoadIDLaneID));
+			lane->set_allocated_id(carla_osi::id_mapping::toOSI(roadId, laneId, sectionId,
+				carla_osi::id_mapping::CarlaUniqueID_e::RoadIDLaneID));
 
 			auto classification = lane->mutable_classification();
 
@@ -389,11 +395,11 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 					if (neighbouringLane) {
 						classification->mutable_left_adjacent_lane_id()->AddAllocated(
 							neighbouringLane->IsJunction() ?
-							CarlaUtility::toOSI(neighbouringLane->GetId(), CarlaUtility::JuncID) :
-							CarlaUtility::toOSI(neighbouringLane->GetRoadId(),
+							carla_osi::id_mapping::toOSI(neighbouringLane->GetId(), carla_osi::id_mapping::JuncID) :
+							carla_osi::id_mapping::toOSI(neighbouringLane->GetRoadId(),
 								neighbouringLane->GetLaneId(),
 								neighbouringLane->GetSectionId(),
-								CarlaUtility::RoadIDLaneID));
+								carla_osi::id_mapping::RoadIDLaneID));
 					}
 				}
 
@@ -409,19 +415,21 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 					auto pair = classification->add_lane_pairing();
 
 					if (roadMap.IsJunction(inbound.road_id)) {
-						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound.road_id, CarlaUtility::JuncID));
+						pair->set_allocated_antecessor_lane_id(
+							carla_osi::id_mapping::toOSI(inbound.road_id, carla_osi::id_mapping::JuncID));
 					}
 					else {
-						pair->set_allocated_antecessor_lane_id(CarlaUtility::toOSI(inbound.road_id,
-							inbound.lane_id, inbound.section_id, CarlaUtility::RoadIDLaneID));
+						pair->set_allocated_antecessor_lane_id(carla_osi::id_mapping::toOSI(inbound.road_id,
+							inbound.lane_id, inbound.section_id, carla_osi::id_mapping::RoadIDLaneID));
 					}
 
 					if (roadMap.IsJunction(inbound.road_id)) {
-						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound.road_id, CarlaUtility::JuncID));
+						pair->set_allocated_successor_lane_id(
+							carla_osi::id_mapping::toOSI(outbound.road_id, carla_osi::id_mapping::JuncID));
 					}
 					else {
-						pair->set_allocated_successor_lane_id(CarlaUtility::toOSI(outbound.road_id,
-							outbound.lane_id, outbound.section_id, CarlaUtility::RoadIDLaneID));
+						pair->set_allocated_successor_lane_id(carla_osi::id_mapping::toOSI(outbound.road_id,
+							outbound.lane_id, outbound.section_id, carla_osi::id_mapping::RoadIDLaneID));
 					}
 				}
 			}
@@ -478,7 +486,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto vehicle = groundTruth->add_moving_object();
 			auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 
-			vehicle->set_allocated_id(CarlaUtility::toOSI(vehicleActor->GetId()));
+			vehicle->set_allocated_id(carla_osi::id_mapping::toOSI(vehicleActor->GetId()));
 			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
 			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(vehicleActor).release());
 
@@ -490,10 +498,10 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			//TODO vehicle might be on more than one lane
 			auto laneIDs = vehicle->mutable_assigned_lane_id();
 			if (waypoint->IsJunction()) {
-				laneIDs->AddAllocated(CarlaUtility::toOSI(waypoint->GetJunctionId(), CarlaUtility::JuncID));
+				laneIDs->AddAllocated(carla_osi::id_mapping::toOSI(waypoint->GetJunctionId(), carla_osi::id_mapping::JuncID));
 			}
 			else {
-				laneIDs->AddAllocated(CarlaUtility::toOSI(waypoint->GetRoadId(), waypoint->GetLaneId()));
+				laneIDs->AddAllocated(carla_osi::id_mapping::toOSI(waypoint->GetRoadId(), waypoint->GetLaneId()));
 			}
 
 			auto attributes = vehicle->mutable_vehicle_attributes();
@@ -551,7 +559,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto pedestrian = groundTruth->add_moving_object();
 			auto walkerActor = boost::static_pointer_cast<const carla::client::Walker>(actor);
 
-			pedestrian->set_allocated_id(CarlaUtility::toOSI(walkerActor->GetId()));
+			pedestrian->set_allocated_id(carla_osi::id_mapping::toOSI(walkerActor->GetId()));
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
 			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor).release());
 
@@ -633,7 +641,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 
 void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 	std::unique_ptr<osi3::TrafficCommand> trafficCommand = std::make_unique<osi3::TrafficCommand>();
-	auto actorid = CarlaUtility::toOSI(ActorId);
+	auto actorid = carla_osi::id_mapping::toOSI(ActorId);
 
 	trafficCommand->set_allocated_traffic_participant_id(actorid);
 	osi3::Timestamp* timestamp = parseTimestamp();
@@ -715,7 +723,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read traffic with no id." << std::endl;
 		return 3;
 	}
-	auto TrafficId = std::get<carla::ActorId>(CarlaUtility::toCarla(&trafficUpdate.mutable_update()->id()));
+	auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&trafficUpdate.mutable_update()->id()));
 	auto actor = world->GetActor(TrafficId);
 	if (TrafficId != actor->GetId()) {
 		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;

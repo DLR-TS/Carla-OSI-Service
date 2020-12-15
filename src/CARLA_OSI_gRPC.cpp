@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include "Utility.h"
+#include "carla_osi/Identifiers.h"
 
 void CARLA_OSI_client::StartServer(const bool nonBlocking)
 {
@@ -204,7 +205,7 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 		sensorView->mutable_sensor_id()->set_value(id->second);
 	}
 	else {
-		CarlaUtility::IDUnion sensorId;
+		carla_osi::id_mapping::IDUnion sensorId;
 		//TODO make sure the type is not defiend in CarlaUtility::CarlaUniqueID_e
 		sensorId.type = 100;
 		sensorId.id = sensorIds.size() + 1;

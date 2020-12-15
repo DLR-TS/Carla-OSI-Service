@@ -1,63 +1,12 @@
 #include "Utility.h"
 
 #include "carla_osi/Geometry.h"
-
-using ID = CarlaUtility::CarlaUniqueID_t;
-
-CarlaUtility::CarlaUniqueID_t CarlaUtility::toCarla(const osi3::Identifier* identifier) {
-	//carlaID as lower 32 bits, CarlaUniqueID_t type index as upper 32 bits, as stored in osi3::Identifier * CarlaUtility::toOSI(CarlaUtility::CarlaUniqueID_t carlaID) {
-	IDUnion idUnion{ identifier->value() };
-
-	switch ((CarlaUniqueID_e)idUnion.type) {
-	default:
-	case ActorID:
-		return (carla::ActorId) idUnion.id;
-	case RoadIDLaneID:
-		return std::make_tuple((carla::road::RoadId)idUnion.id, (carla::road::LaneId)idUnion.special, idUnion.special2);
-	case JuncID:
-		return (carla::road::JuncId) idUnion.id;
-	}
-
-}
-
-osi3::Identifier * CarlaUtility::toOSI(const uint32_t id, CarlaUtility::CarlaUniqueID_e type)
-{
-	////id has to match index of type in variant CarlaUniqueID_t
-	//return CarlaUtility::toOSI(CarlaUtility::getTyped(type, id));
-	return toOSI(id, 0, type);
-}
-
-osi3::Identifier * CarlaUtility::toOSI(const uint32_t roadId, const int8_t laneId, CarlaUniqueID_e type) {
-	return toOSI(roadId, laneId, 0u, type);
-}
-
-osi3::Identifier * CarlaUtility::toOSI(const uint32_t roadId, const int8_t laneId, const uint16_t sectionId, CarlaUniqueID_e type)
-{
-	CarlaUtility::IDUnion idUnion;
-	idUnion.type = type;
-	idUnion.special2 = sectionId;
-	idUnion.special = (int16_t)laneId;
-	idUnion.id = roadId;
-
-	osi3::Identifier* identifier = new osi3::Identifier();
-	identifier->set_value(idUnion.value);
-	return identifier;
-}
-
-osi3::Identifier * CarlaUtility::toOSI(const carla::road::RoadId roadId, const carla::road::LaneId laneId, const uint16_t sectionId, const RoadIDType_e roadMarkType, CarlaUniqueID_e type)
-{
-	if (-3u < sectionId) {
-		throw std::out_of_range("Section id is too large and cannot be differentiated from road mark id");
-	}
-
-	uint16_t sectionIdWithRoadMarkType = sectionId | ((uint16_t)roadMarkType) << 8u;
-	return toOSI(roadId, laneId, sectionIdWithRoadMarkType, type);
-}
+#include "carla_osi/Identifiers.h"
 
 osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
-	prop->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), CarlaUniqueID_e::ActorID));
+	prop->set_allocated_id(carla_osi::id_mapping::toOSI(actor->GetId(), carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
 
 	osi3::BaseStationary* base = prop->mutable_base();
 	// bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
@@ -284,7 +233,8 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		bulbLocation.z = info.second.z + baseTransform.location.z;
 
 		osi3::TrafficLight* trafficLightBulb = new osi3::TrafficLight();
-		trafficLightBulb->set_allocated_id(CarlaUtility::toOSI(actor->GetId(), info.first, CarlaUniqueID_e::ActorID));
+		trafficLightBulb->set_allocated_id(carla_osi::id_mapping::toOSI(actor->GetId(), info.first,
+			carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
 
 		auto base = trafficLightBulb->mutable_base();
 		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation));
@@ -441,7 +391,8 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_field_of_view_horizontal(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::toOSI(sensor->GetId(),
+		carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
 
 	//TODO calculate sensor position in vehicle coordinates
 	//config->set_allocated_mounting_position(position)
@@ -503,7 +454,8 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	//TODO OSI expects a constant number of pixels per message, but Carla only reports new values of the angle sweeped during the last frame
 	config->set_num_of_pixels(numPixels);
 	//TODO number of rays (horizontal/vertical) of lidar
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::toOSI(sensor->GetId(), 
+		carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
 
 	return lidarSensorView;
 }
@@ -529,7 +481,8 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 	//TODO Maybe use the osi3::FeatureData-based osi3::RadarDetection instead of a osi3::SensorView, which is similar to Carla's Radar output
 
 	auto config = radarSensorview->mutable_view_configuration();
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId(), CarlaUniqueID_e::ActorID));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::toOSI(sensor->GetId(), 
+		carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
 	if (hFov) {
 		config->set_field_of_view_horizontal(hFov.value());
 	}
@@ -833,16 +786,16 @@ std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>, uint64_t, uin
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(leftClassifications.first.release());
 			laneBoundary->set_allocated_id(
-				CarlaUtility::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					CarlaUtility::RoadIDType_e::OuterBoundaryLine));
+				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
+					carla_osi::id_mapping::RoadIDType_e::OuterBoundaryLine));
 			left_lane_boundary_id = laneBoundary->id().value();
 		}
 		else if (leftClassifications.second) {
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(leftClassifications.second.release());
 			laneBoundary->set_allocated_id(
-				CarlaUtility::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					CarlaUtility::RoadIDType_e::InnerBoundaryLine));
+				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
+					carla_osi::id_mapping::RoadIDType_e::InnerBoundaryLine));
 			left_lane_boundary_id = laneBoundary->id().value();
 		}
 	}
@@ -854,16 +807,16 @@ std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>, uint64_t, uin
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(rightClassifications.first.release());
 			laneBoundary->set_allocated_id(
-				CarlaUtility::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					CarlaUtility::RoadIDType_e::OuterBoundaryLine));
+				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
+					carla_osi::id_mapping::RoadIDType_e::OuterBoundaryLine));
 			right_lane_boundary_id = laneBoundary->id().value();
 		}
 		else if (rightClassifications.second) {
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(rightClassifications.second.release());
 			laneBoundary->set_allocated_id(
-				CarlaUtility::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					CarlaUtility::RoadIDType_e::InnerBoundaryLine));
+				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
+					carla_osi::id_mapping::RoadIDType_e::InnerBoundaryLine));
 			right_lane_boundary_id = laneBoundary->id().value();
 		}
 	}

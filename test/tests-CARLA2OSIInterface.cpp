@@ -3,6 +3,7 @@
 #include "CARLA2OSIInterface.h"
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
+#include "carla_osi/Identifiers.h"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -151,9 +152,9 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		CHECK(0 < wheel_radius);
 
 		REQUIRE(0 < groundTruth->moving_object_size());
-		CarlaUtility::IDUnion expectedOSIId{ 1ULL << (16ULL + 8ULL + 32ULL) | actor->GetId() };
+		carla_osi::id_mapping::IDUnion expectedOSIId{ 1ULL << (16ULL + 8ULL + 32ULL) | actor->GetId() };
 		CHECK(actor->GetId() == expectedOSIId.id);
-		CHECK(CarlaUtility::CarlaUniqueID_e::ActorID == expectedOSIId.type);
+		CHECK(carla_osi::id_mapping::CarlaUniqueID_e::ActorID == expectedOSIId.type);
 		CHECK(0 == expectedOSIId.special);
 		CHECK(0 == expectedOSIId.special2);
 		REQUIRE(movingObject.has_base());
