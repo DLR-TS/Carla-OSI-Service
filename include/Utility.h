@@ -73,17 +73,6 @@ namespace CarlaUtility {
 
 	carla::rpc::VehicleLightState::LightState toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState);
 
-	/*
-	parsing from carla roadmarking to osi laneboundary
-
-	some lane marking types define double lines, resulting in two lane boundaries
-	*/
-	std::pair<std::unique_ptr<osi3::LaneBoundary::Classification>, std::unique_ptr<osi3::LaneBoundary::Classification>>
-		parseLaneBoundary(const carla::road::element::LaneMarking&);
-	// \return tuple consisting of osi boundaries, left_lane_boundary_id, right_lane_boundary_id
-	std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>,uint64_t, uint64_t> parseLaneBoundary(
-		carla::client::Map::TopologyList::value_type laneSection);
-
 	osi3::MovingObject_VehicleClassification_Type ParseVehicleType(const std::string& typeName);
 
 	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);

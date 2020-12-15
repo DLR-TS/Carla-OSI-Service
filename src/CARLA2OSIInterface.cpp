@@ -5,6 +5,7 @@
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
+#include "carla_osi/Lanes.h"
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
@@ -319,33 +320,13 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
 
 			auto waypoints = junction->GetWaypoints();
-			classification->mutable_lane_pairing()->Reserve(waypoints.size());
+			auto lanePairings = classification->mutable_lane_pairing();
+			lanePairings->Reserve(waypoints.size());
 			for (const auto&[inbound, outbound] : waypoints) {
 				// OSI lane_pairing needs an antecessor/successor pair
-				auto pair = classification->add_lane_pairing();
-				//TODO this currently adds the wrong waypoints - needed are the predecessors of inbound and the successors of outbound, as used for non-junction roads
-				if (inbound) {
-					if (inbound->IsJunction()) {
-						pair->set_allocated_antecessor_lane_id(
-							carla_osi::id_mapping::toOSI(inbound->GetRoadId(), carla_osi::id_mapping::JuncID));
-					}
-					else {
-						pair->set_allocated_antecessor_lane_id(
-							carla_osi::id_mapping::toOSI(inbound->GetRoadId(),
-								inbound->GetLaneId(), inbound->GetSectionId(), carla_osi::id_mapping::RoadIDLaneID));
-					}
-				}
-				if (outbound) {
-					if (outbound->IsJunction()) {
-						pair->set_allocated_successor_lane_id(
-							carla_osi::id_mapping::toOSI(outbound->GetRoadId(), carla_osi::id_mapping::JuncID));
-					}
-					else {
-						pair->set_allocated_successor_lane_id(
-							carla_osi::id_mapping::toOSI(outbound->GetRoadId(),
-								outbound->GetLaneId(), outbound->GetSectionId(), carla_osi::id_mapping::RoadIDLaneID));
-					}
-				}
+				auto pairs = carla_osi::lanes::GetOSILanePairings(roadMap, 
+					inbound->GetWaypoint(), outbound->GetWaypoint());
+				lanePairings->MergeFrom(pairs);
 			}
 
 		}
@@ -410,35 +391,13 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 
 			//add antecesseor/successor pairs
-			for (auto& inbound : roadMap.GetPredecessors(roadStart)) {
-				for (auto& outbound : roadMap.GetSuccessors(roadEnd)) {
-					auto pair = classification->add_lane_pairing();
-
-					if (roadMap.IsJunction(inbound.road_id)) {
-						pair->set_allocated_antecessor_lane_id(
-							carla_osi::id_mapping::toOSI(inbound.road_id, carla_osi::id_mapping::JuncID));
-					}
-					else {
-						pair->set_allocated_antecessor_lane_id(carla_osi::id_mapping::toOSI(inbound.road_id,
-							inbound.lane_id, inbound.section_id, carla_osi::id_mapping::RoadIDLaneID));
-					}
-
-					if (roadMap.IsJunction(inbound.road_id)) {
-						pair->set_allocated_successor_lane_id(
-							carla_osi::id_mapping::toOSI(outbound.road_id, carla_osi::id_mapping::JuncID));
-					}
-					else {
-						pair->set_allocated_successor_lane_id(carla_osi::id_mapping::toOSI(outbound.road_id,
-							outbound.lane_id, outbound.section_id, carla_osi::id_mapping::RoadIDLaneID));
-					}
-				}
-			}
+			classification->mutable_lane_pairing()->MergeFrom(carla_osi::lanes::GetOSILanePairings(roadMap, roadStart, roadEnd));
 
 			// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
 			// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
 			// cases, each lane will define its own side of the lane boundary.
 
-			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = CarlaUtility::parseLaneBoundary(*endpoints);
+			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = carla_osi::lanes::parseLaneBoundary(*endpoints);
 			if (0 < left_lane_boundary_id) {
 				classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
 			}

@@ -66,6 +66,9 @@ add_subdirectory("src")
 add_subdirectory("include")
 add_subdirectory("test")
 
+if(MSVC)
+  add_compile_options(/ZI)
+endif()
 
 #create library target
 add_library(CARLA_OSI_Lib ${CARLA_OSI_LIB_SOURCE} ${CARLA_OSI_LIB_INCLUDES})
