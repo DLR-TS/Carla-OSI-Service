@@ -401,19 +401,20 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 	client->SetTimeout(transactionTimeout);
 	auto world = std::make_unique<carla::client::World>(std::move(client->ReloadWorld()));
 
-	//find a prop and spawn it in the current world to assert it contains an actor of type vehicle
+	// retrieve vehicle blueprints and spawn them
 	auto blueprintLibrary = world->GetBlueprintLibrary();
 	auto vehicleBlueprints = blueprintLibrary->Filter("vehicle.*");
-	//auto vehicleBlueprint = blueprintLibrary->Find("vehicle.dodge_charger.police");
 	auto recommendedSpawnPoints = world->GetMap()->GetRecommendedSpawnPoints();
 	for (size_t i = 0; i < vehicleBlueprints->size() && i < recommendedSpawnPoints.size(); i++) {
 		auto vehicleBlueprint = vehicleBlueprints->at(i);
 		auto actor = world->SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(i));
+		std::cout << __FUNCTION__ << ": Spawning " << actor->GetTypeId() << std::endl;
 		auto vehicle = boost::static_pointer_cast<carla::client::Vehicle>(actor);
 		CHECK(0 < actor->GetId());
 
 		carla::geom::Vector3D bbcenter_to_front;
 		carla::geom::Vector3D bbcenter_to_rear;
+		float wheel_radius = -1;
 		auto attributes = actor->GetAttributes();
 		CHECK(std::any_of(attributes.begin(), attributes.end(),
 			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_front_x"; }));
@@ -427,6 +428,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_rear_y"; }));
 		CHECK(std::any_of(attributes.begin(), attributes.end(),
 			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_rear_z"; }));
+		// build bbcenter_to_front/back vectors and query wheel radius
 		for (auto attribute : actor->GetAttributes()) {
 			auto id = attribute.GetId();
 			if (0 == id.rfind("bbcenter_to", 0)) {
@@ -460,9 +462,11 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 				}
 			}
 			else if ("wheel_radius" == id) {
-				CHECK(0 != attribute.As<float>());
+				wheel_radius = attribute.As<float>();
 			}
 		}
+		// variable is initialized as -1; expression should be true if attribute was defined
+		CHECK(0 <= wheel_radius);
 
 		// draw line for axis using debug helpers
 		auto time = world->WaitForTick(transactionTimeout).GetTimestamp();
@@ -471,25 +475,30 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		auto spectator = world->GetSpectator();
 		auto spectatorTransform = spectator->GetTransform();
 		spectatorTransform.location = vehicleTransform.location;
-		spectatorTransform.location += vehicleTransform.GetRightVector() * vehicleBBox.extent.y * 4;
-		//TODO somehow points down
+		spectatorTransform.location += vehicleTransform.GetRightVector() * std::max(2.f,vehicleBBox.extent.y * 4.f);
+		// points down
 		spectatorTransform.location -= vehicleTransform.GetUpVector() * 1.72f;
 		spectatorTransform.rotation = vehicleTransform.rotation;
 		spectatorTransform.rotation.yaw -= 90;
 		spectatorTransform.rotation.pitch -= 22.5f;
 		spectator->SetTransform(spectatorTransform);
 		auto debug = world->MakeDebugHelper();
-		carla::client::DebugHelper::Color color(255U, 0, 0);
-		carla::client::DebugHelper::Color color2(255U, 255U, 0);
-		carla::client::DebugHelper::Color color3(0, 0, 255U);
-		carla::client::DebugHelper::Color color4(0, 255U, 255U);
+		carla::client::DebugHelper::Color red(255U, 0, 0);
+		carla::client::DebugHelper::Color yellow(255U, 255U, 0);
+		carla::client::DebugHelper::Color red_2(255U / 2U, 0, 0);
+		carla::client::DebugHelper::Color yellow_2(255U / 2U, 255U / 2U, 0);
+		carla::client::DebugHelper::Color orange(255U, 80U, 0);
+		carla::client::DebugHelper::Color lila(255U, 0, 255U);
+		carla::client::DebugHelper::Color blue(0, 0, 255U);
+		carla::client::DebugHelper::Color turkis(0, 255U, 255U);
 		carla::client::DebugHelper::Color green(0, 255U, 0);
 		auto vehicleBBoxWorld(vehicleBBox);
 		CHECK(vehicleBBoxWorld.location == vehicleBBox.location);
 		vehicleBBoxWorld.location += vehicleTransform.location;
 		CHECK(vehicleBBoxWorld.location != vehicleBBox.location);
-		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, color, 6);
-		//wait for vehicle to settle after spawn
+		// draw bounding box at spawn location
+		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, red, 6);
+		// wait for vehicle to settle after spawn
 		time = world->WaitForTick(transactionTimeout).GetTimestamp();
 		double timestamp = time.elapsed_seconds;
 		std::cout << "Time at box 1 " << time.elapsed_seconds << std::endl;
@@ -502,23 +511,171 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		CHECK(vehicleLocation == vehicleTransform.location);
 		CHECK(Approx(vehicleLocation.SquaredLength()) == vehicleTransform.location.SquaredLength());
 		vehicleBBoxWorld.location = vehicleBBox.location + vehicleTransform.location;
-		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, color, 60);
+		//draw bounding box at settled location
+		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, red, 60);
+		auto frontAxleLocation = bbcenter_to_front - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
+		auto rearAxleLocation = bbcenter_to_rear - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
+		// transform from vehicle to world coordinates
+		vehicleTransform.TransformPoint(frontAxleLocation);
+		vehicleTransform.TransformPoint(rearAxleLocation);
+		carla::geom::Vector3D extent = vehicleTransform.GetRightVector() * vehicleBBox.extent.y * 1.2f;
+		debug.DrawPoint(frontAxleLocation, 0.2f, red, 300);
+		debug.DrawPoint(rearAxleLocation, 0.2f, yellow, 300);
+		debug.DrawPoint(vehicleBBoxWorld.location, 0.4f, green, 300);
+		debug.DrawPoint(vehicleTransform.location, 0.2f, blue, 300);
+		debug.DrawPoint(vehicleLocation, 0.2f, turkis, 300);
+		debug.DrawLine(frontAxleLocation - extent, frontAxleLocation + extent, .05f, red, 300);
+		debug.DrawLine(rearAxleLocation - extent, rearAxleLocation + extent, .05f, yellow, 300);
+		debug.DrawArrow(vehicleBBoxWorld.location, frontAxleLocation, 0.02f, 0.1f, blue, 300);
+		debug.DrawArrow(vehicleBBoxWorld.location, rearAxleLocation, 0.02f, 0.1f, turkis, 300);
+
+		// Get current axle positions in vehicle coordinates
+		auto&[currentFrontAxlePosition, currentRearAxlePosition] = world->GetAxlePositions(actor->GetId());
+
+		// Transform positions from vehicle coordinates to world coordinates
+		vehicleTransform.TransformPoint(currentFrontAxlePosition);
+		vehicleTransform.TransformPoint(currentRearAxlePosition);
+		// Compare current world axle positions with attribute values
+		CHECK(Approx(currentFrontAxlePosition.x).margin(0.0001f) == frontAxleLocation.x);
+		CHECK(Approx(currentFrontAxlePosition.y).margin(0.0001f) == frontAxleLocation.y);
+		CHECK(Approx(currentFrontAxlePosition.z).margin(0.0001f) == frontAxleLocation.z);
+		CHECK(Approx(currentRearAxlePosition.x).margin(0.0001f) == rearAxleLocation.x);
+		CHECK(Approx(currentRearAxlePosition.y).margin(0.0001f) == rearAxleLocation.y);
+		CHECK(Approx(currentRearAxlePosition.z).margin(0.0001f) == rearAxleLocation.z);
+		debug.DrawLine(currentFrontAxlePosition - extent, currentFrontAxlePosition + extent, .05f, yellow_2, 300);
+		debug.DrawLine(currentRearAxlePosition - extent, currentRearAxlePosition + extent, .05f, red_2, 300);
+
+		while (timestamp + 9 > time.elapsed_seconds) {
+			time = world->WaitForTick(transactionTimeout).GetTimestamp();
+		}
+	}
+}
+
+TEST_CASE("bbcenter_to_X raw attribute 2", "[DEBUG][.][TestsCarlaOsiServer][DontDraw]") {
+	//NOT a test of a utility function, but of additional data needed from the carla server
+	//TODO refactor this to improve run time - spawn all vehicles at once and test attributes after they have settled, waiting only once
+	auto client = std::make_unique<carla::client::Client>("localhost", 2000u);
+	auto transactionTimeout = std::chrono::duration<double>(60);
+	client->SetTimeout(transactionTimeout);
+	auto world = std::make_unique<carla::client::World>(std::move(client->ReloadWorld()));
+
+	// retrieve vehicle blueprints and spawn them
+	auto blueprintLibrary = world->GetBlueprintLibrary();
+	auto vehicleBlueprints = blueprintLibrary->Filter("vehicle.*");
+	auto recommendedSpawnPoints = world->GetMap()->GetRecommendedSpawnPoints();
+	for (size_t i = 0; i < vehicleBlueprints->size() && i < recommendedSpawnPoints.size(); i++) {
+		auto vehicleBlueprint = vehicleBlueprints->at(i);
+		auto actor = world->SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(i));
+		auto vehicle = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+		CHECK(0 < actor->GetId());
+
+		carla::geom::Vector3D bbcenter_to_front;
+		carla::geom::Vector3D bbcenter_to_rear;
+		float wheel_radius = -1;
+		auto attributes = actor->GetAttributes();
+		CHECK(std::any_of(attributes.begin(), attributes.end(),
+			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_front_x"; }));
+		CHECK(std::any_of(attributes.begin(), attributes.end(),
+			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_front_y"; }));
+		CHECK(std::any_of(attributes.begin(), attributes.end(),
+			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_front_z"; }));
+		CHECK(std::any_of(attributes.begin(), attributes.end(),
+			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_rear_x"; }));
+		CHECK(std::any_of(attributes.begin(), attributes.end(),
+			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_rear_y"; }));
+		CHECK(std::any_of(attributes.begin(), attributes.end(),
+			[](carla::client::ActorAttributeValue& attribute) {return attribute.GetId() == "bbcenter_to_rear_z"; }));
+		// build bbcenter_to_front/back vectors and query wheel radius
+		for (auto attribute : actor->GetAttributes()) {
+			auto id = attribute.GetId();
+			if (0 == id.rfind("bbcenter_to", 0)) {
+				if ('f' == id.at(12)) {
+					if ('x' == id.back()) {
+						CHECK(Approx(0) != attribute.As<float>());
+						bbcenter_to_front.x = attribute.As<float>();
+					}
+					else if ('y' == id.back()) {
+						CHECK(1 > attribute.As<float>());
+						bbcenter_to_front.y = attribute.As<float>();
+					}
+					else if ('z' == id.back()) {
+						CHECK(Approx(0) != attribute.As<float>());
+						bbcenter_to_front.z = attribute.As<float>();
+					}
+				}
+				else if ('r' == id.at(12)) {
+					if ('x' == id.back()) {
+						CHECK(Approx(0) != attribute.As<float>());
+						bbcenter_to_rear.x = attribute.As<float>();
+					}
+					else if ('y' == id.back()) {
+						CHECK(1 > attribute.As<float>());
+						bbcenter_to_rear.y = attribute.As<float>();
+					}
+					else if ('z' == id.back()) {
+						CHECK(Approx(0) != attribute.As<float>());
+						bbcenter_to_rear.z = attribute.As<float>();
+					}
+				}
+			}
+			else if ("wheel_radius" == id) {
+				wheel_radius = attribute.As<float>();
+			}
+		}
+		CHECK(0 <= wheel_radius);
+
+		// draw line for axis using debug helpers
+		auto time = world->WaitForTick(transactionTimeout).GetTimestamp();
+		carla::geom::Transform vehicleTransform = vehicle->GetTransform();
+		carla::geom::BoundingBox vehicleBBox = vehicle->GetBoundingBox();
+
+		// 
+		auto spectator = world->GetSpectator();
+		auto spectatorTransform = spectator->GetTransform();
+		spectatorTransform.location = vehicleTransform.location;
+		spectatorTransform.location += vehicleTransform.GetRightVector() * vehicleBBox.extent.y * 4;
+		// points down
+		spectatorTransform.location -= vehicleTransform.GetUpVector() * 1.72f;
+		spectatorTransform.rotation = vehicleTransform.rotation;
+		spectatorTransform.rotation.yaw -= 90;
+		spectatorTransform.rotation.pitch -= 22.5f;
+		spectator->SetTransform(spectatorTransform);
+
+		auto vehicleBBoxWorld(vehicleBBox);
+		CHECK(vehicleBBoxWorld.location == vehicleBBox.location);
+		vehicleBBoxWorld.location += vehicleTransform.location;
+		CHECK(vehicleBBoxWorld.location != vehicleBBox.location);
+
+		// wait for vehicle to settle after spawn
+		time = world->WaitForTick(transactionTimeout).GetTimestamp();
+		double timestamp = time.elapsed_seconds;
+		while (timestamp + 3 > time.elapsed_seconds) {
+			time = world->WaitForTick(transactionTimeout).GetTimestamp();
+		}
+
+		vehicleTransform = vehicle->GetTransform();
+		auto vehicleLocation = vehicle->GetLocation();
+		CHECK(vehicleLocation == vehicleTransform.location);
+		CHECK(Approx(vehicleLocation.SquaredLength()) == vehicleTransform.location.SquaredLength());
+		vehicleBBoxWorld.location = vehicleBBox.location + vehicleTransform.location;
 		auto frontAxleLocation = bbcenter_to_front - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		auto rearAxleLocation = bbcenter_to_rear - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		vehicleTransform.TransformPoint(frontAxleLocation);
 		vehicleTransform.TransformPoint(rearAxleLocation);
 		carla::geom::Vector3D extent = vehicleTransform.GetRightVector() * vehicleBBox.extent.y * 1.2f;
-		debug.DrawPoint(frontAxleLocation, 0.2f, color, 300);
-		debug.DrawPoint(rearAxleLocation, 0.2f, color2, 300);
-		debug.DrawPoint(vehicleBBoxWorld.location, 0.4f, green, 300);
-		debug.DrawPoint(vehicleTransform.location, 0.2f, color3, 300);
-		debug.DrawPoint(vehicleLocation, 0.2f, color4, 300);
-		debug.DrawLine(frontAxleLocation - extent, frontAxleLocation + extent, .05f, color, 300);
-		debug.DrawLine(rearAxleLocation - extent, rearAxleLocation + extent, .05f, color2, 300);
-		debug.DrawArrow(vehicleBBoxWorld.location, frontAxleLocation, 0.02f, 0.1f, color3, 300);
-		debug.DrawArrow(vehicleBBoxWorld.location, rearAxleLocation, 0.02f, 0.1f, color4, 300);
-		while (timestamp + 9 > time.elapsed_seconds) {
-			time = world->WaitForTick(transactionTimeout).GetTimestamp();
-		}
+
+		// Get current axle positions in vehicle coordinates
+		auto&[currentFrontAxlePosition, currentRearAxlePosition] = world->GetAxlePositions(actor->GetId());
+
+		// Transform positions from vehicle coordinates to world coordinates
+		vehicleTransform.TransformPoint(currentFrontAxlePosition);
+		vehicleTransform.TransformPoint(currentRearAxlePosition);
+		// Compare current world axle positions with attribute values
+		CHECK(Approx(currentFrontAxlePosition.x).margin(0.001f) == frontAxleLocation.x);
+		CHECK(Approx(currentFrontAxlePosition.y).margin(0.001f) == frontAxleLocation.y);
+		CHECK(Approx(currentFrontAxlePosition.z).margin(0.001f) == frontAxleLocation.z);
+		CHECK(Approx(currentRearAxlePosition.x).margin(0.001f) == rearAxleLocation.x);
+		CHECK(Approx(currentRearAxlePosition.y).margin(0.001f) == rearAxleLocation.y);
+		CHECK(Approx(currentRearAxlePosition.z).margin(0.001f) == rearAxleLocation.z);
 	}
 }

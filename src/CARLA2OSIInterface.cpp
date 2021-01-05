@@ -502,16 +502,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					rearAxle->set_z(attribute.As<float>());
 				}
 			}
-			//TODO ground clearance
-
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
-
-			//
-
-
-
-
 
 		}
 		else if (typeID.rfind("walker.pedestrian", 0) == 0) {
