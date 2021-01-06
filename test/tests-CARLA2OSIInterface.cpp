@@ -89,22 +89,25 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	auto blueprintLibrary = world.GetBlueprintLibrary();
 	auto vehicleBlueprints = blueprintLibrary->Filter("vehicle.*");
 	auto recommendedSpawnPoints = world.GetMap()->GetRecommendedSpawnPoints();
-	uint32_t fails = 0;
+	uint32_t spawns = 0, fails = 0;
 	for (size_t i = 0; i < vehicleBlueprints->size() && i < recommendedSpawnPoints.size(); i++) {
 		auto vehicleBlueprint = vehicleBlueprints->at(i);
 		try {
 			auto actor = world.SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(i));
+			spawns++;
 		}
 		catch (std::exception e) {
 			std::cout << "Spawn failed: " << e.what() << std::endl;
 			fails++;
 		}
 	}
+	world.WaitForTick(std::chrono::seconds(45));
 
 	// compare ground truth to vehicles
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
 	carla->initialise(host, port, transactionTimeout, deltaSeconds);
 	auto groundTruth = carla->getLatestGroundTruth();
+	CHECK(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) - fails == spawns);
 	CHECK(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) == groundTruth->moving_object_size() + fails);
 	for (auto& movingObject : groundTruth->moving_object()) {
 		auto actor = world.GetActor(movingObject.id().value());
@@ -200,6 +203,16 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		default:
 			break;
 		}
+
+		auto& [frontAxle, rearAxle] = world.GetAxlePositions(actor->GetId());
+		auto current_front_offset = /*static_cast<carla::geom::Vector3D>(bbox.location) -*/ frontAxle;
+		auto current_rear_offset = /*static_cast<carla::geom::Vector3D>(bbox.location) -*/ rearAxle;
+		CHECK(Approx(current_front_offset.x).margin(0.001f) == bbcenter_to_front.x);
+		CHECK(Approx(current_front_offset.y).margin(0.001f) == bbcenter_to_front.y);
+		CHECK(Approx(current_front_offset.z).margin(0.001f) == bbcenter_to_front.z);
+		CHECK(Approx(current_rear_offset.x).margin(0.001f) == bbcenter_to_rear.x);
+		CHECK(Approx(current_rear_offset.y).margin(0.001f) == bbcenter_to_rear.y);
+		CHECK(Approx(current_rear_offset.z).margin(0.001f) == bbcenter_to_rear.z);
 	}
 }
 
