@@ -405,9 +405,18 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 	auto blueprintLibrary = world->GetBlueprintLibrary();
 	auto vehicleBlueprints = blueprintLibrary->Filter("vehicle.*");
 	auto recommendedSpawnPoints = world->GetMap()->GetRecommendedSpawnPoints();
-	for (size_t i = 0; i < vehicleBlueprints->size() && i < recommendedSpawnPoints.size(); i++) {
+	for (size_t i = 0, j = 0; i < vehicleBlueprints->size() && j < recommendedSpawnPoints.size(); i++, j++) {
 		auto vehicleBlueprint = vehicleBlueprints->at(i);
-		auto actor = world->SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(i));
+		carla::SharedPtr<carla::client::Actor> actor;
+		do {
+			try {
+				actor = world->SpawnActor(vehicleBlueprint, recommendedSpawnPoints.at(j));
+			}
+			catch (std::exception e) {
+				std::cout << "Spawn failed: " << e.what() << std::endl;
+				j++;
+			}
+		} while (!actor && j < recommendedSpawnPoints.size());
 		std::cout << __FUNCTION__ << ": Spawning " << actor->GetTypeId() << std::endl;
 		auto vehicle = boost::static_pointer_cast<carla::client::Vehicle>(actor);
 		CHECK(0 < actor->GetId());
@@ -513,6 +522,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		vehicleBBoxWorld.location = vehicleBBox.location + vehicleTransform.location;
 		//draw bounding box at settled location
 		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, red, 60);
+		// transform from bbox to vehicle coordinates
 		auto frontAxleLocation = bbcenter_to_front - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		auto rearAxleLocation = bbcenter_to_rear - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		// transform from vehicle to world coordinates
@@ -530,20 +540,30 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		debug.DrawArrow(vehicleBBoxWorld.location, rearAxleLocation, 0.02f, 0.1f, turkis, 300);
 
 		// Get current axle positions in vehicle coordinates
-		auto&[currentFrontAxlePosition, currentRearAxlePosition] = world->GetAxlePositions(actor->GetId());
+		auto&[currentFrontAxleOffset, currentRearAxleOffset] = world->GetAxlePositions(actor->GetId());
 
+		CHECK(Approx(currentFrontAxleOffset.x).margin(0.001f) == bbcenter_to_front.x);
+		CHECK(Approx(currentFrontAxleOffset.y).margin(0.001f) == bbcenter_to_front.y);
+		CHECK(Approx(currentFrontAxleOffset.z).margin(0.001f) == bbcenter_to_front.z);
+		CHECK(Approx(currentRearAxleOffset.x).margin(0.001f) == bbcenter_to_rear.x);
+		CHECK(Approx(currentRearAxleOffset.y).margin(0.001f) == bbcenter_to_rear.y);
+		CHECK(Approx(currentRearAxleOffset.z).margin(0.001f) == bbcenter_to_rear.z);
+
+		// Transform axle offsets from bbox coordinates to vehicle coordinates
+		auto currentFrontAxleLocation = currentFrontAxleOffset - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
+		auto currentRearAxleLocation = currentRearAxleOffset - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		// Transform positions from vehicle coordinates to world coordinates
-		vehicleTransform.TransformPoint(currentFrontAxlePosition);
-		vehicleTransform.TransformPoint(currentRearAxlePosition);
+		vehicleTransform.TransformPoint(currentFrontAxleLocation);
+		vehicleTransform.TransformPoint(currentRearAxleLocation);
 		// Compare current world axle positions with attribute values
-		CHECK(Approx(currentFrontAxlePosition.x).margin(0.0001f) == frontAxleLocation.x);
-		CHECK(Approx(currentFrontAxlePosition.y).margin(0.0001f) == frontAxleLocation.y);
-		CHECK(Approx(currentFrontAxlePosition.z).margin(0.0001f) == frontAxleLocation.z);
-		CHECK(Approx(currentRearAxlePosition.x).margin(0.0001f) == rearAxleLocation.x);
-		CHECK(Approx(currentRearAxlePosition.y).margin(0.0001f) == rearAxleLocation.y);
-		CHECK(Approx(currentRearAxlePosition.z).margin(0.0001f) == rearAxleLocation.z);
-		debug.DrawLine(currentFrontAxlePosition - extent, currentFrontAxlePosition + extent, .05f, yellow_2, 300);
-		debug.DrawLine(currentRearAxlePosition - extent, currentRearAxlePosition + extent, .05f, red_2, 300);
+		CHECK(Approx(currentFrontAxleLocation.x).margin(0.001f) == frontAxleLocation.x);
+		CHECK(Approx(currentFrontAxleLocation.y).margin(0.001f) == frontAxleLocation.y);
+		CHECK(Approx(currentFrontAxleLocation.z).margin(0.001f) == frontAxleLocation.z);
+		CHECK(Approx(currentRearAxleLocation.x).margin(0.001f) == rearAxleLocation.x);
+		CHECK(Approx(currentRearAxleLocation.y).margin(0.001f) == rearAxleLocation.y);
+		CHECK(Approx(currentRearAxleLocation.z).margin(0.001f) == rearAxleLocation.z);
+		debug.DrawLine(currentFrontAxleLocation - extent, currentFrontAxleLocation + extent, .05f, yellow_2, 300);
+		debug.DrawLine(currentRearAxleLocation - extent, currentRearAxleLocation + extent, .05f, red_2, 300);
 
 		while (timestamp + 9 > time.elapsed_seconds) {
 			time = world->WaitForTick(transactionTimeout).GetTimestamp();
@@ -658,24 +678,28 @@ TEST_CASE("bbcenter_to_X raw attribute 2", "[DEBUG][.][TestsCarlaOsiServer][Dont
 		CHECK(vehicleLocation == vehicleTransform.location);
 		CHECK(Approx(vehicleLocation.SquaredLength()) == vehicleTransform.location.SquaredLength());
 		vehicleBBoxWorld.location = vehicleBBox.location + vehicleTransform.location;
+		// transform from bbox to vehicle coordinates
 		auto frontAxleLocation = bbcenter_to_front - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		auto rearAxleLocation = bbcenter_to_rear - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
+		// transform from vehicle to world coordinates
 		vehicleTransform.TransformPoint(frontAxleLocation);
 		vehicleTransform.TransformPoint(rearAxleLocation);
-		carla::geom::Vector3D extent = vehicleTransform.GetRightVector() * vehicleBBox.extent.y * 1.2f;
 
 		// Get current axle positions in vehicle coordinates
-		auto&[currentFrontAxlePosition, currentRearAxlePosition] = world->GetAxlePositions(actor->GetId());
+		auto&[currentFrontAxleOffset, currentRearAxleOffset] = world->GetAxlePositions(actor->GetId());
 
+		// Transform axle offsets from bbox coordinates to vehicle coordinates
+		auto currentFrontAxleLocation = currentFrontAxleOffset - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
+		auto currentRearAxleLocation = currentRearAxleOffset - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		// Transform positions from vehicle coordinates to world coordinates
-		vehicleTransform.TransformPoint(currentFrontAxlePosition);
-		vehicleTransform.TransformPoint(currentRearAxlePosition);
+		vehicleTransform.TransformPoint(currentFrontAxleLocation);
+		vehicleTransform.TransformPoint(currentRearAxleLocation);
 		// Compare current world axle positions with attribute values
-		CHECK(Approx(currentFrontAxlePosition.x).margin(0.001f) == frontAxleLocation.x);
-		CHECK(Approx(currentFrontAxlePosition.y).margin(0.001f) == frontAxleLocation.y);
-		CHECK(Approx(currentFrontAxlePosition.z).margin(0.001f) == frontAxleLocation.z);
-		CHECK(Approx(currentRearAxlePosition.x).margin(0.001f) == rearAxleLocation.x);
-		CHECK(Approx(currentRearAxlePosition.y).margin(0.001f) == rearAxleLocation.y);
-		CHECK(Approx(currentRearAxlePosition.z).margin(0.001f) == rearAxleLocation.z);
+		CHECK(Approx(currentFrontAxleLocation.x).margin(0.001f) == frontAxleLocation.x);
+		CHECK(Approx(currentFrontAxleLocation.y).margin(0.001f) == frontAxleLocation.y);
+		CHECK(Approx(currentFrontAxleLocation.z).margin(0.001f) == frontAxleLocation.z);
+		CHECK(Approx(currentRearAxleLocation.x).margin(0.001f) == rearAxleLocation.x);
+		CHECK(Approx(currentRearAxleLocation.y).margin(0.001f) == rearAxleLocation.y);
+		CHECK(Approx(currentRearAxleLocation.z).margin(0.001f) == rearAxleLocation.z);
 	}
 }
