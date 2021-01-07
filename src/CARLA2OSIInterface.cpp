@@ -517,7 +517,20 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
 			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
 
-
+			//The following will only work if there is a matching waypoint:
+			auto closestWaypoint = map->GetWaypoint(walkerActor->GetLocation(), true, (uint32_t)carla::road::Lane::LaneType::Any);
+			if (closestWaypoint) {
+				if (closestWaypoint->IsJunction()) {
+					pedestrian->mutable_assigned_lane_id()->AddAllocated(
+						carla_osi::id_mapping::toOSI(closestWaypoint->GetJunctionId(), carla_osi::id_mapping::JuncID));
+				}
+				else {
+					//TODO
+					pedestrian->mutable_assigned_lane_id()->AddAllocated(
+						carla_osi::id_mapping::toOSI(closestWaypoint->GetRoadId(), closestWaypoint->GetLaneId(),
+							closestWaypoint->GetSectionId(),carla_osi::id_mapping::RoadIDLaneID));
+				}
+			}
 		}
 		else if ("traffic.traffic_light" == typeID) {
 			carla::SharedPtr<const carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
