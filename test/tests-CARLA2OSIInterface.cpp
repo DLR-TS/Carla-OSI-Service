@@ -1,5 +1,7 @@
 #include "catch2/catch.hpp"
 
+#include "testhelpers.h"
+
 #include "CARLA2OSIInterface.h"
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
@@ -162,16 +164,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		CHECK(0 == expectedOSIId.special2);
 		REQUIRE(movingObject.has_base());
 		auto base = movingObject.base();
-		REQUIRE(base.has_position());
-		REQUIRE(carla_osi::geometry::toCarla(&base.position()) == (vehicle->GetLocation() + bbox.location));
-		REQUIRE(base.has_dimension());
-		REQUIRE(carla_osi::geometry::toCarla(&base.dimension(), &base.position()).extent == bbox.extent);
-		REQUIRE(base.has_orientation());
-		auto osiRotation = carla_osi::geometry::toCarla(&base.orientation());
-		auto transform = vehicle->GetTransform();
-		REQUIRE(osiRotation.pitch == transform.rotation.pitch);
-		REQUIRE(osiRotation.yaw == transform.rotation.yaw);
-		REQUIRE(osiRotation.roll == transform.rotation.roll);
+		testBaseMoving(base, vehicle, bbox);
 		REQUIRE(movingObject.has_vehicle_classification());
 		auto classification = movingObject.vehicle_classification();
 		REQUIRE(classification.has_type());
@@ -204,7 +197,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 			break;
 		}
 
-		auto& [frontAxle, rearAxle] = world.GetAxlePositions(actor->GetId());
+		auto&[frontAxle, rearAxle] = world.GetAxlePositions(actor->GetId());
 		auto current_front_offset = /*static_cast<carla::geom::Vector3D>(bbox.location) -*/ frontAxle;
 		auto current_rear_offset = /*static_cast<carla::geom::Vector3D>(bbox.location) -*/ rearAxle;
 		CHECK(Approx(current_front_offset.x).margin(0.001f) == bbcenter_to_front.x);
@@ -216,3 +209,75 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	}
 }
 
+TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][RequiresCarlaServer][Pedestrian]") {
+	// carla server
+	std::string host = "localhost";
+	uint16_t port = 2000u;
+	double transactionTimeout = 5;
+	// delta seconds (1/framerate)
+	double deltaSeconds = (1.0 / 60);
+
+	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
+	auto timeout = std::chrono::duration<double>(transactionTimeout);
+	auto client = std::make_unique<carla::client::Client>(host, port);
+	client->SetTimeout(timeout);
+	auto world = client->GetWorld();
+	if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
+		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
+		world = client->LoadWorld("Town10HD");
+	}
+	else {
+		world = client->ReloadWorld();
+	}
+	world.WaitForTick(std::chrono::seconds(45));
+
+	auto map = world.GetMap();
+
+	auto blueprintLibrary = world.GetBlueprintLibrary();
+	auto walkerBp = blueprintLibrary->Filter("walker.pedestrian.*")->at(0);
+	carla::geom::Transform transform{ world.GetRandomLocationFromNavigation().get_value_or(carla::geom::Location()) };
+	auto walker = boost::static_pointer_cast<carla::client::Walker>(world.SpawnActor(walkerBp, transform));
+
+	// get waypoint next to a suggested spawn location
+	auto waypoint = map->GetWaypoint(transform.location,
+		true, (uint32_t)carla::road::Lane::LaneType::Any);
+	std::unique_ptr<osi3::Identifier>  expectedWaypointIdentity{ waypoint->IsJunction() ?
+		carla_osi::id_mapping::toOSI(waypoint->GetJunctionId(), carla_osi::id_mapping::JuncID)
+		: carla_osi::id_mapping::toOSI(waypoint->GetRoadId(), waypoint->GetLaneId(), waypoint->GetSectionId()) };
+
+	// draw debug point to visualize the waypoints transform
+	auto debug = world.MakeDebugHelper();
+	debug.DrawArrow(waypoint->GetTransform().location, transform.location, 0.04f);
+
+	auto spectator = world.GetSpectator();
+	auto spectatorTransform = spectator->GetTransform();
+	spectatorTransform.location = transform.location;
+	spectatorTransform.location += transform.GetRightVector() * 4.f;
+	// UpVector points down?
+	spectatorTransform.location -= transform.GetUpVector() * 1.72f;
+	spectatorTransform.rotation = transform.rotation;
+	spectatorTransform.rotation.yaw -= 90;
+	spectatorTransform.rotation.pitch -= 22.5f;
+	spectator->SetTransform(spectatorTransform);
+
+	auto& bbox = walker->GetBoundingBox();
+
+	std::unique_ptr<osi3::Identifier> expectedIdentity{ carla_osi::id_mapping::toOSI(walker->GetId()) };
+
+	std::cout << __FUNCTION__ << ": Distance from walker to waypoint: " << walker->GetLocation().Distance(waypoint->GetTransform().location) << std::endl;
+
+	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
+	carla->initialise(host, port, transactionTimeout, deltaSeconds);
+
+	auto groundTruth = carla->getLatestGroundTruth();
+	// search for moving object of type PEDESTRIAN
+	auto iter = std::find_if(groundTruth->moving_object().begin(), groundTruth->moving_object().end(), [](osi3::MovingObject m) {
+		return osi3::MovingObject_Type_TYPE_PEDESTRIAN == m.type(); });
+
+	if (iter != groundTruth->moving_object().end()) {
+		auto& movingObject = *iter;
+		REQUIRE(movingObject.id().value() == expectedIdentity->value());
+		REQUIRE(movingObject.has_base());
+		testBaseMoving(movingObject.base(), walker, bbox);
+	}
+}

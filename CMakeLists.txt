@@ -123,7 +123,7 @@ target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST
 
 find_package(Catch2 REQUIRED)
 add_executable(Test_CARLA_OSI ${TESTFILES})
-target_include_directories(Test_CARLA_OSI PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+target_include_directories(Test_CARLA_OSI PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_CURRENT_LIST_DIR}/test)
 target_link_libraries(Test_CARLA_OSI Catch2::Catch2 CARLA_OSI_Lib CARLA_OSI_gRPC_Lib CARLA_OSI_gRPC_ServiceLib)
 
 include(CTest)
