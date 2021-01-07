@@ -512,7 +512,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 
 			pedestrian->set_allocated_id(carla_osi::id_mapping::toOSI(walkerActor->GetId()));
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
-			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(actor).release());
+			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(walkerActor).release());
 
 			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
 			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
