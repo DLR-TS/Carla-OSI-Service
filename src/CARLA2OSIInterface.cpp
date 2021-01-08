@@ -445,6 +445,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto vehicle = groundTruth->add_moving_object();
 			auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 
+			vehicle->set_model_reference(vehicleActor->GetTypeId());
 			vehicle->set_allocated_id(carla_osi::id_mapping::toOSI(vehicleActor->GetId()));
 			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
 			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(vehicleActor).release());
@@ -510,6 +511,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto pedestrian = groundTruth->add_moving_object();
 			auto walkerActor = boost::static_pointer_cast<const carla::client::Walker>(actor);
 
+			pedestrian->set_model_reference(walkerActor->GetTypeId());
 			pedestrian->set_allocated_id(carla_osi::id_mapping::toOSI(walkerActor->GetId()));
 			pedestrian->set_type(osi3::MovingObject_Type_TYPE_PEDESTRIAN);
 			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(walkerActor).release());
