@@ -1,4 +1,4 @@
 [submodule "lib/open-simulation-interface"]
 	path = lib/open-simulation-interface
 	url = https://gitlab.sl4to5.de/deliverables/architecture/open-simulation-interface.git
-	branch = develop
+	branch = sl45/v3.2.2
