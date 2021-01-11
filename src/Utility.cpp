@@ -17,8 +17,8 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla:
 	auto[dimension, position] = carla_osi::geometry::toOSI(bbox);
 	base->set_allocated_dimension(dimension.release());
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
@@ -38,8 +38,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	auto transform = actor->GetTransform();
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	// but bounding boxes only exist for Vehicle and Walker specializations
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -56,8 +56,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations - assume bbox is not rotated
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -74,8 +74,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations, but
 	// vehicle bounding boxes shouldn't be rotated
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
@@ -91,10 +91,11 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 
 	// velocity and acceleration as part of ground truth are given in global coordinate system
 	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
-	base->set_allocated_velocity(carla_osi::geometry::toOSI(actor->GetVelocity()));
-	base->set_allocated_acceleration(carla_osi::geometry::toOSI(actor->GetAcceleration()));
+	base->set_allocated_velocity(carla_osi::geometry::toOSI(actor->GetVelocity()).release());
+	base->set_allocated_acceleration(carla_osi::geometry::toOSI(actor->GetAcceleration()).release());
 	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
-	base->set_allocated_orientation_rate(carla_osi::geometry::toOSI(carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)));
+	base->set_allocated_orientation_rate(carla_osi::geometry::toOSI(
+		carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)).release());
 
 	//TODO Carla has no rotational acceleration
 	//base->set_allocated_orientation_acceleration
@@ -114,11 +115,11 @@ osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::clien
 	//auto [dimension, position] = carla_osi::geometry::toOSI( actor-> Get BoundingBox() );
 	//base->set_allocated_dimension(dimension);
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
 	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
 	//TODO assure rotation is applied local
 	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation));
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation).release());
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	auto classification = main->mutable_classification();
@@ -237,11 +238,11 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 			carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
 
 		auto base = trafficLightBulb->mutable_base();
-		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation));
+		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation).release());
 		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
 		//TODO assure rotation is applied local
 		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
-		base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation));
+		base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation).release());
 		osi3::Dimension3d* dimension = new osi3::Dimension3d();
 		//bulbs have circa 30 centimeter diameter
 		dimension->set_height(0.30f);

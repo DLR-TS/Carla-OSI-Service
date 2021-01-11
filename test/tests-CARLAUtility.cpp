@@ -59,28 +59,25 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
-			osi3::Orientation3d* orientation = carla_osi::geometry::toOSI(rotation);
+			std::unique_ptr<osi3::Orientation3d> orientation = carla_osi::geometry::toOSI(rotation);
 			REQUIRE(M_PI_4 == orientation->pitch());
 			REQUIRE(M_PI_2 == orientation->yaw());
 			REQUIRE(M_PI == orientation->roll());
-			delete orientation;
 		}
 
 		SECTION("Location") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
-			osi3::Vector3d* position = carla_osi::geometry::toOSI(location);
+			std::unique_ptr<osi3::Vector3d> position = carla_osi::geometry::toOSI(location);
 			REQUIRE(1.2f == position->x());
 			REQUIRE(-3.4f == position->y());
 			REQUIRE(5.6f == position->z());
-			delete position;
 		}
 
 		SECTION("2D Vector") {
 			carla::geom::Vector2D vector(0.1f, -0.1f);
-			osi3::Vector2d* vector2d = carla_osi::geometry::toOSI(vector);
+			std::unique_ptr<osi3::Vector2d> vector2d = carla_osi::geometry::toOSI(vector);
 			REQUIRE(0.1f == vector2d->x());
 			REQUIRE(-0.1f == vector2d->y());
-			delete vector2d;
 		}
 
 		SECTION("BoundingBox") {

@@ -198,8 +198,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		auto base = stationaryObject->mutable_base();
 		auto[dimension, position] = carla_osi::geometry::toOSI(mapObject.bounding_box);
 		base->set_allocated_dimension(dimension.release());
-		base->set_allocated_position(carla_osi::geometry::toOSI(mapObject.transform.location));
-		base->set_allocated_orientation(carla_osi::geometry::toOSI(mapObject.transform.rotation));
+		base->set_allocated_position(carla_osi::geometry::toOSI(mapObject.transform.location).release());
+		base->set_allocated_orientation(carla_osi::geometry::toOSI(mapObject.transform.rotation).release());
 
 		//TODO base_polygon
 
@@ -368,7 +368,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 				centerline->Reserve(waypoints.size());
 				for (const auto& waypoint : waypoints) {
 					auto location = waypoint->GetTransform().location;
-					centerline->AddAllocated(carla_osi::geometry::toOSI(location));
+					centerline->AddAllocated(carla_osi::geometry::toOSI(location).release());
 				}
 
 				// add neighbouring lanes

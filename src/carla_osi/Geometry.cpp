@@ -5,11 +5,11 @@ carla::geom::Vector3D carla_osi::geometry::mul(const carla::geom::Vector3D & vec
 	return carla::geom::Vector3D(vector.x * f, vector.y * f, vector.z * f);
 }
 
-osi3::Orientation3d* carla_osi::geometry::toOSI(const carla::geom::Rotation& rotation)
+std::unique_ptr<osi3::Orientation3d> carla_osi::geometry::toOSI(const carla::geom::Rotation& rotation)
 {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
-	osi3::Orientation3d* orient = new osi3::Orientation3d();
+	std::unique_ptr<osi3::Orientation3d> orient = std::make_unique<osi3::Orientation3d>();
 	//TODO OSI prefers values in angular range [pi,pi]
 	orient->set_yaw(-rotation.yaw * M_PI / 180.0);
 	orient->set_pitch(rotation.pitch * M_PI / 180.0);
@@ -23,23 +23,22 @@ std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> c
 	dim->set_length(boundingBox.extent.x * 2);
 	dim->set_width(boundingBox.extent.y * 2);
 	dim->set_height(boundingBox.extent.z * 2);
-	std::unique_ptr<osi3::Vector3d> vec;
-	vec.reset(carla_osi::geometry::toOSI(boundingBox.location));
+	std::unique_ptr<osi3::Vector3d> vec = carla_osi::geometry::toOSI(boundingBox.location);
 	return std::pair(std::move(dim), std::move(vec));
 }
 
-osi3::Vector3d* carla_osi::geometry::toOSI(const carla::geom::Vector3D& location) {
+std::unique_ptr<osi3::Vector3d> carla_osi::geometry::toOSI(const carla::geom::Vector3D& location) {
 	//flip y
-	osi3::Vector3d* vec = new osi3::Vector3d();
+	std::unique_ptr<osi3::Vector3d> vec = std::make_unique<osi3::Vector3d>();
 	vec->set_x(location.x);
 	vec->set_y(-location.y);
 	vec->set_z(location.z);
 	return vec;
 }
 
-osi3::Vector2d* carla_osi::geometry::toOSI(const carla::geom::Vector2D& vector) {
+std::unique_ptr<osi3::Vector2d> carla_osi::geometry::toOSI(const carla::geom::Vector2D& vector) {
 	//flip y
-	osi3::Vector2d* vec = new osi3::Vector2d();
+	std::unique_ptr<osi3::Vector2d> vec = std::make_unique<osi3::Vector2d>();
 	vec->set_x(vector.x);
 	vec->set_y(vector.y);
 	return vec;
