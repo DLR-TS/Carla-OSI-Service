@@ -95,26 +95,24 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 		SECTION("ActorID") {
 			//actorID is unsigned
 			carla::ActorId actorID(-2);
-			osi3::Identifier* identifier = carla_osi::id_mapping::toOSI(actorID, carla_osi::id_mapping::ActorID);
+			std::unique_ptr<osi3::Identifier> identifier = carla_osi::id_mapping::toOSI(actorID, carla_osi::id_mapping::ActorID);
 			carla_osi::id_mapping::IDUnion value;
 			value.value = identifier->value();
 			REQUIRE(8589934590ull == value.value);
 			REQUIRE(-2 == value.id);
 			REQUIRE(0 == value.special);
 			REQUIRE(carla_osi::id_mapping::ActorID == value.type);
-			delete identifier;
 		}
 		SECTION("ActorID (implicit type)") {
 			//actorID is unsigned
 			carla::ActorId actorID(1234567890u);
-			osi3::Identifier* identifier = carla_osi::id_mapping::toOSI(actorID);
+			std::unique_ptr<osi3::Identifier> identifier = carla_osi::id_mapping::toOSI(actorID);
 			carla_osi::id_mapping::IDUnion value;
 			value.value = identifier->value();
 			REQUIRE(5529535186ull == value.value);
 			REQUIRE(1234567890u == value.id);
 			REQUIRE(0 == value.special);
 			REQUIRE(carla_osi::id_mapping::ActorID == value.type);
-			delete identifier;
 		}
 
 		SECTION("Roads and Junctions") {
@@ -122,25 +120,23 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			SECTION("RoadID and LaneID") {
 				carla::road::RoadId roadID(-1234567890);
 				carla::road::LaneId laneID(-7);
-				osi3::Identifier* identifier = carla_osi::id_mapping::toOSI(roadID, laneID);
+				std::unique_ptr<osi3::Identifier> identifier = carla_osi::id_mapping::toOSI(roadID, laneID);
 				carla_osi::id_mapping::IDUnion value;
 				value.value = identifier->value();
 				REQUIRE(0xF902B669FD2Eull == value.value);
 				REQUIRE(-1234567890 == value.id);
 				REQUIRE(-7 == value.special);
 				REQUIRE(carla_osi::id_mapping::RoadIDLaneID == value.type);
-				delete identifier;
 			}
 			SECTION("JuncID") {
 				carla::road::JuncId juncID(-1234567890);
-				osi3::Identifier* identifier = carla_osi::id_mapping::toOSI(juncID, carla_osi::id_mapping::JuncID);
+				std::unique_ptr<osi3::Identifier> identifier = carla_osi::id_mapping::toOSI(juncID, carla_osi::id_mapping::JuncID);
 				carla_osi::id_mapping::IDUnion value;
 				value.value = identifier->value();
 				REQUIRE(0x3B669FD2Eull == value.value);
 				REQUIRE(-1234567890 == value.id);
 				REQUIRE(0 == value.special);
 				REQUIRE(carla_osi::id_mapping::JuncID == value.type);
-				delete identifier;
 			}
 		}
 	}

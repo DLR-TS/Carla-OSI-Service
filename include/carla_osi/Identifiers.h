@@ -2,8 +2,15 @@
 
 #include <variant>
 
+#include <carla/client/Actor.h>
+#include <carla/client/Junction.h>
+#include <carla/client/TrafficLight.h>
+#include <carla/client/Waypoint.h>
 #include <carla/road/RoadTypes.h>
+#include <carla/road/element/Waypoint.h>
+#include <carla/road/Map.h>
 #include <carla/rpc/ActorId.h>
+#include <carla/rpc/StationaryMapObject.h>
 
 #include "osi_common.pb.h"
 
@@ -40,10 +47,11 @@ namespace carla_osi {
 		//should be the same index as used in CarlaUniqueID_t
 		enum CarlaUniqueID_e : uint8_t {
 			NoCarlaID = 0,
-			StationaryMapObject = 0,
 			ActorID = 1,
 			RoadIDLaneID = 2,//also used for road marks, which are defined per lane in OpenDRIVE
 			JuncID = 3,
+			StationaryMapObject = 4,
+			EnvironmentObject = 4,
 		};//Unmapped globally unique OpenDRIVE ids: object, outline, tunnel, bridge, signal, controller, junctionGroup, (some for railroads: switch, mainTrack, sideTrack, station, platform),
 
 		enum RoadIDType_e : uint8_t {
@@ -56,11 +64,22 @@ namespace carla_osi {
 		};
 
 		//Since some Carla ids are typedefs of the same primitive type, the relevant type for CarlaUniqueID can not be deduced because of the ambiguity
-		osi3::Identifier* toOSI(const uint32_t id, CarlaUniqueID_e type = ActorID);
-		osi3::Identifier* toOSI(const uint32_t id, int8_t special, const CarlaUniqueID_e type = RoadIDLaneID);
-		osi3::Identifier* toOSI(const uint32_t id, const int8_t special, const uint16_t special2, const CarlaUniqueID_e type = RoadIDLaneID);
+		std::unique_ptr<osi3::Identifier> toOSI(const uint32_t id, CarlaUniqueID_e type = ActorID);
+		std::unique_ptr<osi3::Identifier> toOSI(const uint32_t id, int8_t special, const CarlaUniqueID_e type = RoadIDLaneID);
+		std::unique_ptr<osi3::Identifier> toOSI(const uint32_t id, const int8_t special, const uint16_t special2, const CarlaUniqueID_e type = RoadIDLaneID);
 		// stores roadMark  in the 2 upper bits of special 2
-		osi3::Identifier* toOSI(const carla::road::RoadId id, const carla::road::LaneId laneId, const uint16_t sectionId, RoadIDType_e roadMarkType, CarlaUniqueID_e type = RoadIDLaneID);
+		std::unique_ptr<osi3::Identifier> toOSI(const carla::road::RoadId id, const carla::road::LaneId laneId, const uint16_t sectionId, RoadIDType_e roadMarkType, CarlaUniqueID_e type = RoadIDLaneID);
 		CarlaUniqueID_t toCarla(const osi3::Identifier* identifier);
+
+		std::unique_ptr<osi3::Identifier> getOSIActorId(carla::SharedPtr<const carla::client::Actor> actor);
+		std::unique_ptr<osi3::Identifier> getOSITrafficLightId(carla::SharedPtr<const carla::client::TrafficLight> trafficLight, const int index);
+		std::unique_ptr<osi3::Identifier> getOSIEnvironmentObjectId(const carla::rpc::StationaryMapObject& object);
+		std::unique_ptr<osi3::Identifier> getOSIJunctionId(carla::SharedPtr<const carla::client::Junction> junction);
+		std::unique_ptr<osi3::Identifier> getOSIWaypointId(carla::SharedPtr<const carla::client::Waypoint> waypoint);
+		// same as above, but mark as inner or outer boundary id (second argument)
+		std::unique_ptr<osi3::Identifier> getOSIWaypointBoundaryId(carla::SharedPtr<const carla::client::Waypoint> waypoint, const carla_osi::id_mapping::RoadIDType_e type);
+		//std::unique_ptr<osi3::Identifier> getOSIWaypointBoundaryIds(carla::SharedPtr<const carla::client::Waypoint> waypoint);
+		// Requires map object to differentiate between junctions and lanes
+		std::unique_ptr<osi3::Identifier> getOSIWaypointId(const carla::road::element::Waypoint& waypoint, const carla::road::Map& map);
 	}
 }

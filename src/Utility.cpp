@@ -6,7 +6,7 @@
 osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
-	prop->set_allocated_id(carla_osi::id_mapping::toOSI(actor->GetId(), carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
+	prop->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
 
 	osi3::BaseStationary* base = prop->mutable_base();
 	// bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
@@ -234,8 +234,7 @@ std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<cons
 		bulbLocation.z = info.second.z + baseTransform.location.z;
 
 		osi3::TrafficLight* trafficLightBulb = new osi3::TrafficLight();
-		trafficLightBulb->set_allocated_id(carla_osi::id_mapping::toOSI(actor->GetId(), info.first,
-			carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
+		trafficLightBulb->set_allocated_id(carla_osi::id_mapping::getOSITrafficLightId(actor, info.first).release());
 
 		auto base = trafficLightBulb->mutable_base();
 		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation).release());
@@ -392,8 +391,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_field_of_view_horizontal(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
-	config->set_allocated_sensor_id(carla_osi::id_mapping::toOSI(sensor->GetId(),
-		carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	//TODO calculate sensor position in vehicle coordinates
 	//config->set_allocated_mounting_position(position)
@@ -455,8 +453,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	//TODO OSI expects a constant number of pixels per message, but Carla only reports new values of the angle sweeped during the last frame
 	config->set_num_of_pixels(numPixels);
 	//TODO number of rays (horizontal/vertical) of lidar
-	config->set_allocated_sensor_id(carla_osi::id_mapping::toOSI(sensor->GetId(), 
-		carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	return lidarSensorView;
 }
@@ -482,8 +479,7 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 	//TODO Maybe use the osi3::FeatureData-based osi3::RadarDetection instead of a osi3::SensorView, which is similar to Carla's Radar output
 
 	auto config = radarSensorview->mutable_view_configuration();
-	config->set_allocated_sensor_id(carla_osi::id_mapping::toOSI(sensor->GetId(), 
-		carla_osi::id_mapping::CarlaUniqueID_e::ActorID));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 	if (hFov) {
 		config->set_field_of_view_horizontal(hFov.value());
 	}

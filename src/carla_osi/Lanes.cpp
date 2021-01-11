@@ -12,23 +12,9 @@ google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> carl
 		for (const auto& outbound : roadMap.GetSuccessors(roadEnd)) {
 			auto pair = lanePairings.Add();
 
-			if (roadMap.IsJunction(inbound.road_id)) {
-				pair->set_allocated_antecessor_lane_id(
-					carla_osi::id_mapping::toOSI(roadMap.GetJunctionId(inbound.road_id), carla_osi::id_mapping::JuncID));
-			}
-			else {
-				pair->set_allocated_antecessor_lane_id(carla_osi::id_mapping::toOSI(inbound.road_id,
-					inbound.lane_id, inbound.section_id, carla_osi::id_mapping::RoadIDLaneID));
-			}
+			pair->set_allocated_antecessor_lane_id(carla_osi::id_mapping::getOSIWaypointId(inbound, roadMap).release());
 
-			if (roadMap.IsJunction(inbound.road_id)) {
-				pair->set_allocated_successor_lane_id(
-					carla_osi::id_mapping::toOSI(roadMap.GetJunctionId(outbound.road_id), carla_osi::id_mapping::JuncID));
-			}
-			else {
-				pair->set_allocated_successor_lane_id(carla_osi::id_mapping::toOSI(outbound.road_id,
-					outbound.lane_id, outbound.section_id, carla_osi::id_mapping::RoadIDLaneID));
-			}
+			pair->set_allocated_successor_lane_id(carla_osi::id_mapping::getOSIWaypointId(outbound, roadMap).release());
 		}
 	}
 	return lanePairings;
@@ -108,7 +94,7 @@ carla_osi::lanes::parseLaneBoundary(const carla::road::element::LaneMarking& lan
 	return { std::move(laneBoundaryClassification), std::move(laneBoundaryClassification2) };
 }
 
-std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>, uint64_t, uint64_t> 
+std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>, uint64_t, uint64_t>
 carla_osi::lanes::parseLaneBoundary(carla::client::Map::TopologyList::value_type laneSection) {
 	auto&[begin, end] = laneSection;
 	// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
@@ -129,16 +115,16 @@ carla_osi::lanes::parseLaneBoundary(carla::client::Map::TopologyList::value_type
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(leftClassifications.first.release());
 			laneBoundary->set_allocated_id(
-				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					carla_osi::id_mapping::RoadIDType_e::OuterBoundaryLine));
+				carla_osi::id_mapping::getOSIWaypointBoundaryId(begin,
+					carla_osi::id_mapping::RoadIDType_e::OuterBoundaryLine).release());
 			left_lane_boundary_id = laneBoundary->id().value();
 		}
 		else if (leftClassifications.second) {
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(leftClassifications.second.release());
 			laneBoundary->set_allocated_id(
-				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					carla_osi::id_mapping::RoadIDType_e::InnerBoundaryLine));
+				carla_osi::id_mapping::getOSIWaypointBoundaryId(begin,
+					carla_osi::id_mapping::RoadIDType_e::InnerBoundaryLine).release());
 			left_lane_boundary_id = laneBoundary->id().value();
 		}
 	}
@@ -150,16 +136,16 @@ carla_osi::lanes::parseLaneBoundary(carla::client::Map::TopologyList::value_type
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(rightClassifications.first.release());
 			laneBoundary->set_allocated_id(
-				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					carla_osi::id_mapping::RoadIDType_e::OuterBoundaryLine));
+				carla_osi::id_mapping::getOSIWaypointBoundaryId(begin,
+					carla_osi::id_mapping::RoadIDType_e::OuterBoundaryLine).release());
 			right_lane_boundary_id = laneBoundary->id().value();
 		}
 		else if (rightClassifications.second) {
 			auto laneBoundary = laneBoundaries.Add();
 			laneBoundary->set_allocated_classification(rightClassifications.second.release());
 			laneBoundary->set_allocated_id(
-				carla_osi::id_mapping::toOSI(begin->GetRoadId(), begin->GetLaneId(), begin->GetSectionId(),
-					carla_osi::id_mapping::RoadIDType_e::InnerBoundaryLine));
+				carla_osi::id_mapping::getOSIWaypointBoundaryId(begin,
+					carla_osi::id_mapping::RoadIDType_e::InnerBoundaryLine).release());
 			right_lane_boundary_id = laneBoundary->id().value();
 		}
 	}
