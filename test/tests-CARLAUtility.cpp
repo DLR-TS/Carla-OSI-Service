@@ -128,7 +128,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 				osi3::Identifier* identifier = carla_osi::id_mapping::toOSI(roadID, laneID);
 				carla_osi::id_mapping::IDUnion value;
 				value.value = identifier->value();
-				REQUIRE(0xFFF90002B669FD2Eull == value.value);
+				REQUIRE(0xF902B669FD2Eull == value.value);
 				REQUIRE(-1234567890 == value.id);
 				REQUIRE(-7 == value.special);
 				REQUIRE(carla_osi::id_mapping::RoadIDLaneID == value.type);

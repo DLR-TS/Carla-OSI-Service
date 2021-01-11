@@ -17,7 +17,7 @@ namespace carla_osi {
 		typedef std::variant<carla::ActorId, std::tuple<carla::road::RoadId, carla::road::LaneId, uint16_t>, carla::road::JuncId> CarlaUniqueID_t;
 		//
 		//Carla ids have only 32 bits, which will be copied into the lower 32 bits of the OSI identifier. (RoadID in case of Lanes)
-		//The type will be marked in the upper 8 bits of the osi3::Identifier's 64bit value, the remaining 24 upper bits are used for special sub-ids, e.g. the LaneID and road mark id. This limits the implementation to only 256 lanes per road.
+		//The type will be marked in the next 8 bits of the osi3::Identifier's 64bit value, the remaining 24 upper bits are used for special sub-ids, e.g. the LaneID and road mark id. This limits the implementation to only 256 lanes per road.
 		union IDUnion {
 			// OSI id value
 			uint64_t value;
@@ -25,16 +25,15 @@ namespace carla_osi {
 				// Carla/OpenDRIVE id (both uint32_t)
 				uint32_t id;
 
-				// sub-sub-id, e. g. road section and road markings of a lane
-				uint16_t special2;
-
-				// Carla/OpenDRIVE sub-id, for example, LaneID as part of a road id
-				int8_t special;
-
 				// Carla/OpenDRIVE id type
 				//uint16_t type;
 				uint8_t type;
 
+				// Carla/OpenDRIVE sub-id, for example, LaneID as part of a road id
+				int8_t special;
+
+				// sub-sub-id, e. g. road section and road markings of a lane
+				uint16_t special2;
 			};
 		};
 
