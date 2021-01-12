@@ -61,7 +61,7 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	}
 }
 
-TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][RequiresCarlaServer][MovingObject]") {
+TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[CARLAInterface][.][RequiresCarlaServer][MovingObject]") {
 
 	// carla server
 	std::string host = "localhost";
@@ -75,16 +75,16 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 	auto client = std::make_unique<carla::client::Client>(host, port);
 	client->SetTimeout(timeout);
 	auto world = client->GetWorld();
-	//if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
-	//	std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
-	//	world = client->LoadWorld("Town10HD");
-	//	world.WaitForTick(std::chrono::seconds(45));
-	//}
-	//else {
-	//	//clear world
-	//	world = client->ReloadWorld();
-	//}
-	world = client->LoadWorld("2020-05-04_atCity_AF_DLR_Braunschweig_Prio1_ROD_offset");
+	if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
+		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
+		world = client->LoadWorld("Town10HD");
+		world.WaitForTick(std::chrono::seconds(45));
+	}
+	else {
+		//clear world
+		world = client->ReloadWorld();
+	}
+	//world = client->LoadWorld("2020-05-04_atCity_AF_DLR_Braunschweig_Prio1_ROD_offset");
 	world.WaitForTick(std::chrono::seconds(45));
 
 	//spawn vehicles
@@ -157,7 +157,8 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[.][Req
 		CHECK(0 < wheel_radius);
 
 		REQUIRE(0 < groundTruth->moving_object_size());
-		carla_osi::id_mapping::IDUnion expectedOSIId{ 1ULL << (16ULL + 8ULL + 32ULL) | actor->GetId() };
+		carla_osi::id_mapping::IDUnion expectedOSIId{
+			((uint64_t) carla_osi::id_mapping::CarlaUniqueID_e::ActorID) << (/*16ULL + 8ULL +*/ 32ULL) | actor->GetId() };
 		CHECK(actor->GetId() == expectedOSIId.id);
 		CHECK(carla_osi::id_mapping::CarlaUniqueID_e::ActorID == expectedOSIId.type);
 		CHECK(0 == expectedOSIId.special);
