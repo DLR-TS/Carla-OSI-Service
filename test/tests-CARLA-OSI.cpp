@@ -11,6 +11,8 @@
 #include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
 #include "osi_sensorview.pb.h"
 
+#include "testhelpers.h"
+
 #include "CARLA_OSI_gRPC.h"
 
 std::unique_ptr<grpc::ClientContext> CreateDeadlinedClientContext(double transactionTimeout) {
@@ -21,25 +23,6 @@ std::unique_ptr<grpc::ClientContext> CreateDeadlinedClientContext(double transac
 	// set deadline to transactionTimeout seconds from now
 	context->set_deadline(std::chrono::system_clock::now() + timeout);
 	return context;
-}
-
-carla::client::World TryLoadWorld(std::shared_ptr<const carla::client::Client> client, std::string carlaMap) {
-	auto maps = client->GetAvailableMaps();
-	auto world = client->GetWorld();
-	if (!std::any_of(maps.begin(), maps.end(), [&maps, &carlaMap](auto map) {return carlaMap.compare(map) == 0; })) {
-		// no map with name given in carlaMap - use Town10HD as fallback
-		carlaMap = "Town10HD";
-	}
-	if (world.GetMap()->GetName().rfind(carlaMap.substr(0, 4), 0) == std::string::npos) {
-		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world '" << carlaMap << "'" << std::endl;
-		world = client->LoadWorld(carlaMap);
-	}
-	else {
-		//make sure to remove actors added for previous tests
-		world = client->ReloadWorld();
-	}
-	world.WaitForTick(std::chrono::seconds(45));
-	return world;
 }
 
 TEST_CASE("CARLA_OSI_Client", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCarlaServer][gRPC]") {
@@ -66,10 +49,7 @@ TEST_CASE("CARLA_OSI_Client", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCar
 	std::string carlaMap = "Town01";
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
-	auto timeout = std::chrono::duration<double>(transactionTimeout);
-	auto client = std::make_shared<carla::client::Client>(carlaHost, carlaPort);
-	client->SetTimeout(timeout);
-	auto world = TryLoadWorld(client, carlaMap);
+	auto[client, world] = getCarlaDefaultWorld(carlaHost, carlaPort, transactionTimeout, carlaMap);
 
 	SECTION("Supported rpcs") {
 
@@ -244,10 +224,7 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	std::string carlaMap = "Town01";
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
-	auto timeout = std::chrono::duration<double>(transactionTimeout);
-	auto client = std::make_shared<carla::client::Client>(carlaHost, carlaPort);
-	client->SetTimeout(timeout);
-	auto world = TryLoadWorld(client, carlaMap);
+	auto[client, world] = getCarlaDefaultWorld(carlaHost, carlaPort, transactionTimeout, carlaMap);
 
 	//prefixed fmu SensorView variable name
 	std::string baseName = "#prefix#OSMPSensorViewGroundTruth";

@@ -31,15 +31,7 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	double deltaSeconds = (1.0 / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
-	auto timeout = std::chrono::duration<double>(transactionTimeout);
-	auto client = std::make_unique<carla::client::Client>(host, port);
-	client->SetTimeout(timeout);
-	auto world = client->GetWorld();
-	if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
-		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
-		world = client->LoadWorld("Town10HD");
-		world.WaitForTick(std::chrono::seconds(45));
-	}
+	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
 
 	SECTION("Init") {
 		carla->initialise(host, port, transactionTimeout, deltaSeconds);
@@ -71,21 +63,9 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[CARLAI
 	double deltaSeconds = (1.0 / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
-	auto timeout = std::chrono::duration<double>(transactionTimeout);
-	auto client = std::make_unique<carla::client::Client>(host, port);
-	client->SetTimeout(timeout);
-	auto world = client->GetWorld();
-	if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
-		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
-		world = client->LoadWorld("Town10HD");
-		world.WaitForTick(std::chrono::seconds(45));
-	}
-	else {
-		//clear world
-		world = client->ReloadWorld();
-	}
+	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
 	//world = client->LoadWorld("2020-05-04_atCity_AF_DLR_Braunschweig_Prio1_ROD_offset");
-	world.WaitForTick(std::chrono::seconds(45));
+	//world.WaitForTick(std::chrono::seconds(45));
 
 	//spawn vehicles
 	auto blueprintLibrary = world.GetBlueprintLibrary();
@@ -219,18 +199,7 @@ TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][Requir
 	double deltaSeconds = (1.0 / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
-	auto timeout = std::chrono::duration<double>(transactionTimeout);
-	auto client = std::make_unique<carla::client::Client>(host, port);
-	client->SetTimeout(timeout);
-	auto world = client->GetWorld();
-	if (world.GetMap()->GetName().rfind("Town", 0) == std::string::npos) {
-		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world 'Town10HD'" << std::endl;
-		world = client->LoadWorld("Town10HD");
-	}
-	else {
-		world = client->ReloadWorld();
-	}
-	world.WaitForTick(std::chrono::seconds(45));
+	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
 
 	auto map = world.GetMap();
 
