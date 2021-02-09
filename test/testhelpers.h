@@ -32,21 +32,25 @@ static inline std::tuple<std::unique_ptr<carla::client::Client>, carla::client::
 	client->SetTimeout(transactionTimeout);
 	auto maps = client->GetAvailableMaps();
 	auto world = client->GetWorld();
-	std::string carlaMap;
+	std::string carlaMap = map;
 	size_t length = map.size();
-	if (!std::any_of(maps.begin(), maps.end(), [&maps, &carlaMap](auto map) {return carlaMap.compare(map) == 0; })) {
+	if (!std::any_of(maps.begin(), maps.end(), [&maps, &carlaMap, &length](const std::string map) {
+		return map.length() >= length && carlaMap.compare(map.substr(map.length() - length, length)) == 0;
+	})) {
 		// no map with name given in carlaMap - use Town10HD as fallback
 		carlaMap = "Town10HD";
 		std::cout << "CARLA Server has no map '" << map << "'! Using a default map instead" << std::endl;
 		// default maps all begin with 'Town' - don't load another world if already using a default map
 		length = 4;
 	}
-	if (world.GetMap()->GetName().rfind(carlaMap.substr(0, length), 0) == std::string::npos) {
-		std::cout << "Destroying current world '" << world.GetMap()->GetName() << "' to load world '" << carlaMap << "'" << std::endl;
+	const std::string currentMap = world.GetMap()->GetName();
+	if (currentMap.rfind(carlaMap.substr(0, length), 0) == std::string::npos) {
+		std::cout << "Destroying current world '" << currentMap << "' to load map '" << carlaMap << "'" << std::endl;
 		world = client->LoadWorld(carlaMap);
 		world.WaitForTick(std::chrono::seconds(45));
 	}
 	else if (reload) {
+		std::cout << "Reloading current map '" << currentMap << "' to clear world" << std::endl;
 		//clear world
 		world = client->ReloadWorld();
 		world.WaitForTick(std::chrono::seconds(45));

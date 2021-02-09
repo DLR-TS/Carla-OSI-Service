@@ -9,6 +9,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(MSVC)
+ option(DONT_FORCE_STATIC_LIBS "Building dynamic libraries fails for some targets because of incompatabilities in dependencies (protobuf, see FetchGRPC.cmake) and thus static lib's are enforced. Enable this option to abide CMAKE's BUILD_SHARED_LIBS variable" OFF)
+ if(NOT DONT_FORCE_STATIC_LIBS)
+ set(BUILD_SHARED_LIBS false)
+ message("Forcing the use of static libraries as building dynamic libraries fails for some targets using MSVC because of incompatabilities in some dependencies. Enable DONT_FORCE_STATIC_LIBS to unforce this behaviour")
+ endif(NOT DONT_FORCE_STATIC_LIBS)
+endif(MSVC)
+
 option(GIT_SUBMODULE "Check submodules during build" ON)
 if(GIT_SUBMODULE)
 	find_package(Git QUIET)
@@ -32,10 +40,12 @@ endif()
 
 include(${CMAKE_BINARY_DIR}/conan.cmake)
 
+conan_check(VERSION 1.29.0)
+
 # get dependencies distributed as conan packages
 conan_cmake_run(CONANFILE conanfile.txt 
                 BASIC_SETUP CMAKE_TARGETS
-                BUILD missing)
+                BUILD outdated)# option 'outdated' not only builds missing packages as does 'missing', but also packages with a newer recipe revision
 
 # include conan packages for protobuf, catch2, fakeit ...
 include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
