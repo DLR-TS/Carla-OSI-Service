@@ -26,6 +26,7 @@ namespace carla_osi {
 		//carla::geom::Vector3D is a generalization of carla::geom::Location
 		//osi3::Vector3d toOSI(const carla::geom::Location& location);
 		std::unique_ptr<osi3::Vector2d> toOSI(const carla::geom::Vector2D& vector);
+		std::unique_ptr<osi3::MountingPosition> toOSI(const carla::geom::Transform& transform);
 
 		carla::geom::Rotation toCarla(const osi3::Orientation3d* orientation);
 		carla::geom::BoundingBox toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position);

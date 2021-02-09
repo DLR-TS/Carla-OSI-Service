@@ -73,6 +73,21 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			REQUIRE(5.6f == position->z());
 		}
 
+		SECTION("MountingPosition") {
+			carla::geom::Location location(1.2f, 3.4f, 5.6f);
+			carla::geom::Rotation rotation(45, -90, 180);
+			carla::geom::Transform transform(location, rotation);
+			std::unique_ptr<osi3::MountingPosition> mountingPosition = carla_osi::geometry::toOSI(transform);
+			auto position = mountingPosition->position();
+			auto orientation = mountingPosition->orientation();
+			REQUIRE(1.2f == position.x());
+			REQUIRE(-3.4f == position.y());
+			REQUIRE(5.6f == position.z());
+			REQUIRE(M_PI_4 == orientation.pitch());
+			REQUIRE(M_PI_2 == orientation.yaw());
+			REQUIRE(M_PI == orientation.roll());
+		}
+
 		SECTION("2D Vector") {
 			carla::geom::Vector2D vector(0.1f, -0.1f);
 			std::unique_ptr<osi3::Vector2d> vector2d = carla_osi::geometry::toOSI(vector);

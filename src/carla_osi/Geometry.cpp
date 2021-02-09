@@ -44,6 +44,14 @@ std::unique_ptr<osi3::Vector2d> carla_osi::geometry::toOSI(const carla::geom::Ve
 	return vec;
 }
 
+std::unique_ptr<osi3::MountingPosition> carla_osi::geometry::toOSI(const carla::geom::Transform & transform)
+{
+	auto mountingPosition = std::make_unique<osi3::MountingPosition>();
+	mountingPosition->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	mountingPosition->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	return mountingPosition;
+}
+
 carla::geom::Rotation carla_osi::geometry::toCarla(const osi3::Orientation3d* orientation) {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
