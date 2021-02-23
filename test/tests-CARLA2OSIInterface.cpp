@@ -138,7 +138,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[CARLAI
 
 		REQUIRE(0 < groundTruth->moving_object_size());
 		carla_osi::id_mapping::IDUnion expectedOSIId{
-			((uint64_t) carla_osi::id_mapping::CarlaUniqueID_e::ActorID) << (/*16ULL + 8ULL +*/ 32ULL) | actor->GetId() };
+			((uint64_t)carla_osi::id_mapping::CarlaUniqueID_e::ActorID) << (/*16ULL + 8ULL +*/ 32ULL) | actor->GetId() };
 		CHECK(actor->GetId() == expectedOSIId.id);
 		CHECK(carla_osi::id_mapping::CarlaUniqueID_e::ActorID == expectedOSIId.type);
 		CHECK(0 == expectedOSIId.special);
@@ -250,4 +250,71 @@ TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][Requir
 		REQUIRE(movingObject.has_base());
 		testBaseMoving(movingObject.base(), walker, bbox);
 	}
+}
+
+TEST_CASE("Parse some camera sensor frames", "[CARLAInterface][.][RequiresCarlaServer][CameraSensor]") {
+	std::string host = "localhost";
+	uint16_t port = 2000u;
+	double transactionTimeout = 25;
+	// delta seconds (1/framerate)
+	double deltaSeconds = (1.0 / 60);
+
+	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
+	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
+
+	auto map = world.GetMap();
+
+	std::string role = "sensor.camera.rgb";
+	auto blueprintLibrary = world.GetBlueprintLibrary();
+	auto sensorBp = blueprintLibrary->at("sensor.camera.rgb");
+	sensorBp.SetAttribute("role_name", role);
+	sensorBp.SetAttribute("image_size_x", "800");
+	sensorBp.SetAttribute("image_size_y", "600");
+	carla::geom::Transform sensorTransform({ -172.19658203f, 183.85912109f, 27.63805176f }, { 0, -45, 0 });
+	auto sensor = world.SpawnActor(sensorBp, sensorTransform);
+
+	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
+	carla->initialise(host, port, transactionTimeout, deltaSeconds);
+
+	auto sensorView = carla->getSensorView(role);
+	REQUIRE(sensorView->camera_sensor_view_size());
+	auto cameraSensorView = sensorView->camera_sensor_view().at(0);
+	REQUIRE(cameraSensorView.has_view_configuration());
+	auto config = cameraSensorView.view_configuration();
+	REQUIRE(config.has_sensor_id());
+	carla_osi::id_mapping::IDUnion expectedId{ 0 };
+	expectedId.id = sensor->GetId();
+	expectedId.type = carla_osi::id_mapping::CarlaUniqueID_e::ActorID;
+	CHECK(config.sensor_id().value() == expectedId.value);
+	REQUIRE(config.sensor_id().value() == carla_osi::id_mapping::getOSIActorId(sensor)->value());
+	REQUIRE(config.has_number_of_pixels_horizontal());
+	REQUIRE(800 == config.number_of_pixels_horizontal
+	());
+	REQUIRE(config.has_number_of_pixels_vertical());
+	REQUIRE(600 == config.number_of_pixels_vertical());
+	REQUIRE(config.has_mounting_position());
+	auto expectedMountingPosition = carla_osi::geometry::toOSI(sensorTransform);
+	REQUIRE(Approx(config.mounting_position().position().x()) == expectedMountingPosition->position().x());
+	REQUIRE(Approx(config.mounting_position().position().y()) == expectedMountingPosition->position().y());
+	REQUIRE(Approx(config.mounting_position().position().z()) == expectedMountingPosition->position().z());
+	REQUIRE(Approx(config.mounting_position().orientation().pitch()) == expectedMountingPosition->orientation().pitch());
+	REQUIRE(Approx(config.mounting_position().orientation().yaw()) == expectedMountingPosition->orientation().yaw());
+	REQUIRE(Approx(config.mounting_position().orientation().roll()) == expectedMountingPosition->orientation().roll());
+	// Not defined in CARLA
+	//REQUIRE(config.has_mounting_position_rmse());
+	REQUIRE(config.channel_format_size());
+	REQUIRE(osi3::CameraSensorViewConfiguration_ChannelFormat_CHANNEL_FORMAT_RGB_U8_LIN == config.channel_format()
+		.Get(0));
+	REQUIRE(cameraSensorView.has_image_data());
+	auto& imageData = cameraSensorView.image_data();
+	REQUIRE(imageData.size() == 800 * 600 * 3);
+
+
+	boost::gil::rgb8c_pixel_t* pixels = reinterpret_cast<const boost::gil::rgb8_pixel_t*>(imageData.data());
+	boost::gil::rgb8c_view_t view = boost::gil::interleaved_view((std::ptrdiff_t)config.number_of_pixels_horizontal(),
+		(std::ptrdiff_t)config.number_of_pixels_vertical(), pixels,
+		sizeof(uint8_t) * 3 * config.number_of_pixels_horizontal());
+	boost::gil::write_view("CARLA_camera_sensor_image.png", view, boost::gil::png_tag());
+
+
 }

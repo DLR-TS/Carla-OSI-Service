@@ -3,6 +3,12 @@
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
 
+#include "carla/image/ImageView.h"
+
+#include "boost/gil.hpp"
+#include "boost/gil/io/write_view.hpp"
+#include "boost/gil/extension/io/png.hpp"
+
 osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
@@ -366,21 +372,33 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	auto height = image->GetHeight();
 	auto width = image->GetWidth();
 	double aspect = ((double)width) / ((double)height);
-	auto pixelCount = height * width;
+	assert(height * width == image->size());
 
-	//Buffer for RGB OSI raw image
-	auto rgb = new char[pixelCount * 3];
+	/// CARLA provides images with alpha channel, but OSI only has channel formats without alpha channel -> drop transparency
 
-	//TODO use faster pixel format conversion or use osi3::CameraSensorViewConfiguration_ChannelFormat_CHANNEL_FORMAT_OTHER
-	for (size_t i = 0; i < pixelCount; i++) {
-		auto pixel = image->at(i);
-		rgb[3 * i] = pixel.r;
-		rgb[3 * i + 1] = pixel.g;
-		rgb[3 * i + 2] = pixel.b;
-	}
+	//Boost GIL image view for color conversion
+	const carla::sensor::data::ImageTmpl<carla::sensor::data::Color>& ref = *image;
+	const boost::gil::bgra8c_view_t rgbaView = carla::image::ImageView::MakeView(ref);
+		/*=boost::gil::interleaved_view(width,
+		height, reinterpret_cast<boost::gil::rgba8c_ptr_t>(image->data()),
+		sizeof(carla::sensor::data::Image::value_type)  * width);*/
 
+	//Buffer for RGB raw image
+	boost::gil::rgb8_ptr_t rgb = new boost::gil::rgb8_pixel_t[image->size()];
+	//Boost GIL image view for rgb buffer
+	boost::gil::rgb8_view_t rgbView = boost::gil::interleaved_view((std::ptrdiff_t)width,
+		(std::ptrdiff_t)height, rgb,
+		sizeof(boost::gil::rgb8_pixel_t)  * width);
+
+	// perform the actual conversion
+	boost::gil::copy_and_convert_pixels(rgbaView, rgbView);
+
+	//Debug
+	boost::gil::write_view("CARLA_camera_image.png", rgbView, boost::gil::png_tag());
+
+	// Fill OSI CameraSensorView Message
 	osi3::CameraSensorView* cameraSensorView = new osi3::CameraSensorView();
-	cameraSensorView->set_image_data(rgb);
+	cameraSensorView->set_image_data(rgb, image->size() * sizeof(boost::gil::rgb8_pixel_t));
 
 	auto config = cameraSensorView->mutable_view_configuration();
 	config->add_channel_format(osi3::CameraSensorViewConfiguration_ChannelFormat_CHANNEL_FORMAT_RGB_U8_LIN);
@@ -394,7 +412,8 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	//TODO calculate sensor position in vehicle coordinates
-	//config->set_allocated_mounting_position(position)
+	config->set_allocated_mounting_position(carla_osi::geometry::toOSI(sensor->GetTransform()).release());
+	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
 
 
