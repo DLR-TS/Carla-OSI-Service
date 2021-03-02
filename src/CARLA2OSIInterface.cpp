@@ -6,6 +6,7 @@
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
 #include "carla_osi/Lanes.h"
+#include "carla_osi/TrafficSignals.h"
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
@@ -170,9 +171,10 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	// Static props apparently aren't part of the actor list, so this list is empty
 	auto staticProps = world->GetActors()->Filter("static.prop.*");
+	carla::geom::BoundingBox bbox;
 	for each(auto prop in *staticProps) {
 		// class Actor has no generic way of retrieving its bounding box -> custom api
-		auto bbox = world->GetActorBoundingBox(prop->GetId());
+		bbox = world->GetActorBoundingBox(prop->GetId());
 		// parse as StationaryObject
 		stationaryObjects->AddAllocated(CarlaUtility::toOSI(prop, bbox));
 	}
@@ -277,9 +279,12 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	for (auto trafficSign : *trafficSigns) {
+		//TODO pass bbox to getOSITrafficSign since the sign's bbox doesn't describe its occupied volume
+		// class Actor has no generic way of retrieving its bounding box -> custom api
+		bbox = world->GetActorBoundingBox(trafficSign->GetId());
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
-		auto OSITrafficSign = CarlaUtility::toOSI(carlaTrafficSign/*, xodr*/);
-		OSITrafficSigns->AddAllocated(OSITrafficSign);
+		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign/*, xodr*/);
+		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
 	auto lanes = staticMapTruth->mutable_lane();
@@ -518,11 +523,12 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			//TODO parse carla::client::TrafficLight as a set of osi3::TrafficLight
 			//a osi3::TrafficLight describes a single bulb of a traffic light
 
-			auto bulbs = CarlaUtility::toOSI(trafficLight/*, xodr*/);
+			//TODO retrieve traffic light heads and parse them to osi traffic lights instead of using a static guess.
+			auto bulbs = carla_osi::traffic_signals::getOSITrafficLight(trafficLight/*, xodr*/);
 			//add converted bulbs to ground truth
 			auto trafficLights = groundTruth->mutable_traffic_light();
-			for (auto* bulb : bulbs) {
-				trafficLights->AddAllocated(bulb);
+			for (auto& bulb : bulbs) {
+				trafficLights->AddAllocated(bulb.release());
 			}
 		}
 	}

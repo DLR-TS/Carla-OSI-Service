@@ -26,7 +26,7 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 5;
+	double transactionTimeout = 25;
 	// delta seconds (1/framerate)
 	double deltaSeconds = (1.0 / 60);
 
@@ -194,7 +194,7 @@ TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][Requir
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 5;
+	double transactionTimeout = 25;
 	// delta seconds (1/framerate)
 	double deltaSeconds = (1.0 / 60);
 

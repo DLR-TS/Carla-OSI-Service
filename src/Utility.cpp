@@ -104,23 +104,6 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 	return base;
 }
 
-osi3::TrafficSign* CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor/*, const pugi::xml_document& xodr*/)
-{
-	//deprecated (moved to carla_osi::traffic_signals)
-	return carla_osi::traffic_signals::getOSITrafficSign(actor).release();
-}
-
-std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor/*, const  pugi::xml_document& xodr*/)
-{
-	//deprecated (moved to carla_osi::traffic_signals)
-	auto lights = carla_osi::traffic_signals::getOSITrafficLight(actor);
-	std::vector<osi3::TrafficLight*> lightPtrs;
-	for (auto& light : lights) {
-		lightPtrs.push_back(light.release());
-	}
-	return lightPtrs;
-}
-
 std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtility::toOSI(carla::client::Vehicle::LightState vehicleLights)
 {
 	auto lightState = std::make_unique<osi3::MovingObject_VehicleClassification_LightState>();

@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
+#include "carla_osi/TrafficSignals.h"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -371,7 +372,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 
 	for (auto& trafficLightActor : trafficLightActorSnapshots) {
 		auto trafficLight = boost::dynamic_pointer_cast<const carla::client::TrafficLight>(world.GetActor(trafficLightActor.id));
-		auto osiTrafficLight = CarlaUtility::toOSI(trafficLight/*, xodr*/);
+		auto osiTrafficLight = carla_osi::traffic_signals::getOSITrafficLight(trafficLight/*, xodr*/);
 
 		//std::cout << "Bulb group" << std::endl;
 		CHECK(1 < osiTrafficLight.size());

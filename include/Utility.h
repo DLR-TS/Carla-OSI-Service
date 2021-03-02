@@ -66,10 +66,6 @@ namespace CarlaUtility {
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> vehicle);
 	// common part of above methods
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving_common(const carla::SharedPtr<const carla::client::Actor> actor, std::unique_ptr<osi3::BaseMoving> base);
-	[[deprecated("moved to carla_osi::traffic_signals")]]
-	osi3::TrafficSign* toOSI(const carla::SharedPtr<const carla::client::TrafficSign> actor/*, const pugi::xml_document& xodr*/);
-	[[deprecated("moved to carla_osi::traffic_signals")]]
-	std::vector<osi3::TrafficLight*> toOSI(const carla::SharedPtr<const carla::client::TrafficLight> actor/*, const pugi::xml_document& xodr*/);
 
 	std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> toOSI(carla::client::Vehicle::LightState lightState);
 
