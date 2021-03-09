@@ -279,11 +279,11 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	for (auto trafficSign : *trafficSigns) {
-		//TODO pass bbox to getOSITrafficSign since the sign's bbox doesn't describe its occupied volume
 		// class Actor has no generic way of retrieving its bounding box -> custom api
 		bbox = world->GetActorBoundingBox(trafficSign->GetId());
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
-		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign/*, xodr*/);
+		// pass bbox to getOSITrafficSign since the sign's bbox doesn't describe its occupied volume
+		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, bbox/*, xodr*/);
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
@@ -524,7 +524,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			//a osi3::TrafficLight describes a single bulb of a traffic light
 
 			//TODO retrieve traffic light heads and parse them to osi traffic lights instead of using a static guess.
-			auto bulbs = carla_osi::traffic_signals::getOSITrafficLight(trafficLight/*, xodr*/);
+			auto heads = world->GetTrafficLightHeads(trafficLight);
+			auto bulbs = carla_osi::traffic_signals::getOSITrafficLight(trafficLight, heads);
 			//add converted bulbs to ground truth
 			auto trafficLights = groundTruth->mutable_traffic_light();
 			for (auto& bulb : bulbs) {

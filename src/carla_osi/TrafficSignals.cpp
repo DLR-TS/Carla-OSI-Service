@@ -8,7 +8,9 @@
 #include "carla_osi/Geometry.h"
 
 
-std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign(const carla::SharedPtr<const carla::client::TrafficSign> actor/*, const pugi::xml_document& xodr*/)
+std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign(
+	const carla::SharedPtr<const carla::client::TrafficSign> actor,
+	const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/)
 {
 	std::unique_ptr<osi3::TrafficSign> sign = std::make_unique<osi3::TrafficSign>();
 	sign->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
@@ -17,9 +19,10 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 
 	auto main = sign->mutable_main_sign();
 	auto base = main->mutable_base();
-	//TODO defined bounding box of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
-	//auto [dimension, position] = carla_osi::geometry::toOSI( actor-> Get BoundingBox() );
-	//base->set_allocated_dimension(dimension);
+	// bounding boxes of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
+	// --> use world::GetActorBoundingBox and pass as argument
+	auto[dimension, position] = carla_osi::geometry::toOSI(bbox);
+	base->set_allocated_dimension(dimension.release());
 	auto transform = actor->GetTransform();
 	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
 	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
@@ -98,7 +101,8 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 	return sign;
 }
 
-std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(const carla::SharedPtr<const carla::client::TrafficLight> actor/*, const  pugi::xml_document& xodr*/)
+std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
+	const carla::SharedPtr<const carla::client::TrafficLight> actor/*,/*, const  pugi::xml_document& xodr*/)
 {
 	std::vector<std::unique_ptr<osi3::TrafficLight>> osiTrafficLights;
 
@@ -176,5 +180,88 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 		classification->set_icon(osi3::TrafficLight_Classification_Icon_ICON_NONE);
 		osiTrafficLights.push_back(std::move(trafficLightBulb));
 	}
+	return osiTrafficLights;
+}
+
+std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
+	const carla::SharedPtr<const carla::client::TrafficLight> actor,
+	const std::vector<carla::rpc::TrafficLightHeads> heads) {
+
+	std::cout << "parsing a traffic light with the new function" << std::endl;
+
+	//fallback - use old behaviour
+	if (!heads.size()) {
+		return carla_osi::traffic_signals::getOSITrafficLight(actor);
+	}
+
+	std::vector<std::unique_ptr<osi3::TrafficLight>> osiTrafficLights;
+	int counter = 0;
+	auto origin = actor->GetTransform();
+
+	for (const auto& head : heads) {
+		for (const auto& light : head.lights) {
+			auto bulb = std::make_unique<osi3::TrafficLight>();
+
+			//set id
+			bulb->set_allocated_id(carla_osi::id_mapping::getOSITrafficLightId(actor, counter++).release());
+
+			//fill base stationary
+			auto base = bulb->mutable_base();
+			//carla::geom::BoundingBox bbox(origin.TransformPoint(light.bbox.location),light.bbox.extent, light.bbox.rotation * origin.rotation);
+			auto[dimension, position] = carla_osi::geometry::toOSI(light.bbox);
+			base->set_allocated_position(position.release());
+			base->set_allocated_dimension(dimension.release());
+			base->set_allocated_orientation(carla_osi::geometry::toOSI(light.bbox.rotation).release());
+
+			//fill classification
+			auto classification = bulb->mutable_classification();
+			//TODO flashing is not described by CARLA's state
+			carla::rpc::TrafficLightState state = actor->GetState();
+			switch (light.color)
+			{
+			case carla::rpc::TrafficLightColor::Red:
+				classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_RED);
+				if (carla::rpc::TrafficLightState::Red == state)
+					classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+				break;
+			case carla::rpc::TrafficLightColor::Yellow:
+				classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_YELLOW);
+				if (carla::rpc::TrafficLightState::Yellow == state)
+					classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+				break;
+			case carla::rpc::TrafficLightColor::Green:
+				classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_GREEN);
+				if (carla::rpc::TrafficLightState::Green == state)
+					classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+				break;
+			case carla::rpc::TrafficLightColor::Blue:
+				classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_BLUE);
+				classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_FLASHING);
+				break;
+			case carla::rpc::TrafficLightColor::White:
+				classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_WHITE);
+				classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+				break;
+			default:
+			case carla::rpc::TrafficLightColor::Other:
+				classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_OTHER);
+				classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
+				break;
+			}
+			if (carla::rpc::TrafficLightState::Off == state) {
+				classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_OFF);
+			}
+			else if (carla::rpc::TrafficLightState::Unknown == state) {
+				classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_OTHER);
+			}
+			//TODO CARLA traffic lights have no knowledge about displayed icons (only defined as texture)
+			classification->set_icon(osi3::TrafficLight_Classification_Icon_ICON_NONE);
+
+			//TODO fill missing attributes (assigned_lane_id, is_out_of_service)
+
+			osiTrafficLights.push_back(std::move(bulb));
+		}
+	}
+
 	return osiTrafficLights;
 }
