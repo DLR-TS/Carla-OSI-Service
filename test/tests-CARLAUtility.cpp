@@ -56,7 +56,7 @@ TEST_CASE("Two way difference", "[TwoWayDifference][Utility]") {
 	}
 }
 
-TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
+TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords]") {
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
