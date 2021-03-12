@@ -1,0 +1,21 @@
+syntax = "proto3";
+import "grpc_proto_files/CoSiMaMessages.proto";
+
+
+package CoSiMa.rpc;
+
+service BaseInterface {
+	rpc GetIntValue(String) returns (Int32) {}
+	rpc GetBoolValue(String) returns (Bool) {}
+	rpc GetFloatValue(String) returns (Float) {}
+	rpc GetDoubleValue(String) returns (Double) {}
+	rpc GetStringValue(String) returns (Bytes) {}
+
+	rpc SetIntValue(NamedInt32) returns (Int32) {}
+	rpc SetBoolValue(NamedBool) returns (Int32) {}
+	rpc SetFloatValue(NamedFloat) returns (Int32) {}
+	rpc SetDoubleValue(NamedDouble) returns (Int32) {}
+	rpc SetStringValue(NamedBytes) returns (Int32) {}
+
+	rpc DoStep(Empty) returns (Double) {}
+}

@@ -1,4 +1,4 @@
-﻿#include "CARLA-OSI.h"
+﻿#include "CARLA_OSI_gRPC.h"
 
 int main(int argc, char *argv[])
 {
@@ -6,13 +6,14 @@ int main(int argc, char *argv[])
 
 	std::cout << std::filesystem::current_path() << std::endl << std::endl;
 
+	std::string server_address = "0.0.0.0:51425";
+	if (1 < argc) {
+		server_address = argv[1];
+	}
 
+	CARLA_OSI_client client(server_address);
 
-	mainLoop();
+	client.StartServer();
 
 	return 0;
-}
-
-void mainLoop() {
-	//TODO wait for CoSiMa message, handle message, reply
 }

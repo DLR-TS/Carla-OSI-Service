@@ -1,271 +1,235 @@
 #include "Utility.h"
 
-osi3::Orientation3d* CarlaUtility::toOSI(carla::geom::Rotation& rotation)
-{
-	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
-	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
-	osi3::Orientation3d* orient = new osi3::Orientation3d();
-	//TODO OSI prefers values in angular range [pi,pi]
-	orient->set_yaw(-rotation.yaw * M_PI / 180.0);
-	orient->set_pitch(rotation.pitch * M_PI / 180.0);
-	orient->set_roll(rotation.roll * M_PI / 180.0);
-	return orient;
-}
+#include "carla_osi/Geometry.h"
+#include "carla_osi/Identifiers.h"
+#include "carla_osi/TrafficSignals.h"
 
-std::pair<osi3::Dimension3d*, osi3::Vector3d*> CarlaUtility::toOSI(carla::geom::BoundingBox& boundingBox) {
-	osi3::Dimension3d* dim = new osi3::Dimension3d();
-	// dimensions are unsigned
-	dim->set_length(boundingBox.extent.x * 2);
-	dim->set_width(boundingBox.extent.y * 2);
-	dim->set_height(boundingBox.extent.z * 2);
-	osi3::Vector3d* vec = CarlaUtility::toOSI(boundingBox.location);
-	return std::pair(dim, vec);
-}
+#include "carla/image/ImageView.h"
 
-osi3::Vector3d* CarlaUtility::toOSI(carla::geom::Vector3D& location) {
-	//flip y
-	osi3::Vector3d* vec = new osi3::Vector3d();
-	vec->set_x(location.x);
-	vec->set_y(-location.y);
-	vec->set_z(location.z);
-	return vec;
-}
+#include "boost/gil.hpp"
+#include "boost/gil/io/write_view.hpp"
+#include "boost/gil/extension/io/png.hpp"
 
-osi3::Vector2d* CarlaUtility::toOSI(carla::geom::Vector2D& vector) {
-	//flip y
-	osi3::Vector2d* vec = new osi3::Vector2d();
-	vec->set_x(vector.x);
-	vec->set_y(vector.y);
-	return vec;
-}
-
-carla::geom::Rotation CarlaUtility::toCarla(osi3::Orientation3d* orientation) {
-	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
-	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
-	return carla::geom::Rotation(
-		(float)(orientation->pitch() * 180 * M_1_PI),
-		(float)(orientation->yaw() * -180 * M_1_PI),
-		(float)(orientation->roll() * 180 * M_1_PI));
-}
-
-carla::geom::BoundingBox CarlaUtility::toCarla(osi3::Dimension3d* dimension, osi3::Vector3d* position) {
-	carla::geom::Location pos = CarlaUtility::toCarla(position);
-	carla::geom::Vector3D extent((float)(dimension->length() / 2.0), (float)(dimension->width() / 2.0), (float)(dimension->height() / 2.0));
-	return carla::geom::BoundingBox(pos, extent);
-}
-
-carla::geom::Location CarlaUtility::toCarla(osi3::Vector3d* position) {
-	//flip y
-	return carla::geom::Location((float)position->x(), (float)-position->y(), (float)position->z());
-}
-
-carla::geom::Vector2D CarlaUtility::toCarla(osi3::Vector2d* position) {
-	return carla::geom::Vector2D((float)position->x(), (float)position->y());
-}
-
-osi3::Identifier* CarlaUtility::toOSI(carla::ActorId actorID)
-{
-	osi3::Identifier* id = new osi3::Identifier();
-	id->set_value(actorID);
-	return id;
-}
-
-carla::ActorId CarlaUtility::toCarla(osi3::Identifier* id)
-{
-	return (carla::ActorId)(id->value());
-}
-
-osi3::StationaryObject* CarlaUtility::toOSIStationaryObject(carla::SharedPtr< carla::client::Actor> actor)
+osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
 {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
-	prop->set_allocated_id(CarlaUtility::toOSI(actor->GetId()));
+	prop->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
 
 	osi3::BaseStationary* base = prop->mutable_base();
-	//TODO bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
-	// also mentioned in https://github.com/carla-simulator/carla/issues/3025
+	// bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
+	// also mentioned in https://github.com/carla-simulator/carla/issues/3186, https://github.com/carla-simulator/carla/issues/3025 and https://github.com/carla-simulator/carla/issues/1766
+	// The attribute behind the protected field is misused for traffic signs and traffic lights and holds their active area instead
 	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
-	//base->set_allocated_dimension(dimension);
+	// The bounding box has to be given as argument. To circumvent the described limitation, World::GetActorBoundingBox(ActorId) is added
+	auto[dimension, position] = carla_osi::geometry::toOSI(bbox);
+	base->set_allocated_dimension(dimension.release());
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	base->set_allocated_orientation(CarlaUtility::toOSI(transform.rotation));
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	//TODO Carla doesn't seem to offer information needed for osi3::StationaryObject::Classification. Using default instance
-	prop->mutable_classification();//creates default instance as side-effect
+	auto classification = prop->mutable_classification();//creates default instance as side-effect
+	classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
+	//TODO fill with information from OpenDRIVE file, if available
 
 	prop->set_model_reference(actor->GetTypeId());
 
 	return prop;
 }
 
-osi3::TrafficSign* CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficSign> actor, pugi::xml_document& xodr)
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
 {
-	osi3::TrafficSign* sign = new osi3::TrafficSign();
-
-	//TODO use OpenDRIVE for better traffic sign description. Also use it to differentiate between traffic signs as road marking and 'normal' traffic signs
-
-	auto main = sign->mutable_main_sign();
-	auto base = main->mutable_base();
-	//TODO defined bounding box of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
-	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
-	//base->set_allocated_dimension(dimension);
+	auto base = std::make_unique<osi3::BaseMoving>();
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
-	//TODO assure rotation is applied local
-	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
-	base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
-	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
+	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
+	// but bounding boxes only exist for Vehicle and Walker specializations
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
-	auto classification = main->mutable_classification();
-	//TODO find LaneID for traffic sign
-	//classification->add_assigned_lane_id
-
-	classification->set_direction_scope(osi3::TrafficSign::MainSign::Classification::DirectionScope::TrafficSign_MainSign_Classification_DirectionScope_DIRECTION_SCOPE_NO_DIRECTION);
-	// Carla doesn't differentiate the variability of traffic signs
-	classification->set_variability(osi3::TrafficSign_Variability::TrafficSign_Variability_VARIABILITY_FIXED);
-
-	// Traffic sign IDs as defined in <carla 0.9.9>/Unreal/CarlaUE4/Plugins/Carla/Source/Carla/Game/CarlaEpisode.cpp
-	if (actor->GetTypeId() == "traffic.traffic_light") {
-		std::cerr << "Traffic lights should not be parsed as traffic signs" << std::endl;
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.30") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(30);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.40") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(40);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.50") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(50);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.60") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(60);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.90") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(90);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.100") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(100);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.120") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(120);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.130") {
-		//TODO also set unit
-		classification->mutable_value()->set_value(130);
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
-	}
-	else if (actor->GetTypeId() == "traffic.stop") {
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_STOP);
-	}
-	else if (actor->GetTypeId() == "traffic.yield") {
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY);
-	}
-	else if (actor->GetTypeId() == "traffic.unknown") {
-		//Unknown as part of OSI ground truth is forbidden
-		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_OTHER);
-	}
-
-
-	return sign;
+	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
 
-std::vector<osi3::TrafficLight*> CarlaUtility::toOSI(carla::SharedPtr<carla::client::TrafficLight> actor, pugi::xml_document& xodr)
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Walker> actor)
 {
-	std::vector<osi3::TrafficLight*> osiTrafficLights;
-
-	//TODO OSI defines a traffic light as an actual bulb. Therefore, red, yellow and green are three separate traffic lights
-
-
-	//find corresponding traffic light in xodr file
-	auto opendrive = xodr.child("OpenDRIVE");
-	for (auto road = opendrive.child("road"); road; road.next_sibling("road")) {
-		// This node traversal needs no error handling because pugiXML never returns null, but empty nodes which return false as boolean.
-		for (auto signal = road.child("signals").child("signal"); signal; signal.next_sibling("signal")) {
-			std::string id = actor->GetSignId();
-			if (0 < id.length() && id == signal.attribute("id").as_string()) {
-
-				//TODO parse traffic lights from OpenDRIVE xml description
-
-				return osiTrafficLights;
-			}
-		}
-	}
-
-	// sign id not found
-	// create a single dummy traffic light using information available in Carla
-	osi3::TrafficLight * dummy = new osi3::TrafficLight();
-	dummy->set_allocated_id(CarlaUtility::toOSI(actor->GetId()));
-
-	auto base = dummy->mutable_base();
+	auto base = std::make_unique<osi3::BaseMoving>();
 	auto transform = actor->GetTransform();
-	base->set_allocated_position(CarlaUtility::toOSI(transform.location));
-	// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
-	//TODO assure rotation is applied local
-	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
-	base->set_allocated_orientation(CarlaUtility::toOSI(rotation));
+	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
+	//TODO verify relation of bouding box origin and actor.GetLocation() for Walkers
+	auto bbox = actor->GetBoundingBox();
+	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
+	auto[dimension, location] = carla_osi::geometry::toOSI(actor->GetBoundingBox());
+	base->set_allocated_dimension(dimension.release());
+	transform.location += bbox.location;
+	//TODO libCarla_client has no arithmetics for rotations - assume bbox is not rotated
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
 
-	auto classification = dummy->mutable_classification();
-	switch (actor->GetState()) {
-	case carla::rpc::TrafficLightState::Red:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_RED);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
-		break;
-	case carla::rpc::TrafficLightState::Yellow:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_YELLOW);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
-		break;
-	case carla::rpc::TrafficLightState::Green:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_GREEN);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_CONSTANT);
-		break;
-	default:
-		classification->set_color(osi3::TrafficLight_Classification_Color_COLOR_OTHER);
-		classification->set_mode(osi3::TrafficLight_Classification_Mode_MODE_OFF);
-	}
-	classification->set_icon(osi3::TrafficLight_Classification_Icon_ICON_NONE);
-
-	return osiTrafficLights;
+	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
 
-osi3::CameraSensorView* CarlaUtility::toOSICamera(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> actor)
+{
+	auto base = std::make_unique<osi3::BaseMoving>();
+	auto transform = actor->GetTransform();
+	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
+	auto bbox = actor->GetBoundingBox();
+	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
+	auto[dimension, location] = carla_osi::geometry::toOSI(bbox);
+	base->set_allocated_dimension(dimension.release());
+	transform.location += bbox.location;
+	//TODO libCarla_client has no arithmetics for rotations, but
+	// vehicle bounding boxes shouldn't be rotated
+	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+
+
+	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
+}
+
+std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const carla::SharedPtr<const carla::client::Actor> actor, std::unique_ptr<osi3::BaseMoving> base)
+{
+	auto transform = actor->GetTransform();
+
+	//TODO determine contour on z-plane
+	//auto contour = base->mutable_base_polygon();
+	//contour->Add
+
+	// velocity and acceleration as part of ground truth are given in global coordinate system
+	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
+	base->set_allocated_velocity(carla_osi::geometry::toOSI(actor->GetVelocity()).release());
+	base->set_allocated_acceleration(carla_osi::geometry::toOSI(actor->GetAcceleration()).release());
+	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
+	base->set_allocated_orientation_rate(carla_osi::geometry::toOSI(
+		carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)).release());
+
+	//TODO Carla has no rotational acceleration
+	//base->set_allocated_orientation_acceleration
+
+	return base;
+}
+
+std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtility::toOSI(carla::client::Vehicle::LightState vehicleLights)
+{
+	auto lightState = std::make_unique<osi3::MovingObject_VehicleClassification_LightState>();
+
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Position) {
+		// has no mapping
+	}
+
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::LowBeam) {
+		lightState->set_head_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+	}
+	else {
+		lightState->set_head_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+	}
+
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::HighBeam) {
+		lightState->set_high_beam(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+	}
+	else {
+		lightState->set_high_beam(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+	}
+
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Brake) {
+		lightState->set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_NORMAL);
+	}
+	else {
+		lightState->set_brake_light_state(osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF);
+	}
+
+	if ((uint32_t)vehicleLights &
+		((uint32_t)carla::client::Vehicle::LightState::RightBlinker & (uint32_t)carla::client::Vehicle::LightState::LeftBlinker)) {
+		// Both indicator lights
+		lightState->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_WARNING);
+	}
+	else if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::RightBlinker) {
+		// Only right indicator light
+		lightState->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_RIGHT);
+	}
+	else if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::LeftBlinker) {
+		// Only left indicator light
+		lightState->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_LEFT);
+	}
+	else {
+		lightState->set_indicator_state(osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF);
+	}
+
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Reverse) {
+		lightState->set_reversing_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+	}
+	else {
+		lightState->set_reversing_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+	}
+
+	// Setting both, front and rear fog lights because Carla does not differentiate
+	//TODO do Carla vehicles have both front and rear fog lights or only front or rear?
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Fog) {
+		lightState->set_front_fog_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+		lightState->set_rear_fog_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON);
+	}
+	else {
+		lightState->set_front_fog_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+		lightState->set_rear_fog_light(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+	}
+
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Interior) {
+		// has no mapping
+	}
+
+	//TODO how to determine type of special illumination in Carla? OSI field can only be set if supported by the vehicle, which cannot be determined from Carla's light state
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Special1) {
+		lightState->set_emergency_vehicle_illumination(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE);
+	}
+	//else {
+	//	lightState->set_emergency_vehicle_illumination(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+	//}
+	if ((uint32_t)vehicleLights & (uint32_t)carla::client::Vehicle::LightState::Special2) {
+		lightState->set_service_vehicle_illumination(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER);
+	}
+	//else {
+	//	lightState->set_service_vehicle_illumination(osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF);
+	//}
+
+	return lightState;
+}
+
+osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
 {
 	//Contains RGBA uint8 values
-	auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
+	auto image = boost::dynamic_pointer_cast<const carla::sensor::data::Image>(sensorData);
 	if (!image) return nullptr;
 	auto height = image->GetHeight();
 	auto width = image->GetWidth();
 	double aspect = ((double)width) / ((double)height);
-	auto pixelCount = height * width;
+	assert(height * width == image->size());
 
-	//Buffer for RGB OSI raw image
-	auto rgb = new char[pixelCount * 3];
+	/// CARLA provides images with alpha channel, but OSI only has channel formats without alpha channel -> drop transparency
 
-	//TODO use faster pixel format conversion or use osi3::CameraSensorViewConfiguration_ChannelFormat_CHANNEL_FORMAT_OTHER
-	for (size_t i = 0; i < pixelCount; i++) {
-		auto pixel = image->at(i);
-		rgb[3 * i] = pixel.r;
-		rgb[3 * i + 1] = pixel.g;
-		rgb[3 * i + 2] = pixel.b;
-	}
+	//Boost GIL image view for color conversion
+	const carla::sensor::data::ImageTmpl<carla::sensor::data::Color>& ref = *image;
+	const boost::gil::bgra8c_view_t rgbaView = carla::image::ImageView::MakeView(ref);
+		/*=boost::gil::interleaved_view(width,
+		height, reinterpret_cast<boost::gil::rgba8c_ptr_t>(image->data()),
+		sizeof(carla::sensor::data::Image::value_type)  * width);*/
 
+	//Buffer for RGB raw image
+	boost::gil::rgb8_ptr_t rgb = new boost::gil::rgb8_pixel_t[image->size()];
+	//Boost GIL image view for rgb buffer
+	boost::gil::rgb8_view_t rgbView = boost::gil::interleaved_view((std::ptrdiff_t)width,
+		(std::ptrdiff_t)height, rgb,
+		sizeof(boost::gil::rgb8_pixel_t)  * width);
+
+	// perform the actual conversion
+	boost::gil::copy_and_convert_pixels(rgbaView, rgbView);
+
+	//Debug
+	boost::gil::write_view("CARLA_camera_image.png", rgbView, boost::gil::png_tag());
+
+	// Fill OSI CameraSensorView Message
 	osi3::CameraSensorView* cameraSensorView = new osi3::CameraSensorView();
-	cameraSensorView->set_image_data(rgb);
+	cameraSensorView->set_image_data(rgb, image->size() * sizeof(boost::gil::rgb8_pixel_t));
 
 	auto config = cameraSensorView->mutable_view_configuration();
 	config->add_channel_format(osi3::CameraSensorViewConfiguration_ChannelFormat_CHANNEL_FORMAT_RGB_U8_LIN);
@@ -276,19 +240,20 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(carla::SharedPtr<carla::client
 	config->set_field_of_view_horizontal(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
-	//TODO calculate sensor position in vehicle coordinates, that is relative to the vehicles rear
-	//config->set_allocated_mounting_position(position)
+	//TODO calculate sensor position in vehicle coordinates
+	config->set_allocated_mounting_position(carla_osi::geometry::toOSI(sensor->GetTransform()).release());
+	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
 
 
 	return cameraSensorView;
 }
 
-osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
 {
-	auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
+	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::LidarMeasurement>(sensorData);
 	std::optional<double> rotationFrequency;
 	std::optional<double> upperFov;
 	std::optional<double> lowerFov;
@@ -338,14 +303,14 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(carla::SharedPtr<carla::client::
 	//TODO OSI expects a constant number of pixels per message, but Carla only reports new values of the angle sweeped during the last frame
 	config->set_num_of_pixels(numPixels);
 	//TODO number of rays (horizontal/vertical) of lidar
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	return lidarSensorView;
 }
 
-osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
 {
-	auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
+	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::RadarMeasurement>(sensorData);
 	std::optional<double> hFov;
 	std::optional<double> vFov;
 	auto attributes = sensor->GetAttributes();
@@ -364,7 +329,7 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::
 	//TODO Maybe use the osi3::FeatureData-based osi3::RadarDetection instead of a osi3::SensorView, which is similar to Carla's Radar output
 
 	auto config = radarSensorview->mutable_view_configuration();
-	config->set_allocated_sensor_id(CarlaUtility::toOSI(sensor->GetId()));
+	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 	if (hFov) {
 		config->set_field_of_view_horizontal(hFov.value());
 	}
@@ -381,11 +346,246 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(carla::SharedPtr<carla::client::
 	return nullptr;
 }
 
-carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(carla::SharedPtr<carla::client::Actor> actor)
+carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor)
 {
-	while (actor && 0 != actor->GetTypeId().rfind("vehicle", 0)) {
-		actor = actor->GetParent();
+	auto current = actor->GetParent();
+	while (current && 0 != current->GetTypeId().rfind("vehicle", 0)) {
+		current = current->GetParent();
 	}
-	auto vehicle = boost::dynamic_pointer_cast<carla::client::Vehicle>(actor);
+	auto vehicle = boost::dynamic_pointer_cast<carla::client::Vehicle>(current);
 	return vehicle;
 }
+
+carla::rpc::VehicleLightState::LightState CarlaUtility::toCarla(osi3::MovingObject_VehicleClassification_LightState* indicatorState) {
+	//aggregate all received light states
+	std::set<carla::rpc::VehicleLightState::LightState> receivedStates;
+
+	if (indicatorState->has_indicator_state()) {
+		switch (indicatorState->indicator_state()) {
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_LEFT:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::LeftBlinker);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_RIGHT:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::RightBlinker);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_WARNING:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::LeftBlinker);
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::RightBlinker);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_IndicatorState_INDICATOR_STATE_OTHER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as rear_fog_light
+	if (indicatorState->has_front_fog_light()) {
+		switch (indicatorState->front_fog_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Fog);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as front_fog_light
+	if (indicatorState->has_rear_fog_light()) {
+		switch (indicatorState->rear_fog_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Fog);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_head_light()) {
+		switch (indicatorState->head_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::LowBeam);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_high_beam()) {
+		switch (indicatorState->high_beam()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::HighBeam);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_reversing_light()) {
+		switch (indicatorState->reversing_light()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Reverse);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	if (indicatorState->has_brake_light_state()) {
+		switch (indicatorState->brake_light_state()) {
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_NORMAL:
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_STRONG:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Brake);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_BrakeLightState_BRAKE_LIGHT_STATE_OTHER:
+			break;
+		default:
+			break;
+		}
+	}
+	//not part of carla
+	if (indicatorState->has_license_plate_illumination_rear()) {
+		switch (indicatorState->license_plate_illumination_rear()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as service_vehicle_illumination
+	//(Special1 and Special2: This is reserved for certain vehicles that can have special lights, like a siren.)
+	if (indicatorState->has_emergency_vehicle_illumination()) {
+		switch (indicatorState->emergency_vehicle_illumination()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special1);
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special2);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+	//same effect as emergency_vehicle_illumination
+	//(Special1 and Special2: This is reserved for certain vehicles that can have special lights, like a siren.)
+	if (indicatorState->has_service_vehicle_illumination()) {
+		switch (indicatorState->service_vehicle_illumination()) {
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_ON:
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special1);
+			receivedStates.emplace(carla::rpc::VehicleLightState::LightState::Special2);
+			break;
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OFF:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_UNKNOWN:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_OTHER:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_BLUE_AND_RED:
+		case osi3::MovingObject_VehicleClassification_LightState_GenericLightState_GENERIC_LIGHT_STATE_FLASHING_AMBER:
+			break;
+		default:
+			break;
+		}
+	}
+
+	//aggregate all received light states into one state
+	carla::rpc::VehicleLightState::LightState state = carla::rpc::VehicleLightState::LightState::None;
+	for (carla::rpc::VehicleLightState::LightState receivedState : receivedStates) {
+		state = carla::rpc::VehicleLightState::LightState(
+			(carla::rpc::VehicleLightState::flag_type)state | (carla::rpc::VehicleLightState::flag_type)receivedState);
+	}
+	return state;
+}
+
+osi3::MovingObject_VehicleClassification_Type CarlaUtility::ParseVehicleType(const std::string & value)
+{
+	if (std::string::npos != value.find("OTHER")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_OTHER;
+	}
+	if (std::string::npos != value.find("SMALL_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_SMALL_CAR;
+	}
+	if (std::string::npos != value.find("COMPACT_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_COMPACT_CAR;
+	}
+	if (std::string::npos != value.find("MEDIUM_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_MEDIUM_CAR;
+	}
+	if (std::string::npos != value.find("LUXURY_CAR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_LUXURY_CAR;
+	}
+	if (std::string::npos != value.find("DELIVERY_VAN")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_DELIVERY_VAN;
+	}
+	if (std::string::npos != value.find("HEAVY_TRUCK")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_HEAVY_TRUCK;
+	}
+	if (std::string::npos != value.find("SEMITRAILER")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_SEMITRAILER;
+	}
+	if (std::string::npos != value.find("TRAILER")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_TRAILER;
+	}
+	if (std::string::npos != value.find("MOTORBIKE")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_MOTORBIKE;
+	}
+	if (std::string::npos != value.find("BICYCLE")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_BICYCLE;
+	}
+	if (std::string::npos != value.find("BUS")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_BUS;
+	}
+	if (std::string::npos != value.find("TRAM")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_TRAM;
+	}
+	if (std::string::npos != value.find("TRAIN")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_TRAIN;
+	}
+	if (std::string::npos != value.find("WHEELCHAIR")) {
+		return osi3::MovingObject_VehicleClassification_Type_TYPE_WHEELCHAIR;
+	}
+	return osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN;
+}
+

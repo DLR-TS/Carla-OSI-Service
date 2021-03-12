@@ -8,16 +8,16 @@ if(NOT COMMAND FetchContent_Declare)
 	include(FetchContent)
 endif(NOT COMMAND FetchContent_Declare)
 
-# Which version of LibCarla should get fetched? Variable is also needed by Carla itself to generate Version.h
-if(NOT DEFINED CARLA_VERSION)# don't overwrite if already defined
-	set(CARLA_VERSION 0.9.9.4 )
-endif()
 
 # LibCarla itself
 FetchContent_Declare(
   LibCarla_client
-  GIT_REPOSITORY https://github.com/carla-simulator/carla.git
-  GIT_TAG ${CARLA_VERSION}
+  # original repository
+  #GIT_REPOSITORY https://github.com/carla-simulator/carla.git
+  # forked repository with OSI-specific additions for SETLevel4to5
+  GIT_REPOSITORY git@gitlab.dlr.de:setlevel4to5/carla-osi.git
+  # Branch or tag to checkout, e.g. 0.9.10.1 or master
+  GIT_TAG carla-osi-0.9.10 # OSI-specific branch in fork
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla
@@ -39,7 +39,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   libRPC
   GIT_REPOSITORY https://github.com/carla-simulator/rpclib.git
-  GIT_TAG v2.2.1_c2
+  GIT_TAG v2.2.1_c3
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla/Build
@@ -129,8 +129,29 @@ function(fetch_carla_and_non_conan_dependencies)
 	FetchContent_GetProperties(LibCarla_client)
 	if(NOT libcarla_client_POPULATED)
 		FetchContent_Populate(LibCarla_client)
+
+		# Set library version as would be reported by carla's build system to silence version mismatch warnings when we are using the same library version
+		# Needed to generate Version.h
+		find_package(Git QUIET)
+		if(GIT_FOUND AND EXISTS "${libcarla_client_SOURCE_DIR}/.git")
+			execute_process(COMMAND ${GIT_EXECUTABLE} describe --tags --dirty --always
+							WORKING_DIRECTORY ${libcarla_client_SOURCE_DIR}
+							RESULT_VARIABLE GIT_CARLA_VERSION_RESULT
+							OUTPUT_VARIABLE GIT_CARLA_VERSION)
+			if(NOT GIT_CARLA_VERSION_RESULT EQUAL "0")
+				message(STATUS "git describe --tags --dirty --always failed to provide the LibCarla_client version as reported by carla's build system")
+			else()
+				#remove trailing newline from output
+				string(REGEX REPLACE "\n$" "" GIT_CARLA_VERSION "${GIT_CARLA_VERSION}")
+				message(STATUS "Using '${GIT_CARLA_VERSION}' as LibCarla_client version identifier, as reported by git")
+				set(CARLA_VERSION ${GIT_CARLA_VERSION})
+			endif()
+		endif()
+
 		add_subdirectory("${libcarla_client_SOURCE_DIR}/LibCarla/cmake" "${libcarla_client_BINARY_DIR}/LibCarla" EXCLUDE_FROM_ALL)
 	endif()
+
+
 		
 	# Carla changes its library name when including the RSS component in a build
 	if(TARGET carla_client_rss)
@@ -155,3 +176,5 @@ function(fetch_carla_and_non_conan_dependencies)
 	# includes of link libraries somehow don't propagate. Also misuse SYSTEM switch to hide compiler warnings
 	target_include_directories(LibCarla_and_deps SYSTEM INTERFACE ${BOOST_INCLUDE_PATH} ${RPCLIB_INCLUDE_PATH} ${ZLIB_INCLUDE_PATH} ${LIBPNG_INCLUDE_PATH} ${RECAST_INCLUDE_PATH})
 endfunction()
+
+fetch_carla_and_non_conan_dependencies()
