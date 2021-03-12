@@ -3,6 +3,7 @@
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
+#include "carla_osi/TrafficSignals.h"
 
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -71,6 +72,21 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility]") {
 			REQUIRE(1.2f == position->x());
 			REQUIRE(-3.4f == position->y());
 			REQUIRE(5.6f == position->z());
+		}
+
+		SECTION("MountingPosition") {
+			carla::geom::Location location(1.2f, 3.4f, 5.6f);
+			carla::geom::Rotation rotation(45, -90, 180);
+			carla::geom::Transform transform(location, rotation);
+			std::unique_ptr<osi3::MountingPosition> mountingPosition = carla_osi::geometry::toOSI(transform);
+			auto position = mountingPosition->position();
+			auto orientation = mountingPosition->orientation();
+			REQUIRE(1.2f == position.x());
+			REQUIRE(-3.4f == position.y());
+			REQUIRE(5.6f == position.z());
+			REQUIRE(M_PI_4 == orientation.pitch());
+			REQUIRE(M_PI_2 == orientation.yaw());
+			REQUIRE(M_PI == orientation.roll());
 		}
 
 		SECTION("2D Vector") {
@@ -356,8 +372,13 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 
 	for (auto& trafficLightActor : trafficLightActorSnapshots) {
 		auto trafficLight = boost::dynamic_pointer_cast<const carla::client::TrafficLight>(world.GetActor(trafficLightActor.id));
-		auto osiTrafficLight = CarlaUtility::toOSI(trafficLight/*, xodr*/);
+		//auto osiTrafficLight = carla_osi::traffic_signals::getOSITrafficLight(trafficLight/*, xodr*/);
+		auto heads = world.GetTrafficLightHeads(trafficLight);
+		auto osiTrafficLight = carla_osi::traffic_signals::getOSITrafficLight(trafficLight, heads);
 
+		std::cout << trafficLight->GetDisplayId() << std::endl;
+		auto transform = trafficLight->GetTransform();
+		//std::cout << "Actor rotation: " << transform.rotation.pitch << "," << transform.rotation.yaw << "," << transform.rotation.roll << std::endl;
 		//std::cout << "Bulb group" << std::endl;
 		CHECK(1 < osiTrafficLight.size());
 
@@ -381,6 +402,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 				//std::cout << "Red bulb bbox: " << bbox.location.x << "," << bbox.location.y << "," << bbox.location.z << " " << bbox.extent.x << "," << bbox.extent.y << "," << bbox.extent.z << std::endl;
 				break;
 			}
+			//std::cout << "rotation: " << orientation.pitch << "," << orientation.yaw << "," << orientation.roll << std::endl;
 		}
 	}
 
@@ -477,7 +499,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		auto spectator = world->GetSpectator();
 		auto spectatorTransform = spectator->GetTransform();
 		spectatorTransform.location = vehicleTransform.location;
-		spectatorTransform.location += vehicleTransform.GetRightVector() * std::max(2.f,vehicleBBox.extent.y * 4.f);
+		spectatorTransform.location += vehicleTransform.GetRightVector() * std::max(2.f, vehicleBBox.extent.y * 4.f);
 		// points down
 		spectatorTransform.location -= vehicleTransform.GetUpVector() * 1.72f;
 		spectatorTransform.rotation = vehicleTransform.rotation;
