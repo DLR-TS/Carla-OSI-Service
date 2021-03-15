@@ -156,4 +156,4 @@ private:
 	int receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand);
 };
 
-#endif CARLAINTERFACE_H
+#endif //!CARLAINTERFACE_H

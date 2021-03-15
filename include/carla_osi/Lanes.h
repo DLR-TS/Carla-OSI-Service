@@ -2,7 +2,7 @@
 
 #include <carla/client/Junction.h>
 #include <carla/client/Map.h>
-#include <carla/road/roadTypes.h>
+#include <carla/road/RoadTypes.h>
 
 #include <osi_common.pb.h>
 #include <osi_lane.pb.h>
