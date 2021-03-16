@@ -30,7 +30,12 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 
 double CARLA2OSIInterface::doStep() {
 	if (!world) {
+		std::cerr << "No world";
+#ifdef __linux__
+		throw std::exception();
+#else
 		throw std::exception("No world");
+#endif //!__linux__
 	}
 
 	auto preStepTimestamp = world->GetSnapshot().GetTimestamp();
@@ -39,7 +44,7 @@ double CARLA2OSIInterface::doStep() {
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
 	auto worldActors = world->GetActors();
 	// compare actor ids, not actors
-	for each (auto actor in *worldActors)
+	for (auto actor : *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
 	}
@@ -59,7 +64,7 @@ double CARLA2OSIInterface::doStep() {
 	worldActorIDs.clear();
 	worldActors = world->GetActors();
 	// compare actor ids, not actors
-	for each (auto actor in *worldActors)
+	for (auto actor : *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
 	}
@@ -172,7 +177,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	// Static props apparently aren't part of the actor list, so this list is empty
 	auto staticProps = world->GetActors()->Filter("static.prop.*");
 	carla::geom::BoundingBox bbox;
-	for each(auto prop in *staticProps) {
+	for (auto prop : *staticProps) {
 		// class Actor has no generic way of retrieving its bounding box -> custom api
 		bbox = world->GetActorBoundingBox(prop->GetId());
 		// parse as StationaryObject
@@ -393,8 +398,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
 			// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
 			// cases, each lane will define its own side of the lane boundary.
-
-			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = carla_osi::lanes::parseLaneBoundary(*endpoints);
+			auto boundary = carla_osi::lanes::parseLaneBoundary(*endpoints);
+			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = boundary;
 			if (0 < left_lane_boundary_id) {
 				classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
 			}
@@ -434,7 +439,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 
 	auto map = world->GetMap();
 	auto worldActors = world->GetActors();
-	for each (auto actor in *worldActors) {
+	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
 
 		//based on blueprint vehicle.*
