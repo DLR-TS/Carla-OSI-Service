@@ -17,7 +17,7 @@ if(MSVC)
  endif(NOT DONT_FORCE_STATIC_LIBS)
 endif(MSVC)
 
-option(GIT_SUBMODULE "Check submodules during build" ON)
+option(GIT_SUBMODULE "Check submodules during build" OFF)
 if(GIT_SUBMODULE)
 	find_package(Git QUIET)
 	if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -56,12 +56,12 @@ conan_basic_setup()
 # => We use our own FindCatch2.cmake module
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
 
-# OSI is not distributed as conan package, but we already took care of installig its dependency (protobuf), so we can just use it as submodule
-add_subdirectory(lib/open-simulation-interface/ EXCLUDE_FROM_ALL)
-
 # Read CMake_FetchContent_Overrides for changes of FetchContent_declare default of other included scripts (currently applies to FetchLibCarla_client, only)
 include(FetchContent)
 include(${CMAKE_CURRENT_LIST_DIR}/CMake_FetchContent_Overrides.cmake OPTIONAL)
+
+# OSI is not distributed as conan package, but we already took care of installig its dependency (protobuf), so we can just fetch it
+include(FetchOpenSimulationInterface)
 
 # use CMake FetchContent Module to fetch LibCarla_client using our custom FetchLibCarla_client.cmake script
 include(FetchLibCarla_client)
