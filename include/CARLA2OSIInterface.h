@@ -11,24 +11,14 @@
 #include <boost/bimap.hpp>
 #include <boost/foreach.hpp>
 
-#include <carla/client/ActorBlueprint.h>
-#include <carla/client/ActorList.h>
 #include <carla/client/Actor.h>
-#include <carla/client/BlueprintLibrary.h>
 #include <carla/client/Client.h>
-#include <carla/client/Map.h>
-#include <carla/client/Sensor.h>
-#include <carla/client/TimeoutException.h>
 #include <carla/client/World.h>
-#include <carla/geom/Transform.h>
-#include <carla/image/ImageIO.h>
-#include <carla/image/ImageView.h>
-#include <carla/road/Lane.h>
-#include <carla/rpc/ObjectLabel.h>
-#include <carla/sensor/data/Image.h>
+#include <carla/client/Sensor.h>
+#include <carla/sensor/SensorData.h>
 
 //uncomment include if needed
-//#include "osi_common.pb.h"
+#include "osi_common.pb.h"
 //#include "osi_datarecording.pb.h"
 //#include "osi_detectedlane.pb.h"
 //#include "osi_detectedobject.pb.h"
@@ -38,7 +28,7 @@
 //#include "osi_detectedtrafficsign.pb.h"
 //#include "osi_environment.pb.h"
 #include "osi_featuredata.pb.h"
-//#include "osi_groundtruth.pb.h"
+#include "osi_groundtruth.pb.h"
 //#include "osi_hostvehicledata.pb.h"
 //#include "osi_lane.pb.h"
 //#include "osi_object.pb.h"
