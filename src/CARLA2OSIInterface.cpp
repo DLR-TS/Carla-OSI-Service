@@ -1,12 +1,38 @@
 #include "CARLA2OSIInterface.h"
 
 #include <execution>
+#include <stdexcept>
 
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
 #include "carla_osi/Lanes.h"
 #include "carla_osi/TrafficSignals.h"
+
+#include <carla/client/ActorBlueprint.h>
+#include <carla/client/ActorList.h>
+#include <carla/client/BlueprintLibrary.h>
+#include <carla/client/Map.h>
+#include <carla/client/Sensor.h>
+#include <carla/client/TimeoutException.h>
+#include <carla/client/Timestamp.h>
+#include <carla/client/TrafficSign.h>
+#include <carla/client/TrafficLight.h>
+#include <carla/client/Vehicle.h>
+#include <carla/client/Walker.h>
+#include <carla/geom/BoundingBox.h>
+#include <carla/geom/Location.h>
+#include <carla/geom/Transform.h>
+#include <carla/geom/Vector3D.h>
+#include <carla/geom/Rotation.h>
+#include <carla/image/ImageIO.h>
+#include <carla/image/ImageView.h>
+#include <carla/road/Lane.h>
+#include <carla/rpc/ObjectLabel.h>
+#include <carla/rpc/StationaryMapObject.h>
+#include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/LidarMeasurement.h>
+#include <carla/sensor/data/RadarMeasurement.h>
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
@@ -150,7 +176,7 @@ std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 {
 	osi3::Timestamp* osiTime = new osi3::Timestamp();
-	auto carlaTime = world->GetSnapshot().GetTimestamp();
+	carla::client::Timestamp carlaTime = world->GetSnapshot().GetTimestamp();
 	double intPart;
 	double fractional = std::modf(carlaTime.elapsed_seconds, &intPart);
 	osiTime->set_seconds(google::protobuf::int64(intPart));

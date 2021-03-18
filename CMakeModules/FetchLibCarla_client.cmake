@@ -15,7 +15,8 @@ FetchContent_Declare(
   # original repository
   #GIT_REPOSITORY https://github.com/carla-simulator/carla.git
   # forked repository with OSI-specific additions for SETLevel4to5
-  GIT_REPOSITORY git@gitlab.dlr.de:setlevel4to5/carla-osi.git
+  #GIT_REPOSITORY git@gitlab.dlr.de:setlevel4to5/carla-osi.git
+  GIT_REPOSITORY https://gitlab.dlr.de:setlevel4to5/carla-osi.git
   # Branch or tag to checkout, e.g. 0.9.10.1 or master
   GIT_TAG carla-osi-0.9.10 # OSI-specific branch in fork
   GIT_SHALLOW TRUE
@@ -167,7 +168,7 @@ function(fetch_carla_and_non_conan_dependencies)
 		
 	# Carla only defines private cmake include, which don't propagate --> re-add carla headers. Also misuse SYSTEM switch to hide compiler warnings
 	target_include_directories(LibCarla_and_deps SYSTEM INTERFACE "${libcarla_client_SOURCE_DIR}/LibCarla/source")
-	target_link_libraries(LibCarla_and_deps INTERFACE $<IF:$<BOOL:${CARLA_DEBUG}>,carla_client_debug,carla_client> CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast)
+	target_link_libraries(LibCarla_and_deps INTERFACE $<IF:$<BOOL:${CARLA_DEBUG}>,carla_client_debug,carla_client> CONAN_PKG::boost rpc CONAN_PKG::zlib CONAN_PKG::libpng RecastNavigation::Recast RecastNavigation::Detour RecastNavigation::DetourCrowd)
 	if (WIN32)
 		# Required for https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathmatchspeca used in carla::StringUtil::Match
 		target_link_libraries(LibCarla_and_deps INTERFACE Shlwapi)
