@@ -2,14 +2,17 @@
 
 #include <chrono>
 
+#include <carla/client/BlueprintLibrary.h>
+
 #include <grpc/grpc.h>
 #include <grpcpp/channel.h>
 #include <grpcpp/client_context.h>
 #include <grpcpp/create_channel.h>
 #include <grpcpp/security/credentials.h>
-#include "grpc_proto_files/base_interface/CARLAInterface.grpc.pb.h"
-#include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
-#include "osi_sensorview.pb.h"
+#include <grpc_proto_files/base_interface/CARLAInterface.grpc.pb.h>
+#include <grpc_proto_files/base_interface/CARLAInterface.pb.h>
+
+#include <osi_sensorview.pb.h>
 
 #include "testhelpers.h"
 

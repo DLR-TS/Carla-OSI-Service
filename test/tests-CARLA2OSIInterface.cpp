@@ -20,6 +20,9 @@
 #include <carla/geom/Vector2D.h>
 #include <carla/geom/Vector3D.h>
 
+#include <boost/gil.hpp>
+#include <boost/gil/extension/io/png.hpp>
+
 TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
 
