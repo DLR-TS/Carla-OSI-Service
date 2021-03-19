@@ -86,6 +86,12 @@ add_library(CARLA_OSI_Lib ${CARLA_OSI_LIB_SOURCE} ${CARLA_OSI_LIB_INCLUDES})
 set_property(TARGET CARLA_OSI_Lib PROPERTY WINDOWS_EXPORT_ALL_SYMBOLS ON)
 target_include_directories(CARLA_OSI_Lib PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include)
 
+#TBB needs to be explicitly linke in Linux
+if(UNIX)
+	target_link_libraries(CARLA_OSI_Lib PUBLIC CONAN_PKG::tbb)
+	target_compile_options(CARLA_OSI_Lib PUBLIC -ltbb)
+endif()
+
 # link to conan managed dependencies
 target_link_libraries(CARLA_OSI_Lib PUBLIC CONAN_PKG::protobuf CONAN_PKG::yaml-cpp)
 
@@ -114,7 +120,7 @@ set(COSIMA_GRPC_PROTO_FILES
 	grpc_proto_files/base_interface/CARLAInterface.proto
 )
 add_library(CARLA_OSI_gRPC_Lib ${COSIMA_GRPC_PROTO_FILES})
-generate_grpc_cpp(TARGET CARLA_OSI_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} lib/open-simulation-interface)
+generate_grpc_cpp(TARGET CARLA_OSI_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR})
 # CALRA_OSI_gRPC_Lib depends on OSI because it reuses some messages as submessage (at least for sensor mounting positions)
 if(BUILD_SHARED_LIBS)
 	target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC open_simulation_interface)

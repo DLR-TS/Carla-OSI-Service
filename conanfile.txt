@@ -13,7 +13,7 @@ zlib/1.2.11
 libpng/1.6.37
 # requirement of grpc on windows (see https://github.com/grpc/grpc/blob/v1.31.0/BUILDING.md#windows)
 nasm/2.14
-
+tbb/2020.3
 
 [generators]
 cmake

@@ -1,5 +1,6 @@
 #include "CARLA2OSIInterface.h"
 
+#include <algorithm>
 #include <execution>
 #include <stdexcept>
 
