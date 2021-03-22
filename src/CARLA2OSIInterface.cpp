@@ -1,12 +1,39 @@
 #include "CARLA2OSIInterface.h"
 
+#include <algorithm>
 #include <execution>
+#include <stdexcept>
 
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
 #include "carla_osi/Lanes.h"
 #include "carla_osi/TrafficSignals.h"
+
+#include <carla/client/ActorBlueprint.h>
+#include <carla/client/ActorList.h>
+#include <carla/client/BlueprintLibrary.h>
+#include <carla/client/Map.h>
+#include <carla/client/Sensor.h>
+#include <carla/client/TimeoutException.h>
+#include <carla/client/Timestamp.h>
+#include <carla/client/TrafficSign.h>
+#include <carla/client/TrafficLight.h>
+#include <carla/client/Vehicle.h>
+#include <carla/client/Walker.h>
+#include <carla/geom/BoundingBox.h>
+#include <carla/geom/Location.h>
+#include <carla/geom/Transform.h>
+#include <carla/geom/Vector3D.h>
+#include <carla/geom/Rotation.h>
+#include <carla/image/ImageIO.h>
+#include <carla/image/ImageView.h>
+#include <carla/road/Lane.h>
+#include <carla/rpc/ObjectLabel.h>
+#include <carla/rpc/StationaryMapObject.h>
+#include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/LidarMeasurement.h>
+#include <carla/sensor/data/RadarMeasurement.h>
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
 	//connect
@@ -30,7 +57,12 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 
 double CARLA2OSIInterface::doStep() {
 	if (!world) {
+		std::cerr << "No world";
+#ifdef __linux__
+		throw std::exception();
+#else
 		throw std::exception("No world");
+#endif //!__linux__
 	}
 
 	auto preStepTimestamp = world->GetSnapshot().GetTimestamp();
@@ -39,7 +71,7 @@ double CARLA2OSIInterface::doStep() {
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
 	auto worldActors = world->GetActors();
 	// compare actor ids, not actors
-	for each (auto actor in *worldActors)
+	for (auto actor : *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
 	}
@@ -59,7 +91,7 @@ double CARLA2OSIInterface::doStep() {
 	worldActorIDs.clear();
 	worldActors = world->GetActors();
 	// compare actor ids, not actors
-	for each (auto actor in *worldActors)
+	for (auto actor : *worldActors)
 	{
 		worldActorIDs.insert(actor->GetId());
 	}
@@ -145,7 +177,7 @@ std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 {
 	osi3::Timestamp* osiTime = new osi3::Timestamp();
-	auto carlaTime = world->GetSnapshot().GetTimestamp();
+	carla::client::Timestamp carlaTime = world->GetSnapshot().GetTimestamp();
 	double intPart;
 	double fractional = std::modf(carlaTime.elapsed_seconds, &intPart);
 	osiTime->set_seconds(google::protobuf::int64(intPart));
@@ -172,7 +204,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	// Static props apparently aren't part of the actor list, so this list is empty
 	auto staticProps = world->GetActors()->Filter("static.prop.*");
 	carla::geom::BoundingBox bbox;
-	for each(auto prop in *staticProps) {
+	for (auto prop : *staticProps) {
 		// class Actor has no generic way of retrieving its bounding box -> custom api
 		bbox = world->GetActorBoundingBox(prop->GetId());
 		// parse as StationaryObject
@@ -393,8 +425,8 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
 			// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
 			// cases, each lane will define its own side of the lane boundary.
-
-			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = carla_osi::lanes::parseLaneBoundary(*endpoints);
+			auto boundary = carla_osi::lanes::parseLaneBoundary(*endpoints);
+			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = boundary;
 			if (0 < left_lane_boundary_id) {
 				classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
 			}
@@ -434,7 +466,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 
 	auto map = world->GetMap();
 	auto worldActors = world->GetActors();
-	for each (auto actor in *worldActors) {
+	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
 
 		//based on blueprint vehicle.*
