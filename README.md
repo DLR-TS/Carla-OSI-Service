@@ -2,6 +2,15 @@
 
 A client for CARLA simulator. Translates World and sensor outputs into OSI messages
 
+# manual build (on Linux)
+in root folder:
+```sh
+ mkdir build && cd build
+ cmake .. -DCMAKE_BUILD_TYPE=Release
+ cmake --build . --target CARLA_OSI_Client 
+ cmake --install . # not yet defined
+```
+
 ## Installation Guide
 
 preparations:
