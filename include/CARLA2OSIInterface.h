@@ -121,6 +121,17 @@ public:
 	\return success indicator
 	*/
 	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
+
+	//Helper function for our client
+	/**
+	Try to parse the given osi::Identifier to its corresponding actor id and retrieve the actors role_name attribute
+
+	\return the role name of the actor with the given id, or empty string if the actor has no role name or doesn't exist
+
+	Throws std::bad_variant_access if id doesn't correspond to a regular carla actor
+	*/
+	std::string actorIdToRoleName(const osi3::Identifier& id);
+
 private:
 
 	std::string_view getPrefix(std::string_view name);
@@ -130,6 +141,16 @@ private:
 	void parseStationaryMapObjects();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
+
+	/**
+	Clear mapping data and preparsed messages and reparse stationary/environment map objects.
+	Mapping data consists of the actor to role name mapping and sensor to sensor message mappings.
+	The preparsed message describes the stationary/environment map objects and will be reconstructed.
+
+	Called during doStep when the world's id has changed.
+	*/
+	virtual void clearData();
+
 
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 
