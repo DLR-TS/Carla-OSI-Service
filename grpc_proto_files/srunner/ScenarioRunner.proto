@@ -5,7 +5,7 @@ import "google/protobuf/empty.proto";
 import "osi_trafficcommand.proto";
 //import "osi_trafficupdate.proto";
 
-package carla.grpc.srunner;
+package srunner.osi.client;
 
 service OSIVehicleController {
 //  rpc VehicleControl(stream osi3.TrafficCommand) returns (stream osi3.TrafficUpdate) {}

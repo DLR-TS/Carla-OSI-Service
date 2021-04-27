@@ -16,7 +16,7 @@
 namespace carla::srunner {
 	typedef std::function<void(const osi3::TrafficCommand&)> TrafficCommandCallback;
 
-	class TrafficCommandReceiver : public carla::grpc::srunner::OSIVehicleController::Service {
+	class TrafficCommandReceiver : public ::srunner::osi::client::OSIVehicleController::Service {
 
 		TrafficCommandCallback _callback;
 
