@@ -34,3 +34,9 @@ open-simulation-interface
 
 Either don't build protobuffer as shared library or copy libprotobufd.dll and libprotocd.dll in cache folder from bin to lib\open-simulation-interface since the generation of pb.cc and pb.h files is not working right now.
 ToDo: Fix this issue
+
+##Fix for Waypoint.cpp error
+
+Change Lines in libarla Wapoint.cpp
+16: size_t seed = 0u;
+21: return (WaypointHash::result_type) seed;
