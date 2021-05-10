@@ -36,10 +36,16 @@
 #include <carla/sensor/data/RadarMeasurement.h>
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
-	//connect
-	this->client = std::make_unique<carla::client::Client>(host, port);
-	this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
-	this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+	try {
+		//connect
+		this->client = std::make_unique<carla::client::Client>(host, port);
+		this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
+		this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+	}
+	catch (std::exception e) {
+		std::cout << e.what() << std::endl;
+		return -1;
+	}
 
 	//assure server is in synchronous mode
 	auto settings = world->GetSettings();

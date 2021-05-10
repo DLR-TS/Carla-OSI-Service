@@ -56,6 +56,21 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	}
 }
 
+TEST_CASE("CARLA2OSIInterface w/o server", "[CARLAInterface][Exception]") {
+	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
+
+	// carla server
+	std::string host = "localhost";
+	uint16_t port = 200000u;
+	double transactionTimeout = 0.0;
+	// delta seconds (1/framerate)
+	double deltaSeconds = (1.0 / 60);
+
+	SECTION("Init") {
+		REQUIRE(-1==carla->initialise(host, port, transactionTimeout, deltaSeconds));
+	}
+}
+
 TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[CARLAInterface][.][RequiresCarlaServer][MovingObject]") {
 
 	// carla server
