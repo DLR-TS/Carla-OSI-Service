@@ -29,7 +29,7 @@ FetchContent_Declare(
 FetchContent_Declare(
   libRecast
   GIT_REPOSITORY https://github.com/carla-simulator/recastnavigation.git
-  GIT_TAG cdce4e1a270fdf1f3942d4485954cc5e136df1df
+  GIT_TAG 0b13b0d288ac96fdc5347ee38299511c6e9400db
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla/Build
