@@ -13,10 +13,13 @@
 #include <grpc_proto_files/base_interface/CARLAInterface.pb.h>
 
 #include <osi_sensorview.pb.h>
+#include <osi_trafficCommand.pb.h>
 
 #include "testhelpers.h"
 
 #include "CARLA_OSI_gRPC.h"
+#include "carla_osi/Identifiers.h"
+#include "ScenarioRunner/TrafficCommandReceiver.h"
 
 std::unique_ptr<grpc::ClientContext> CreateDeadlinedClientContext(double transactionTimeout) {
 	// context to handle a rpc call - cannot be reused
@@ -271,4 +274,124 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	REQUIRE(position->x() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().x());
 	REQUIRE(position->y() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().y());
 	REQUIRE(position->z() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().z());
+}
+
+TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][TrafficCommandReceiver]") {
+	std::string gRPCHost = "localhost:51425";
+	grpc::ChannelArguments channelArgs;
+	auto channel = grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs);
+	::srunner::osi::client::OSIVehicleController::Stub stub(channel);
+	CoSiMa::rpc::BaseInterface::Stub baseStub(channel);
+
+	osi3::TrafficCommand trafficCommand;
+	trafficCommand.mutable_traffic_participant_id()->set_value(0);
+	google::protobuf::Empty empty;
+
+	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
+	CARLA_OSI_client server(gRPCHost);
+
+	server.StartServer(true);
+
+	auto context = CreateDeadlinedClientContext(5.0);
+	stub.SendCommand(context.get(), trafficCommand, &empty);
+
+	// Unmatched actor id resolves to empty role name
+	CoSiMa::rpc::String rpcBaseName;
+	rpcBaseName.set_value("TrafficCommand{}");
+	CoSiMa::rpc::Bytes serializedResponse;
+	osi3::TrafficCommand response;
+
+	context = CreateDeadlinedClientContext(5.0);
+	baseStub.GetStringValue(context.get(), rpcBaseName, &serializedResponse);
+	REQUIRE(0 < serializedResponse.value().length());
+	REQUIRE(0 < serializedResponse.ByteSizeLong());
+	REQUIRE(response.ParseFromString(serializedResponse.value()));
+	REQUIRE(0 == response.traffic_participant_id().value());
+}
+
+TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][TrafficCommandReceiver][.][RequiresCarlaServer][gRPC]") {
+	std::string gRPCHost = "localhost:51425";
+	grpc::ChannelArguments channelArgs;
+	auto channel = grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs);
+	::srunner::osi::client::OSIVehicleController::Stub osiStub(channel);
+	CoSiMa::rpc::BaseInterface::Stub baseStub(channel);
+	CoSiMa::rpc::CARLAInterface::Stub carlaStub(channel);
+
+	osi3::TrafficCommand trafficCommand;
+	trafficCommand.mutable_traffic_participant_id()->set_value(0);
+	google::protobuf::Empty empty;
+
+	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
+	CARLA_OSI_client server(gRPCHost);
+
+	const double deltaSeconds = 1 / 60.0;
+	const uint16_t carlaPort = 2000u;
+	const std::string carlaHost = "localhost";
+	std::string carlaMap = "Town10HD";
+	const double transactionTimeout = 60;
+	CoSiMa::rpc::CarlaConfig conf;
+	conf.set_carla_host(carlaHost);
+	conf.set_carla_port(carlaPort);
+	conf.set_transaction_timeout(transactionTimeout);
+	conf.set_delta_seconds(1 / 60.);
+
+	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
+	auto[client, world] = getCarlaDefaultWorld(carlaHost, carlaPort, transactionTimeout, carlaMap);
+
+	auto recommendedSpawnPoints = world.GetMap()->GetRecommendedSpawnPoints();
+	auto blueprintLibrary = world.GetBlueprintLibrary();
+	auto vehicleBlueprints = blueprintLibrary->Filter("vehicle.*");
+	auto vehicle = vehicleBlueprints->at(0);
+	std::string role = "TrafficCommand test target";
+	vehicle.SetAttribute("role_name", role);
+	
+	carla::SharedPtr<carla::client::Actor> actor = world.SpawnActor(vehicle, recommendedSpawnPoints.at(0));
+
+	auto attributes = actor->GetAttributes();
+	auto it = std::find_if(attributes.begin(), attributes.end(), [](auto attr) {return "role_name" == attr.GetId(); });
+	CHECK(it != attributes.end());
+	CHECK(it->GetValue() == role);
+
+	server.StartServer(true);
+
+	CoSiMa::rpc::Int32 result;
+	auto context = CreateDeadlinedClientContext(transactionTimeout);
+	auto status = carlaStub.SetConfig(context.get(), conf, &result);
+	CHECK(0 == result.value());
+	CHECK(status.ok());
+	
+	context = CreateDeadlinedClientContext(transactionTimeout);
+	status = osiStub.SendCommand(context.get(), trafficCommand, &empty);
+	REQUIRE(status.error_code() == grpc::StatusCode::OK);
+
+	// Unmatched actor id resolves to empty role name
+	CoSiMa::rpc::String rpcBaseName;
+	rpcBaseName.set_value("TrafficCommand{}");
+	CoSiMa::rpc::Bytes serializedResponse;
+	osi3::TrafficCommand response;
+
+	context = CreateDeadlinedClientContext(transactionTimeout);
+	status = baseStub.GetStringValue(context.get(), rpcBaseName, &serializedResponse);
+	REQUIRE(status.error_code() == grpc::StatusCode::OK);
+	REQUIRE(0 < serializedResponse.value().length());
+	REQUIRE(0 < serializedResponse.ByteSizeLong());
+	REQUIRE(response.ParseFromString(serializedResponse.value()));
+	REQUIRE(0 == response.traffic_participant_id().value());
+
+	trafficCommand.Clear();
+	trafficCommand.set_allocated_traffic_participant_id(carla_osi::id_mapping::getOSIActorId(actor).release());
+	rpcBaseName.set_value("TrafficCommand{" + role + "}");
+	serializedResponse.Clear();
+
+	context = CreateDeadlinedClientContext(transactionTimeout);
+	status = osiStub.SendCommand(context.get(), trafficCommand, &empty);
+	REQUIRE(status.error_code() == grpc::StatusCode::OK);
+	
+	context = CreateDeadlinedClientContext(transactionTimeout);
+	status = baseStub.GetStringValue(context.get(), rpcBaseName, &serializedResponse);
+	REQUIRE(status.error_code() == grpc::StatusCode::OK);
+	REQUIRE(0 < serializedResponse.ByteSizeLong());
+	REQUIRE(0 < serializedResponse.value().length());
+	REQUIRE(response.ParseFromString(serializedResponse.value()));
+	REQUIRE(trafficCommand.traffic_participant_id().value() == response.traffic_participant_id().value());
 }

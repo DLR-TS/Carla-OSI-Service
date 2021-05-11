@@ -34,8 +34,10 @@ endif()
 # Download automatically, you can also just copy the conan.cmake file
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
    message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-   file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.16.1/conan.cmake"
-                 "${CMAKE_BINARY_DIR}/conan.cmake")
+   file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/v0.16.1/conan.cmake"
+                "${CMAKE_BINARY_DIR}/conan.cmake"
+                EXPECTED_HASH SHA256=396e16d0f5eabdc6a14afddbcfff62a54a7ee75c6da23f32f7a31bc85db23484
+                TLS_VERIFY ON)
 endif()
 
 include(${CMAKE_BINARY_DIR}/conan.cmake REQUIRED)
@@ -111,8 +113,9 @@ else()
 endif(BUILD_SHARED_LIBS)
 
 ## generate grpc code
-# custom grcp cpp code generation script that is easier to use than gRPC's default function
+# include custom grcp cpp code generation script that is easier to use than gRPC's default function
 include(GenerateGRPC)
+# BaseInterface and CARLAInterface grpc Service for CoSiMa messages
 # gRPC can handle relative files
 set(COSIMA_GRPC_PROTO_FILES
 	grpc_proto_files/CoSiMaMessages.proto
@@ -121,20 +124,36 @@ set(COSIMA_GRPC_PROTO_FILES
 )
 add_library(CARLA_OSI_gRPC_Lib ${COSIMA_GRPC_PROTO_FILES})
 generate_grpc_cpp(TARGET CARLA_OSI_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR})
-# CALRA_OSI_gRPC_Lib depends on OSI because it reuses some messages as submessage (at least for sensor mounting positions)
-if(BUILD_SHARED_LIBS)
-	target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC open_simulation_interface)
-else()
-	target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC open_simulation_interface_static)
-endif(BUILD_SHARED_LIBS)
-
-#add_library(CARLA_OSI_gRPC_Lib ${COSIMA_PROTO_SRCS} ${COSIMA_GRPC_SRCS})
 target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC grpc++)
 target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
+# receiver for ScenarioRunner TrafficCommands
+set(SCENARIO_RUNNER_TRAFFIC_COMMAND_PROTO_FILES
+    grpc_proto_files/srunner/ScenarioRunner.proto
+)
+add_library(CARLA_OSI_ScenarioRunner_gRPC_Lib ${SCENARIO_RUNNER_TRAFFIC_COMMAND_PROTO_FILES})
+generate_grpc_cpp(TARGET CARLA_OSI_ScenarioRunner_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR})
+target_link_libraries(CARLA_OSI_ScenarioRunner_gRPC_Lib PUBLIC grpc++)
+target_include_directories(CARLA_OSI_ScenarioRunner_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
+
+# CALRA_OSI_gRPC_Lib depends on OSI because it reuses some messages as submessage (at least for sensor mounting positions)
+if(BUILD_SHARED_LIBS)
+	target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC open_simulation_interface)
+	target_link_libraries(CARLA_OSI_ScenarioRunner_gRPC_Lib PUBLIC open_simulation_interface)
+else()
+	target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC open_simulation_interface_static)
+	target_link_libraries(CARLA_OSI_ScenarioRunner_gRPC_Lib PUBLIC open_simulation_interface_static)
+endif(BUILD_SHARED_LIBS)
+
+# ScenarioRunner gRPC receiver library, separated to keep as an example when contributing to carla
+add_library(CARLA_OSI_ScenarioRunner_Lib "${CMAKE_CURRENT_SOURCE_DIR}/src/ScenarioRunner/TrafficCommandReceiver.cpp"
+                                         "${CMAKE_CURRENT_SOURCE_DIR}/include/ScenarioRunner/TrafficCommandReceiver.h")
+target_link_libraries(CARLA_OSI_ScenarioRunner_Lib PUBLIC CARLA_OSI_ScenarioRunner_gRPC_Lib)
+target_include_directories(CARLA_OSI_ScenarioRunner_Lib BEFORE PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/gens)
+
 # gRPC service logic library, separated from CARLA_OSI_Client to be testalble with catch2
 add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
-target_link_libraries(CARLA_OSI_gRPC_ServiceLib PUBLIC CARLA_OSI_gRPC_Lib CARLA_OSI_Lib)
+target_link_libraries(CARLA_OSI_gRPC_ServiceLib PUBLIC CARLA_OSI_gRPC_Lib CARLA_OSI_Lib CARLA_OSI_ScenarioRunner_Lib)
 target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
 find_package(Catch2 REQUIRED)

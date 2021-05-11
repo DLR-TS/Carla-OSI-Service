@@ -1,5 +1,4 @@
-﻿#ifndef COSIMA_H
-#define COSIMA_H
+﻿#pragma once
 
 #include "CARLA2OSIInterface.h"
 
@@ -23,6 +22,8 @@
 #include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
 #include "osi_common.pb.h"
 
+#include "ScenarioRunner/TrafficCommandReceiver.h"
+
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
 
@@ -44,13 +45,17 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	std::map<std::string, uint64_t, std::less<>> sensorIds;
 #pragma endregion fields for the Carla OSI Interface
 
+	carla::srunner::TrafficCommandReceiver trafficCommandReceiver;
+
 public:
 
 	CARLA_OSI_client(const std::string& server_address)
-		: server_address(server_address), transaction_timeout(std::chrono::milliseconds(5000)) {};
+		: server_address(server_address), transaction_timeout(std::chrono::milliseconds(5000)),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
 
 	CARLA_OSI_client(const std::string& server_address, const std::chrono::milliseconds transaction_timeout)
-		: server_address(server_address), transaction_timeout(transaction_timeout) {};
+		: server_address(server_address), transaction_timeout(transaction_timeout),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
 
 	~CARLA_OSI_client() {
 		if (server)
@@ -65,6 +70,7 @@ public:
 
 	virtual grpc::Status SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response) override;
 
+	// CARLA base interface service overrides
 	//Only overriding Set/GetString and DoStep because other methods aren't supported by the Carla2OSI interface (yet?)
 	virtual grpc::Status DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response) override;
 	virtual grpc::Status GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::Bytes* response) override;
@@ -82,6 +88,9 @@ private:
 	// generate a SensorView that holds only ground truth. Can be used as input for osi3::SensorView generating OSI sensors;
 	virtual std::shared_ptr<osi3::SensorView> getSensorViewGroundTruth(const std::string& name);
 	static void copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to);
+
+	// Serialize given trafficCommand into varName2MessageMap
+	// Callback function passed to TrafficCommandReceiver
+	void serializeTrafficCommand(const osi3::TrafficCommand& command);
 };
 
-#endif // !COSIMA_H

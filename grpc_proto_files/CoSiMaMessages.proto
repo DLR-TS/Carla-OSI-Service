@@ -1,6 +1,6 @@
 syntax = "proto3";
 //TODO fix import; see TODO near message Empty
-//import "google/protobuf/Empty.proto";
+//import "google/protobuf/empty.proto";
 
 package CoSiMa.rpc;
 

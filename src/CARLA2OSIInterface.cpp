@@ -36,10 +36,16 @@
 #include <carla/sensor/data/RadarMeasurement.h>
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
-	//connect
-	this->client = std::make_unique<carla::client::Client>(host, port);
-	this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
-	this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+	try {
+		//connect
+		this->client = std::make_unique<carla::client::Client>(host, port);
+		this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
+		this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+	}
+	catch (std::exception e) {
+		std::cout << e.what() << std::endl;
+		return -1;
+	}
 
 	//assure server is in synchronous mode
 	auto settings = world->GetSettings();
@@ -57,15 +63,18 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 
 double CARLA2OSIInterface::doStep() {
 	if (!world) {
-		std::cerr << "No world";
+		std::cerr << "No world" << std::endl;
 #ifdef __linux__
 		throw std::exception();
 #else
 		throw std::exception("No world");
 #endif //!__linux__
 	}
-
-	auto preStepTimestamp = world->GetSnapshot().GetTimestamp();
+	else if (this->world->GetId() != this->client->GetWorld().GetId()) {
+		// change of world id indicates map reload or map change
+		std::cerr << "World has changed" << std::endl;
+		this->clearData();
+	}
 
 	// track actors added/removed by simulation interfaces
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
@@ -161,6 +170,21 @@ std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::s
 		return nullptr;
 	}
 	return *sensorViewPtr;
+}
+
+std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
+{
+	carla::ActorId actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&id));
+	std::string role;
+	try	{//mutex scope
+		std::scoped_lock lock(actorRole2IDMap_mutex);
+		//look up from right to left -> retrieve role for given id
+		role = actorRole2IDMap.right.at(actorId);
+	}
+	catch (std::out_of_range exception) {
+		//empty by design
+	}
+	return role;
 }
 
 std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
@@ -567,6 +591,20 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	}
 
 	return groundTruth;
+}
+
+void CARLA2OSIInterface::clearData()
+{
+	if (!world) {
+		throw new std::exception("No world");
+	}
+	{//mutex scope
+		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
+		actorRole2IDMap.clear();
+		varName2MessageMap.clear();
+	}
+	staticMapTruth->Clear();
+	parseStationaryMapObjects();
 }
 
 void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)

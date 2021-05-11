@@ -12,6 +12,7 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 	builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
 	builder.RegisterService(static_cast<CoSiMa::rpc::BaseInterface::Service*>(this));
 	builder.RegisterService(static_cast<CoSiMa::rpc::CARLAInterface::Service*>(this));
+	builder.RegisterService(&trafficCommandReceiver);
 	// try to use unlimited message size
 	builder.SetMaxMessageSize(INT_MAX);
 	server = builder.BuildAndStart();
@@ -63,6 +64,13 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, con
 {
 	response->set_value(deserializeAndSet(request->name(), request->value()));
 	return grpc::Status::OK;
+}
+
+void CARLA_OSI_client::serializeTrafficCommand(const osi3::TrafficCommand & command)
+{
+	//command.traffic_participant_id() to role name and append to variable name
+	std::string& role = carlaInterface.actorIdToRoleName(command.traffic_participant_id());
+	varName2MessageMap["TrafficCommand{" + role + "}"] = command.SerializeAsString();
 }
 
 std::string_view CARLA_OSI_client::getPrefix(std::string_view name)

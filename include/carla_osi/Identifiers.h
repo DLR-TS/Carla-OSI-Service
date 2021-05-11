@@ -50,7 +50,7 @@ namespace carla_osi {
 			ActorID = 1,
 			RoadIDLaneID = 2,//also used for road marks, which are defined per lane in OpenDRIVE
 			JuncID = 3,
-			StationaryMapObject = 4,
+			StationaryMapObject = 4,// currently not invertable
 			EnvironmentObject = 4,
 		};//Unmapped globally unique OpenDRIVE ids: object, outline, tunnel, bridge, signal, controller, junctionGroup, (some for railroads: switch, mainTrack, sideTrack, station, platform),
 
