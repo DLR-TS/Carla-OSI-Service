@@ -1,5 +1,5 @@
 [requires]
-protobuf/3.11.4
+protobuf/3.12.4
 yaml-cpp/0.6.3
 catch2/2.12.1
 FakeIt/2.0.5@gasuketsu/stable

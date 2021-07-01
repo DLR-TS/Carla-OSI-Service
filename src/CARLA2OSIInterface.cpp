@@ -596,7 +596,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 void CARLA2OSIInterface::clearData()
 {
 	if (!world) {
-		throw new std::exception("No world");
+    std::cerr << "No world" << std::endl;
+		throw new std::exception();
 	}
 	{//mutex scope
 		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);

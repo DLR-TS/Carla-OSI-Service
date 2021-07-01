@@ -69,7 +69,7 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, con
 void CARLA_OSI_client::serializeTrafficCommand(const osi3::TrafficCommand & command)
 {
 	//command.traffic_participant_id() to role name and append to variable name
-	std::string& role = carlaInterface.actorIdToRoleName(command.traffic_participant_id());
+  std::string role = carlaInterface.actorIdToRoleName(command.traffic_participant_id());
 	varName2MessageMap["TrafficCommand{" + role + "}"] = command.SerializeAsString();
 }
 
