@@ -5,6 +5,7 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <thread>
@@ -26,6 +27,8 @@
 
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
+
+	std::ofstream Logging;
 
 #pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;

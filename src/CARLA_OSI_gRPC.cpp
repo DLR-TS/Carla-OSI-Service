@@ -6,6 +6,8 @@
 
 void CARLA_OSI_client::StartServer(const bool nonBlocking)
 {
+	Logging.open("CARLA-OSI.log");
+	Logging << "Start" << std::endl;
 	if (server)
 		server->Shutdown(std::chrono::system_clock::now() + transaction_timeout);
 	grpc::ServerBuilder builder;
@@ -33,6 +35,8 @@ void CARLA_OSI_client::StopServer()
 		server_thread->join();
 	server = nullptr;
 	std::cout << "Server stopped" << std::endl;
+	Logging << "Stop" << std::endl;
+	Logging.close();
 }
 
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const CoSiMa::rpc::CarlaConfig * config, CoSiMa::rpc::Int32 * response)
@@ -51,17 +55,21 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const Co
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiMa::rpc::Empty * request, CoSiMa::rpc::Double * response)
 {
 	response->set_value(carlaInterface.doStep());
+	Logging << "Do step" << std::endl;
 	return grpc::Status::OK;
 }
 
 grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::String * request, CoSiMa::rpc::Bytes * response)
 {
-	response->set_value(getAndSerialize(request->value()));
+	std::string message = getAndSerialize(request->value());
+	response->set_value(message);
+	Logging << "Out:" << request->value() << ":" << message << std::endl;
 	return grpc::Status::OK;
 }
 
 grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::NamedBytes * request, CoSiMa::rpc::Int32 * response)
 {
+	Logging << "In:" << request->name() << ":" << request->value() << std::endl;
 	response->set_value(deserializeAndSet(request->name(), request->value()));
 	return grpc::Status::OK;
 }
