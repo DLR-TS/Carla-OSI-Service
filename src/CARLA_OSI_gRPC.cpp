@@ -56,6 +56,13 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiM
 {
 	response->set_value(carlaInterface.doStep());
 	Logging << "Do step" << std::endl;
+	logHeartbeatCounter++;
+	if (logHeartbeatCounter >= logHeartbeat) {
+		logHeartbeatCounter = 0;
+		logEnabled = true;
+	} else {
+		logEnabled = false;
+	}
 	return grpc::Status::OK;
 }
 
@@ -63,13 +70,17 @@ grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext * context, con
 {
 	std::string message = getAndSerialize(request->value());
 	response->set_value(message);
-	Logging << "Out:" << request->value() << ":" << message << std::endl;
+	if (logEnabled) {
+		Logging << "Out:" << request->value() << ":" << message << std::endl;
+	}
 	return grpc::Status::OK;
 }
 
 grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::NamedBytes * request, CoSiMa::rpc::Int32 * response)
 {
-	Logging << "In:" << request->name() << ":" << request->value() << std::endl;
+	if (logEnabled) {
+		Logging << "In:" << request->name() << ":" << request->value() << std::endl;
+	}
 	response->set_value(deserializeAndSet(request->name(), request->value()));
 	return grpc::Status::OK;
 }
