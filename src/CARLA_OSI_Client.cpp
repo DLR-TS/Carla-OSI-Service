@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 		server_address = argv[1];
 	}
 	if (2 < argc) {
-    if (argv[2] == "no-log"){
+    if (std::string{argv[2]} == "no-log"){
         logHeartbeatRate = -1;
         std::cout << "no-log option enabled" << std::endl;
     } else {
