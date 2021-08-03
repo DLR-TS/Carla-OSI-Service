@@ -12,8 +12,13 @@ int main(int argc, char *argv[])
 		server_address = argv[1];
 	}
 	if (2 < argc) {
-		logHeartbeatRate = std::stoi(argv[2]);
-		std::cout << "Log just each " << logHeartbeatRate << " simulation step." << std::endl;
+    if (argv[2] == "no-log"){
+        logHeartbeatRate = -1;
+        std::cout << "no-log option enabled" << std::endl;
+    } else {
+		  logHeartbeatRate = std::stoi(argv[2]);
+		  std::cout << "Log just each " << logHeartbeatRate << " simulation step." << std::endl;
+    }
 	}
 
 	CARLA_OSI_client client(server_address, logHeartbeatRate);

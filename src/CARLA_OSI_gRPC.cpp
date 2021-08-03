@@ -55,14 +55,16 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const Co
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiMa::rpc::Empty * request, CoSiMa::rpc::Double * response)
 {
 	response->set_value(carlaInterface.doStep());
-	Logging << "Do step" << std::endl;
-	logHeartbeatCounter++;
-	if (logHeartbeatCounter >= logHeartbeat) {
-		logHeartbeatCounter = 0;
-		logEnabled = true;
-	} else {
-		logEnabled = false;
-	}
+  if (logHeartbeat != -1){
+	  Logging << "Do step" << std::endl;
+	  logHeartbeatCounter++;
+	  if (logHeartbeatCounter >= logHeartbeat) {
+		  logHeartbeatCounter = 0;
+		  logEnabled = true;
+	  } else {
+		  logEnabled = false;
+	  }
+  }
 	return grpc::Status::OK;
 }
 
