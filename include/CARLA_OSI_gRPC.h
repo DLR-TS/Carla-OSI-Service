@@ -1,4 +1,9 @@
-﻿#pragma once
+﻿/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
+#ifndef CARLAOSIGRPC_H
+#define CARLAOSIGRPC_H
 
 #include "CARLA2OSIInterface.h"
 
@@ -94,3 +99,4 @@ private:
 	void serializeTrafficCommand(const osi3::TrafficCommand& command);
 };
 
+#endif //!CARLAOSIGRPC_H

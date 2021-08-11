@@ -1,4 +1,9 @@
-#pragma once
+/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
+#ifndef LANES_H
+#define LANES_H
 
 #include <carla/client/Junction.h>
 #include <carla/client/Map.h>
@@ -24,3 +29,5 @@ namespace carla_osi::lanes {
 	std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>, uint64_t, uint64_t> parseLaneBoundary(
 		carla::client::Map::TopologyList::value_type laneSection);
 }
+
+#endif //!LANES_H

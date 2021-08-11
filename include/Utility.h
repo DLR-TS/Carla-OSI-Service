@@ -1,3 +1,7 @@
+/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
 #ifndef CARLAUTILITY_H
 #define CARLAUTILITY_H
 

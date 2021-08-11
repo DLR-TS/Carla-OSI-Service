@@ -1,4 +1,9 @@
-#pragma once
+/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
+#ifndef TRAFFICSIGNALS_H
+#define TRAFFICSIGNALS_H
 
 #include <carla/client/Map.h>
 #include <carla/client/TrafficSign.h>
@@ -32,3 +37,5 @@ namespace carla_osi::traffic_signals {
 	std::vector<std::unique_ptr<osi3::TrafficLight>> getOSITrafficLight(const carla::SharedPtr<const carla::client::TrafficLight> actor,
 		const std::vector<carla::rpc::TrafficLightHeads> heads);
 }
+
+#endif //!TRAFFICSIGNALS_H

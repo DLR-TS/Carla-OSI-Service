@@ -1,4 +1,9 @@
-#pragma once
+/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
+#ifndef TRAFFICCOMMANDRECEIVER_H
+#define TRAFFICCOMMANDRECEIVER_H
 
 #include <functional>
 
@@ -29,3 +34,5 @@ namespace carla::srunner {
 		virtual ::grpc::Status SendCommand(::grpc::ServerContext* context, const osi3::TrafficCommand* command, google::protobuf::Empty* response) override;
 	};
 }
+
+#endif //!TRAFFICCOMMANDRECEIVER_H

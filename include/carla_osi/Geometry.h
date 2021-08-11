@@ -1,4 +1,9 @@
-#pragma once
+/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
+#ifndef GEOMETRY_H
+#define GEOMETRY_H
 
 #define _USE_MATH_DEFINES
 
@@ -34,3 +39,5 @@ namespace carla_osi {
 		carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
 	}
 }
+
+#endif //!GEOMETRY_H

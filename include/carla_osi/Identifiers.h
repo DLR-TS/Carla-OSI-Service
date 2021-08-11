@@ -1,4 +1,9 @@
-#pragma once
+/**
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+*/
+
+#ifndef IDENTIFIERS_H
+#define IDENTIFIERS_H
 
 #include <variant>
 
@@ -83,3 +88,5 @@ namespace carla_osi {
 		std::unique_ptr<osi3::Identifier> getOSIWaypointId(const carla::road::element::Waypoint& waypoint, const carla::road::Map& map);
 	}
 }
+
+#endif //!IDENTIFIERS_H
