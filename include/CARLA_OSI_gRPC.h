@@ -10,6 +10,7 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <thread>
@@ -31,6 +32,11 @@
 
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
+
+	std::ofstream Logging;
+	bool logEnabled = false;
+	int logHeartbeatCounter = 0;
+	int logHeartbeat = 0;
 
 #pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;
@@ -56,6 +62,10 @@ public:
 
 	CARLA_OSI_client(const std::string& server_address)
 		: server_address(server_address), transaction_timeout(std::chrono::milliseconds(5000)),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
+
+	CARLA_OSI_client(const std::string& server_address, const int heartbeatRate)
+		: server_address(server_address), logHeartbeat(heartbeatRate), transaction_timeout(std::chrono::milliseconds(5000)),
 		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
 
 	CARLA_OSI_client(const std::string& server_address, const std::chrono::milliseconds transaction_timeout)
