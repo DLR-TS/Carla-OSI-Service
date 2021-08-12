@@ -209,7 +209,7 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		return iter->second;
 	}
 	else {
-		std::cerr << __FUNCTION__ << ": Could not find a variable named " << base_name << std::endl;
+		std::cerr << __FUNCTION__ << ": Could not find a variable named " << base_name << " in Carla." << std::endl;
 		return "";
 	}
 }
