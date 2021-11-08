@@ -1,13 +1,13 @@
-# CARLA OSI client for SETLevel4to5
+# CARLA OSI Service for SETLevel4to5
 
-A client for CARLA simulator. Translates World and sensor outputs into OSI messages
+A client service for CARLA simulator. Translates World and sensor outputs into OSI messages
 
 # manual build (on Linux)
 in root folder:
 ```sh
  mkdir build && cd build
  cmake .. -DCMAKE_BUILD_TYPE=Release
- cmake --build . --target CARLA_OSI_Client 
+ cmake --build . --target CARLA_OSI_Service 
  cmake --install . # not yet defined
 ```
 

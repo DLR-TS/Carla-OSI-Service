@@ -3,7 +3,7 @@
 cmake_minimum_required (VERSION 3.12)
 message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 
-project ("CARLA OSI client" CXX)
+project ("CARLA OSI Service" CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -58,7 +58,7 @@ conan_basic_setup()
 # => We use our own FindCatch2.cmake module
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/CMakeModules ${CMAKE_MODULE_PATH})
 
-# Read CMake_FetchContent_Overrides for changes of FetchContent_declare default of other included scripts (currently applies to FetchLibCarla_client, only)
+# Read CMake_FetchContent_Overrides for changes of FetchContent_declare default of other included scripts (currently applies to FetchLibCarla_Service, only)
 include(FetchContent)
 include(${CMAKE_CURRENT_LIST_DIR}/CMake_FetchContent_Overrides.cmake OPTIONAL)
 
@@ -151,7 +151,7 @@ add_library(CARLA_OSI_ScenarioRunner_Lib "${CMAKE_CURRENT_SOURCE_DIR}/src/Scenar
 target_link_libraries(CARLA_OSI_ScenarioRunner_Lib PUBLIC CARLA_OSI_ScenarioRunner_gRPC_Lib)
 target_include_directories(CARLA_OSI_ScenarioRunner_Lib BEFORE PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
-# gRPC service logic library, separated from CARLA_OSI_Client to be testalble with catch2
+# gRPC service logic library, separated from CARLA_OSI_Service to be testalble with catch2
 add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
 target_link_libraries(CARLA_OSI_gRPC_ServiceLib PUBLIC CARLA_OSI_gRPC_Lib CARLA_OSI_Lib CARLA_OSI_ScenarioRunner_Lib)
 target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
@@ -165,12 +165,12 @@ include(CTest)
 include(Catch)
 catch_discover_tests(Test_CARLA_OSI)
 
-add_executable (CARLA_OSI_Client "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_Client.cpp")
-target_link_libraries(CARLA_OSI_Client PUBLIC CARLA_OSI_Lib)
-target_include_directories(CARLA_OSI_Client PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
-target_link_libraries(CARLA_OSI_Client PUBLIC CARLA_OSI_gRPC_ServiceLib)
+add_executable (CARLA_OSI_Service "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_Service.cpp")
+target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_Lib)
+target_include_directories(CARLA_OSI_Service PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
+target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_gRPC_ServiceLib)
 # public include of target CARLA_OSI_gRPC_Lib is supposed to propagate, but is missing...
-target_include_directories(CARLA_OSI_Client BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
+target_include_directories(CARLA_OSI_Service BEFORE PUBLIC ${CMAKE_BINARY_DIR}/gens)
 
 # The import section in conanfile.txt is supposed to do the same, but somehow it stopped working.
 # so far, only boost is needed. Additional globbing expressions can be added if needed

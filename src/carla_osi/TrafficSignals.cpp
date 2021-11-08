@@ -12,6 +12,9 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 	const carla::SharedPtr<const carla::client::TrafficSign> actor,
 	const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/)
 {
+
+	std::cout << "parsing a traffic sign" << std::endl;
+
 	std::unique_ptr<osi3::TrafficSign> sign = std::make_unique<osi3::TrafficSign>();
 	sign->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
 
@@ -104,6 +107,9 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
 	const carla::SharedPtr<const carla::client::TrafficLight> actor/*,/*, const  pugi::xml_document& xodr*/)
 {
+
+	std::cout << "parsing a traffic light with the old function" << std::endl;
+
 	std::vector<std::unique_ptr<osi3::TrafficLight>> osiTrafficLights;
 
 	//OSI defines a traffic light as an actual bulb. Therefore, red, yellow and green are three separate traffic lights
@@ -187,12 +193,12 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 	const carla::SharedPtr<const carla::client::TrafficLight> actor,
 	const std::vector<carla::rpc::TrafficLightHeads> heads) {
 
-	std::cout << "parsing a traffic light with the new function" << std::endl;
-
 	//fallback - use old behaviour
 	if (!heads.size()) {
 		return carla_osi::traffic_signals::getOSITrafficLight(actor);
 	}
+
+	std::cout << "parsing a traffic light with the new function" << std::endl;
 
 	std::vector<std::unique_ptr<osi3::TrafficLight>> osiTrafficLights;
 	int counter = 0;
