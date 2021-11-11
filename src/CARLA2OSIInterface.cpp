@@ -550,6 +550,12 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				else if ("bbcenter_to_rear_z" == attribute.GetId()) {
 					rearAxle->set_z(attribute.As<float>());
 				}
+				else if ("role_name" == attribute.GetId()) {
+					std::string role_name = attribute.GetValue();
+					if ("hero" == role_name) {
+						groundTruth->set_allocated_host_vehicle_id(vehicle->mutable_id());
+					}
+				}
 			}
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
@@ -587,6 +593,9 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			for (auto& bulb : bulbs) {
 				trafficLights->AddAllocated(bulb.release());
 			}
+		}
+		else{
+			std::cout << typeID << " not parsed to groundtruth" <<  std::endl;
 		}
 	}
 
