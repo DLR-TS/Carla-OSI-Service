@@ -406,7 +406,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 		}
 	}
 
-	//carla->initialise(host, port, transactionTimeout, deltaSeconds);
+	//carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
 }
 
 TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDebugStuff]") {

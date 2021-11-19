@@ -41,14 +41,13 @@ void CARLA_OSI_client::StopServer()
 
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const CoSiMa::rpc::CarlaConfig * config, CoSiMa::rpc::Int32 * response)
 {
-	//TODO
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
 		CoSiMa::rpc::SensorViewSensorMountingPosition mountingPosition;
 		mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
 		sensorMountingPositionMap.insert({ sensorViewExtra.prefixed_fmu_variable_name(), mountingPosition });
 	}
 	response->set_value(
-		carlaInterface.initialise(config->carla_host(), config->carla_port(), config->transaction_timeout(), config->delta_seconds()));
+		carlaInterface.initialise(config->carla_host(), config->carla_port(), config->transaction_timeout(), config->delta_seconds(), debug));
 	return grpc::Status::OK;
 }
 
@@ -225,7 +224,24 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 	// if defined, set sensor mounting positions
 	auto iter = sensorMountingPositionMap.find(varName);
 	if (sensorMountingPositionMap.end() != iter) {
+		if (debug)
+		{
+			std::cout << "Searched successfully for sensor " << varName << " Copy mounting position to sensorview message." << std::endl;
+		}
 		copyMountingPositions(iter->second, sensorView);
+	} else 	if (debug)
+	{
+		std::cout << "No sensor found with name: " << varName << " Can not set mounting position.\n";
+		if (sensorMountingPositionMap.size() != 0) {
+			std::cout << "Available sensors are: ";
+			for (auto& positions : sensorMountingPositionMap) {
+				std::cout << positions.first << " ";
+			}
+			std::cout << std::endl;
+		}
+		else {
+			std::cout << "No sensor positions are configured!" << std::endl;
+		}
 	}
 
 	// find or generate id for the named sensor
@@ -242,11 +258,24 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}
 
+	//host_vehicle_id
+	if (groundTruth->has_host_vehicle_id()) {
+		sensorView->set_allocated_host_vehicle_id(groundTruth->mutable_host_vehicle_id());
+	}
+	if (debug) {
+		std::cout << "Host vehicle id: " << sensorView->mutable_host_vehicle_id() << std::endl;
+	}
 	return sensorView;
 }
 
 void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to)
 {
+	//TODO
+	//The virtual mounting position as well as rmse is not set: https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1SensorView.html
+	//Is the virtual mounting position needed?
+	//to->mutable_mounting_position
+	//to->mutable_mounting_position_rmse
+
 	for (int i = 0; i < from.generic_sensor_mounting_position_size(); i++) {
 		to->add_generic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(i));
 	}

@@ -35,7 +35,9 @@
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 
-int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds) {
+int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug) {
+	this->debug = debug;
+
 	try {
 		//connect
 		this->client = std::make_unique<carla::client::Client>(host, port);
@@ -255,6 +257,16 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 		auto base = stationaryObject->mutable_base();
 		auto[dimension, position] = carla_osi::geometry::toOSI(mapObject.bounding_box);
+
+		if (!debug && dimension->length() * dimension->width() * dimension->height() >= 1000) {
+			std::cout << "Large volume of stationary object detected. Name: " << mapObject.name << std::endl;
+		}
+		if (debug) {
+			std::cout << "OSI-Dimensions: " << dimension->length() << " " << dimension->width() << " " << dimension->height()
+				<< " OSI-Position:" << position->x() << " " << position->y() << " " << position->z()
+				<< " Name: " << mapObject.name
+				<< std::endl;
+		}
 		base->set_allocated_dimension(dimension.release());
 		base->set_allocated_position(carla_osi::geometry::toOSI(mapObject.transform.location).release());
 		base->set_allocated_orientation(carla_osi::geometry::toOSI(mapObject.transform.rotation).release());

@@ -70,6 +70,8 @@ class CARLA2OSIInterface
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	pugi::xml_document xodr;
+	// Print debug information
+	bool debug;
 
 public:
 
@@ -96,9 +98,11 @@ public:
 	* transaction timeout in seconds
 	* \var deltaSeconds
 	* simulation time delta per tick
+	* \var debug
+	* print extra debug information
 	* \return Success status.
 	*/
-	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds);
+	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration

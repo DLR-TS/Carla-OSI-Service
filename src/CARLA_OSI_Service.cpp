@@ -17,11 +17,16 @@ int main(int argc, char *argv[])
 	//Server address deliberately chosen to accept any connection
 	std::string server_address = "0.0.0.0:51425";
 	int logHeartbeatRate = -1;//no logs
+	bool debug = false;
 
 	for (int i = 2; i < argc; i++) {
 		if (isNumber(argv[i])) {
 			logHeartbeatRate = std::stoi(argv[i]);
 			std::cout << "Log just each " << logHeartbeatRate << " simulation step." << std::endl;
+		}
+		else if (argv[i] == "-d") {
+			debug = true;
+			std::cout << "Running with additional debug prints." << std::endl;
 		}
 		else {
 			server_address = argv[i];
@@ -32,7 +37,7 @@ int main(int argc, char *argv[])
 		std::cout << "no-log option enabled" << std::endl;
 	}
 
-	CARLA_OSI_client client(server_address, logHeartbeatRate);
+	CARLA_OSI_client client(server_address, logHeartbeatRate, debug);
 
 	client.StartServer();
 

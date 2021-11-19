@@ -37,7 +37,7 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
 
 	SECTION("Init") {
-		carla->initialise(host, port, transactionTimeout, deltaSeconds);
+		carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
 	}
 
 	SECTION("Init with generated static props") {
@@ -51,7 +51,7 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 		auto fallbackLocation = carla::geom::Location(0, 0, 1);
 		world.SpawnActor(*prop, randomLocation.value_or(fallbackLocation));
 
-		carla->initialise(host, port, transactionTimeout, deltaSeconds);
+		carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
 
 	}
 }
@@ -67,7 +67,7 @@ TEST_CASE("CARLA2OSIInterface w/o server", "[CARLAInterface][Exception]") {
 	double deltaSeconds = (1.0 / 60);
 
 	SECTION("Init") {
-		REQUIRE(-1==carla->initialise(host, port, transactionTimeout, deltaSeconds));
+		REQUIRE(-1==carla->initialise(host, port, transactionTimeout, deltaSeconds, false));
 	}
 }
 
@@ -105,7 +105,7 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[CARLAI
 
 	// compare ground truth to vehicles
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
-	carla->initialise(host, port, transactionTimeout, deltaSeconds);
+	carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
 	auto groundTruth = carla->getLatestGroundTruth();
 	CHECK(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) - fails == spawns);
 	CHECK(std::min(vehicleBlueprints->size(), recommendedSpawnPoints.size()) == groundTruth->moving_object_size() + fails);
@@ -255,7 +255,7 @@ TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][Requir
 	std::cout << __FUNCTION__ << ": Distance from walker to waypoint: " << walker->GetLocation().Distance(waypoint->GetTransform().location) << std::endl;
 
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
-	carla->initialise(host, port, transactionTimeout, deltaSeconds);
+	carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
 
 	auto groundTruth = carla->getLatestGroundTruth();
 	// search for moving object of type PEDESTRIAN
@@ -292,7 +292,7 @@ TEST_CASE("Parse some camera sensor frames", "[CARLAInterface][.][RequiresCarlaS
 	auto sensor = world.SpawnActor(sensorBp, sensorTransform);
 
 	std::shared_ptr<CARLA2OSIInterface> carla = std::make_shared<CARLA2OSIInterface>();
-	carla->initialise(host, port, transactionTimeout, deltaSeconds);
+	carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
 
 	auto sensorView = carla->getSensorView(role);
 	REQUIRE(sensorView->camera_sensor_view_size());
