@@ -19,12 +19,12 @@ int main(int argc, char *argv[])
 	int logHeartbeatRate = -1;//no logs
 	bool debug = false;
 
-	for (int i = 2; i < argc; i++) {
+	for (int i = 1; i < argc; i++) {
 		if (isNumber(argv[i])) {
 			logHeartbeatRate = std::stoi(argv[i]);
 			std::cout << "Log just each " << logHeartbeatRate << " simulation step." << std::endl;
 		}
-		else if (argv[i] == "-d") {
+		else if (std::string(argv[i]) == "-d") {
 			debug = true;
 			std::cout << "Running with additional debug prints." << std::endl;
 		}
