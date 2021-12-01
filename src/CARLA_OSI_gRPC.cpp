@@ -260,7 +260,7 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 
 	//host_vehicle_id
 	if (groundTruth->has_host_vehicle_id()) {
-		sensorView->set_allocated_host_vehicle_id(groundTruth->mutable_host_vehicle_id());
+		sensorView->mutable_host_vehicle_id()->set_value(groundTruth->host_vehicle_id().value());
 	}
 	if (debug) {
 		std::cout << "Host vehicle id: " << sensorView->mutable_host_vehicle_id() << std::endl;

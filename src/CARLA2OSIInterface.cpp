@@ -261,12 +261,15 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		if (!debug && dimension->length() * dimension->width() * dimension->height() >= 1000) {
 			std::cout << "Large volume of stationary object detected. Name: " << mapObject.name << std::endl;
 		}
+
 		if (debug) {
 			std::cout << "OSI-Dimensions: " << dimension->length() << " " << dimension->width() << " " << dimension->height()
-				<< " OSI-Position:" << position->x() << " " << position->y() << " " << position->z()
+				<< " OSI-Position: " << mapObject.transform.location.x << " " << mapObject.transform.location.y << " " << mapObject.transform.location.z
+				<< " OSI-Rotation: " << mapObject.transform.rotation.roll << " " << mapObject.transform.rotation.pitch << " " << mapObject.transform.rotation.yaw
 				<< " Name: " << mapObject.name
 				<< std::endl;
 		}
+
 		base->set_allocated_dimension(dimension.release());
 		base->set_allocated_position(carla_osi::geometry::toOSI(mapObject.transform.location).release());
 		base->set_allocated_orientation(carla_osi::geometry::toOSI(mapObject.transform.rotation).release());
@@ -565,7 +568,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				else if ("role_name" == attribute.GetId()) {
 					std::string role_name = attribute.GetValue();
 					if ("hero" == role_name) {
-						groundTruth->set_allocated_host_vehicle_id(vehicle->mutable_id());
+						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
+						//groundTruth->set_allocated_host_vehicle_id(vehicle->mutable_id());
 					}
 				}
 			}
@@ -610,6 +614,10 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			std::cout << typeID << " not parsed to groundtruth" <<  std::endl;
 		}
 	}
+
+	//Timestamp
+	osi3::Timestamp* timestamp = parseTimestamp();
+	groundTruth->set_allocated_timestamp(timestamp);
 
 	return groundTruth;
 }
