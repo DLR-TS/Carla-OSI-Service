@@ -93,6 +93,11 @@ public:
 	virtual grpc::Status SetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::NamedBytes* request, CoSiMa::rpc::Int32* response) override;
 
 private:
+	//print the whole SensorViewMessage for debugging
+	void printSensorViewMessage(std::shared_ptr<osi3::SensorView> sensorView);
+	void printOsiVector(osi3::Vector3d vector3d);
+	void printOsiOrientation3d(osi3::Orientation3d orientation3d);
+
 	// separate prefix, sourrounded by '#', from the given variable name
 	virtual std::string_view getPrefix(const std::string_view base_name);
 	// parse index from OSMP variable name, if present

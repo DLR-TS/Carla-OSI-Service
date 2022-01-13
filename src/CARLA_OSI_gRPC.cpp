@@ -221,6 +221,11 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 	// copy latest ground truth into previously created ground truth
 	groundTruth->MergeFrom(*carlaInterface.getLatestGroundTruth());
 
+	//host_vehicle_id
+	if (groundTruth->has_host_vehicle_id()) {
+		sensorView->mutable_host_vehicle_id()->set_value(groundTruth->host_vehicle_id().value());
+	}
+
 	// if defined, set sensor mounting positions
 	auto iter = sensorMountingPositionMap.find(varName);
 	if (sensorMountingPositionMap.end() != iter) {
@@ -258,12 +263,8 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}
 
-	//host_vehicle_id
-	if (groundTruth->has_host_vehicle_id()) {
-		sensorView->mutable_host_vehicle_id()->set_value(groundTruth->host_vehicle_id().value());
-	}
 	if (debug) {
-		std::cout << "Host vehicle id: " << sensorView->mutable_host_vehicle_id() << std::endl;
+		printSensorViewMessage(sensorView);
 	}
 	return sensorView;
 }
@@ -272,11 +273,44 @@ void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensor
 {
 	//TODO
 	//The virtual mounting position as well as rmse is not set: https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1SensorView.html
-	//Is the virtual mounting position needed?
-	//to->mutable_mounting_position
+	//Is the virtual mounting position needed? Yes!
+
+	if (from.generic_sensor_mounting_position_size()) {
+		to->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(0));
+	}
+	else if (from.radar_sensor_mounting_position_size()) {
+		to->mutable_mounting_position()->CopyFrom(from.radar_sensor_mounting_position(0));
+	}
+	else if (from.lidar_sensor_mounting_position_size()) {
+		to->mutable_mounting_position()->CopyFrom(from.lidar_sensor_mounting_position(0));
+	}
+	else if (from.camera_sensor_mounting_position_size()) {
+		to->mutable_mounting_position()->CopyFrom(from.camera_sensor_mounting_position(0));
+	}
+	else if (from.ultrasonic_sensor_mounting_position_size()) {
+		to->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(0));
+	}
+
+	/*osi3::Vector3d bb_center_to_rear;//needed if virtual sensor mounting position is measured from bounding box center instead of rear axle
+	if (to->has_host_vehicle_id()) {
+		for (const auto &moving_object : to->global_ground_truth().moving_object()) {
+			if (moving_object.has_id() && moving_object.id().value() == to->host_vehicle_id().value()) {
+				if (moving_object.has_vehicle_attributes() && moving_object.vehicle_attributes().has_bbcenter_to_rear()) {
+					bb_center_to_rear.CopyFrom(moving_object.vehicle_attributes().bbcenter_to_rear());
+				}
+				break;
+			}
+		}
+	}
+	to->mutable_mounting_position()->mutable_position()->set_x(to->mutable_mounting_position()->mutable_position()->x() - bb_center_to_rear.x());
+	to->mutable_mounting_position()->mutable_position()->set_y(to->mutable_mounting_position()->mutable_position()->y() - bb_center_to_rear.y());
+	to->mutable_mounting_position()->mutable_position()->set_z(to->mutable_mounting_position()->mutable_position()->z() - bb_center_to_rear.z());
+	*/
+
 	//to->mutable_mounting_position_rmse
 
-	for (int i = 0; i < from.generic_sensor_mounting_position_size(); i++) {
+	//physical sensor mounting position is defined by model itself
+	/*for (int i = 0; i < from.generic_sensor_mounting_position_size(); i++) {
 		to->add_generic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(i));
 	}
 	for (int i = 0; i < from.radar_sensor_mounting_position_size(); i++) {
@@ -290,5 +324,149 @@ void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensor
 	}
 	for (int i = 0; i < from.ultrasonic_sensor_mounting_position_size(); i++) {
 		to->add_ultrasonic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(i));
+	}*/
+}
+
+void CARLA_OSI_client::printSensorViewMessage(std::shared_ptr<osi3::SensorView> sensorView) {
+	std::cout << std::endl << "SensorViewMessage:\n";
+	if (sensorView->has_version()) {
+		std::cout << "Version: " << sensorView->version().version_major()
+			<< "." << sensorView->version().version_minor() << "."
+			<< sensorView->version().version_patch() << "\n";
 	}
+	//timestamp
+	//sensor_id
+	if (sensorView->has_mounting_position()) {
+		std::cout << "   Mounting Position:\n      ";
+		printOsiVector(sensorView->mounting_position().position());
+		std::cout << "      ";
+		printOsiOrientation3d(sensorView->mounting_position().orientation());
+	}
+	//mountin_position_rmse
+	//host_vehicle_data
+	//global_ground_truth
+	if (sensorView->has_global_ground_truth()) {
+		auto groundTruth = sensorView->global_ground_truth();
+		//version
+		if (groundTruth.has_timestamp()) {
+			std::cout << "   Timestamp: " << groundTruth.timestamp().seconds()
+				<< "," << groundTruth.timestamp().nanos() << "\n";//Not fully correct
+		}
+		if (groundTruth.has_host_vehicle_id()) {
+			std::cout << "   HostVehicleID: " << groundTruth.host_vehicle_id().value() << "\n";
+		}
+		if (groundTruth.stationary_object_size()) {
+			std::cout << "STATIONARY OBJECTS NOT YET IMPLEMENTED!\n";
+		}
+		if (groundTruth.moving_object_size()) {
+			std::cout << "   MovingObjects:\n";
+			for (const osi3::MovingObject &movingObject : groundTruth.moving_object()) {
+				if (movingObject.has_id()) {
+					std::cout << "      ID: " << movingObject.id().value() << "\n";
+				}
+				if (movingObject.has_base()) {
+					auto base = movingObject.base();
+					if (base.has_dimension()) {
+						std::cout << "         Dimension:\n"
+							<< "            Length:" << base.dimension().length()
+							<< " Width: " << base.dimension().width()
+							<< " Height: " << base.dimension().height() << "\n";
+					}
+					if (base.has_position()) {
+						std::cout << "         Position:\n            ";
+						printOsiVector(base.position());
+					}
+					if (base.has_orientation()) {
+						std::cout << "         Orientation:\n            ";
+						printOsiOrientation3d(base.orientation());
+					}
+					if (base.has_velocity()) {
+						std::cout << "         Velocity:\n            ";
+						printOsiVector(base.velocity());
+					}
+					if (base.has_acceleration()) {
+						std::cout << "         Acceleration:\n            ";
+						printOsiVector(base.acceleration());
+					}
+					if (base.has_orientation_rate()) {
+						std::cout << "         Orientation rate:\n            ";
+						printOsiOrientation3d(base.orientation_rate());
+					}
+					if (base.has_orientation_acceleration()) {
+						std::cout << "         Orientation Acceleration:\n            ";
+						printOsiOrientation3d(base.orientation_acceleration());
+					}
+					//base_polygon
+				}
+				if (movingObject.has_type()) {
+					std::cout << "      Type: " << movingObject.type() << "\n";
+				}
+				//assigned_lane_id
+				//vehicle_attributes
+				if (movingObject.has_vehicle_attributes()) {
+					std::cout << "      Vehicle Attributes:\n";
+					if (movingObject.vehicle_attributes().has_driver_id()) {
+						std::cout << "         Driver ID: " << movingObject.vehicle_attributes().driver_id().value() << "\n";
+					}
+					//radius_wheel
+					//number_wheels
+					if (movingObject.vehicle_attributes().has_bbcenter_to_rear()) {
+						std::cout << "         bbcenter_to_rear:\n            ";
+						printOsiVector(movingObject.vehicle_attributes().bbcenter_to_rear());
+					}
+					if (movingObject.vehicle_attributes().has_bbcenter_to_front()) {
+						std::cout << "         bbcenter_to_front:\n            ";
+						printOsiVector(movingObject.vehicle_attributes().bbcenter_to_front());
+					}
+					if (movingObject.vehicle_attributes().has_ground_clearance()) {
+						std::cout << "         Ground Clearance: " << movingObject.vehicle_attributes().ground_clearance() << "\n";
+					}
+					//wheel_data
+					//steering_wheel_angle
+				}
+				if (movingObject.has_vehicle_classification()) {
+					std::cout << "      Vehicle Classification:\n";
+					if (movingObject.vehicle_classification().has_type()) {
+						std::cout << "         Type: " << movingObject.vehicle_classification().type() << "\n";
+					}
+					//light_state
+					if (movingObject.vehicle_classification().has_has_trailer()) {
+						std::cout << "         Has Trailer: " << movingObject.vehicle_classification().has_trailer() << "\n";
+					}
+					if (movingObject.vehicle_classification().has_trailer_id()) {
+						std::cout << "         TrailerID: " << movingObject.vehicle_classification().trailer_id().value() << "\n";
+					}
+				}
+				//model_reference
+				//future_trajetory
+				//moving_object_classification
+				//source_reference
+				//color_description
+			}
+		}
+		//traffic_sign
+		//traffic_light
+		//road_marking
+		//lane_boundary
+		//lane
+		//occupant
+		//environmental_conditions
+		//country_code
+		//proj_string
+		//map_reference
+		//model_reference
+	}
+	//generic_sensor_view
+	//radar_sensor_view
+	//lidar_sensor_view
+	//camera_sensor_view
+	//ultrasonic_sensor_view
+	std::cout << std::endl;
+}
+
+void CARLA_OSI_client::printOsiVector(osi3::Vector3d vector3d) {
+	std::cout << "X:" << vector3d.x() << " Y:" << vector3d.y() << " Z:" << vector3d.z() << "\n";
+}
+void CARLA_OSI_client::printOsiOrientation3d(osi3::Orientation3d orientation3d) {
+	std::cout << "Roll:" << orientation3d.roll() << " Pitch:" << orientation3d.pitch() << " Yaw:" << orientation3d.yaw() << "\n";
 }

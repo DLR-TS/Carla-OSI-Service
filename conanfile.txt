@@ -2,7 +2,7 @@
 protobuf/3.12.4
 yaml-cpp/0.6.3
 catch2/2.12.1
-FakeIt/2.0.5@gasuketsu/stable
+fakeit/2.0.7
 # used to parse OpenDRIVE description of Carla's map (Carla also contains version 1.9 as third party library)
 pugixml/1.10
 # requirement of Carla (wants 1.72.0)

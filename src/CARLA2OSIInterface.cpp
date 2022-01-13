@@ -243,6 +243,13 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto stationaryMapObjects = world->GetStationaryMapObjects();
 	for (auto& mapObject : stationaryMapObjects) {
 
+		//do not parse the CameraActor spawned by Carla
+		if (mapObject.name.find("CameraActor") == 0 || mapObject.name.find("Plane") != std::string::npos) {
+			if (debug)
+				std::cout << "Not parsing " << mapObject.name << " Carla.\n";
+			continue;
+		}
+
 		//TODO don't parse RoadMarkings as stationary object but add them to their lane
 		if (mapObject.semantic_tag == carla::rpc::CityObjectLabel::RoadLines) {
 			roadMarkings.push_back(std::move(mapObject));
@@ -516,6 +523,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			vehicle->set_model_reference(vehicleActor->GetTypeId());
 			vehicle->set_allocated_id(carla_osi::id_mapping::getOSIActorId(vehicleActor).release());
 			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
+
 			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(vehicleActor).release());
 
 			auto classification = vehicle->mutable_vehicle_classification();
@@ -575,6 +583,14 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			}
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
+
+			if (debug) {
+				std::cout << "OSI-Dimensions: " << vehicle->base().dimension().length() << " " << vehicle->base().dimension().width() << " " << vehicle->base().dimension().height()
+					<< " OSI-Position: " << vehicle->base().position().x() << " " << vehicle->base().position().y() << " " << vehicle->base().position().z()
+					<< " OSI-Rotation: " << vehicle->base().orientation().roll() << " " << vehicle->base().orientation().pitch() << " " << vehicle->base().orientation().yaw()
+					<< " Name: " << vehicleActor->GetId()
+					<< std::endl;
+			}
 
 		}
 		else if (typeID.rfind("walker.pedestrian", 0) == 0) {
