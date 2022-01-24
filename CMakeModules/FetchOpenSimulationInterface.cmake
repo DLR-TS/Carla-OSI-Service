@@ -3,7 +3,7 @@ include(FetchContent)
 
 FetchContent_Declare(
   osi
-  GIT_REPOSITORY https://gitlab.sl4to5.de/deliverables/architecture/open-simulation-interface.git
+  GIT_REPOSITORY https://gitlab.setlevel.de/deliverables/architecture/open-simulation-interface.git
   GIT_TAG "sl45/v3.2.2"
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
