@@ -13,7 +13,6 @@
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
 #include <carla/client/BlueprintLibrary.h>
-#include <carla/client/Map.h>
 #include <carla/client/Sensor.h>
 #include <carla/client/TimeoutException.h>
 #include <carla/client/Timestamp.h>
@@ -43,6 +42,7 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 		this->client = std::make_unique<carla::client::Client>(host, port);
 		this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
 		this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
+		this->map = world->GetMap();
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
@@ -216,7 +216,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 
-	carla::SharedPtr<carla::client::Map> map = world->GetMap();
 	const carla::road::Map& roadMap = map->GetMap();
 
 	staticMapTruth->set_map_reference(map->GetName());
@@ -510,7 +509,6 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
 	groundTruth->MergeFrom(*staticMapTruth);
 
-	auto map = world->GetMap();
 	auto worldActors = world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
@@ -690,7 +688,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else {
+	else if (debug){
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
@@ -701,7 +699,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 			std::string varName = iter->second;
 			varName2MessageMap[varName] = std::move(sensorView);
 		}
-		else {
+		else if (debug){
 			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
 		}
 	}

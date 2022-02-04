@@ -18,6 +18,7 @@
 #include <carla/client/Actor.h>
 #include <carla/client/Client.h>
 #include <carla/client/World.h>
+#include <carla/client/Map.h>
 #include <carla/client/Sensor.h>
 #include <carla/sensor/SensorData.h>
 
@@ -56,6 +57,7 @@ class CARLA2OSIInterface
 
 	std::unique_ptr<carla::client::World> world;
 	std::unique_ptr<carla::client::Client> client;
+	carla::SharedPtr<carla::client::Map> map;
 	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role. Role names are used as variable name to identify OSI messages
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
 	std::shared_mutex actorRole2IDMap_mutex;
