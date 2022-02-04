@@ -274,9 +274,11 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 		//upper and lower field of view are given in degree
 		vFov = (upperFov.value() - lowerFov.value()) * M_PI / 180.0;
 	}
-	uint32_t numPixels;//OSI field uses uint32_t
-	for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
-		numPixels += measurement->GetPointCount(i);
+	uint32_t numPixels{0};//OSI field uses uint32_t
+	if (measurement != nullptr) {
+		for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
+			numPixels += measurement->GetPointCount(i);
+		}
 	}
 
 	//TODO find translation from Carla point cloud to OSI Reflections. OSI uses signal strength, time of flight, doppler shift and normal to surface as measurements instead of simple hit point positions.
@@ -343,7 +345,7 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 	//config->set_allocated_mounting_position(position)
 	//config->set_allocated_mounting_position_rmse(rmse)
 
-	return nullptr;
+	return radarSensorview;
 }
 
 carla::SharedPtr<carla::client::Vehicle> CarlaUtility::getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor)
