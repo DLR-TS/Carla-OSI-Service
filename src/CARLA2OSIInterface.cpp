@@ -800,6 +800,9 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 		&& trafficUpdate.mutable_update()->mutable_base()->has_orientation()) {
 		auto position = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
 		auto orientation = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
+		position.z = actor->GetLocation().z;
+		orientation.pitch = actor->GetTransform().rotation.pitch;
+		orientation.roll = actor->GetTransform().rotation.roll;
 		actor->SetTransform(carla::geom::Transform(position, orientation));
 	}
 
