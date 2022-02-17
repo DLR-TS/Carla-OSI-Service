@@ -507,7 +507,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	// lanes and lane boundaries are part of the map, which shouldn't change during simulation and can be preparsed during init
 	// use staticMapTruth as a base for every new groundTruth message that already contains unchanging fields
 	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
-	groundTruth->MergeFrom(*staticMapTruth);
+	//groundTruth->MergeFrom(*staticMapTruth);
 
 	auto worldActors = world->GetActors();
 	for (auto actor : *worldActors) {
