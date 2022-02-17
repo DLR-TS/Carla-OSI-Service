@@ -10,6 +10,8 @@
 #include <string>
 #include <mutex>
 #include <shared_mutex>
+#include <chrono>
+#include <ctime>
 
 #include "pugixml.hpp"
 #include <boost/bimap.hpp>
@@ -74,6 +76,8 @@ class CARLA2OSIInterface
 	pugi::xml_document xodr;
 	// Print debug information
 	bool debug;
+	float delta_seconds = 0.f;
+	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
 
 public:
 

@@ -51,7 +51,7 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 
 	//assure server is in synchronous mode
 	auto settings = world->GetSettings();
-	settings.fixed_delta_seconds = deltaSeconds;
+	settings.fixed_delta_seconds = delta_seconds;
 	settings.synchronous_mode = true;
 	this->world->ApplySettings(settings);
 
@@ -92,6 +92,16 @@ double CARLA2OSIInterface::doStep() {
 		std::inserter(addedActors, addedActors.begin()),
 		std::inserter(removedActors, removedActors.begin())
 	);
+
+	auto end = std::chrono::system_clock::now();
+
+	std::chrono::duration<double> elapsed_seconds = end - last_timestamp;
+	last_timestamp = end;
+
+	auto settings = world->GetSettings();
+	settings.fixed_delta_seconds = elapsed_seconds.count();
+	settings.synchronous_mode = true;
+	this->world->ApplySettings(settings);
 
 	world->Tick(client->GetTimeout());
 	//world->WaitForTick(this->transactionTimeout);
@@ -178,7 +188,7 @@ std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
 {
 	carla::ActorId actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&id));
 	std::string role;
-	try	{//mutex scope
+	try {//mutex scope
 		std::scoped_lock lock(actorRole2IDMap_mutex);
 		//look up from right to left -> retrieve role for given id
 		role = actorRole2IDMap.right.at(actorId);
@@ -624,8 +634,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				trafficLights->AddAllocated(bulb.release());
 			}
 		}
-		else{
-			std::cout << typeID << " not parsed to groundtruth" <<  std::endl;
+		else {
+			std::cout << typeID << " not parsed to groundtruth" << std::endl;
 		}
 	}
 
@@ -639,7 +649,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 void CARLA2OSIInterface::clearData()
 {
 	if (!world) {
-    std::cerr << "No world" << std::endl;
+		std::cerr << "No world" << std::endl;
 		throw new std::exception();
 	}
 	{//mutex scope
@@ -688,7 +698,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else if (debug){
+	else if (debug) {
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
@@ -699,7 +709,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 			std::string varName = iter->second;
 			varName2MessageMap[varName] = std::move(sensorView);
 		}
-		else if (debug){
+		else if (debug) {
 			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
 		}
 	}
