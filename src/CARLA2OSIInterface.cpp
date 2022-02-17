@@ -51,8 +51,8 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 
 	//assure server is in synchronous mode
 	auto settings = world->GetSettings();
-	settings.fixed_delta_seconds = deltaSeconds;
-	settings.synchronous_mode = true;
+	//settings.fixed_delta_seconds = None;
+	settings.synchronous_mode = false;
 	this->world->ApplySettings(settings);
 
 	parseStationaryMapObjects();
@@ -93,7 +93,7 @@ double CARLA2OSIInterface::doStep() {
 		std::inserter(removedActors, removedActors.begin())
 	);
 
-	world->Tick(client->GetTimeout());
+	//world->Tick(client->GetTimeout());
 	//world->WaitForTick(this->transactionTimeout);
 
 	// track actors added/removed by Carla
