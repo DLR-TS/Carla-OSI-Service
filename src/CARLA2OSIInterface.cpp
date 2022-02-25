@@ -789,6 +789,10 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	}
 	auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&trafficUpdate.mutable_update()->id()));
 	auto actor = world->GetActor(TrafficId);
+	if (actor == nullptr){
+		std::cout << "Actor not found! No position updates will be done!" << std::endl;
+		return 0;
+	}
 	if (TrafficId != actor->GetId()) {
 		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;
 		return 2;
