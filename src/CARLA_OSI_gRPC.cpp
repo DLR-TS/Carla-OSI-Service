@@ -131,7 +131,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 	}
 
 	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-
+	/*
 	if (std::string::npos != varName.find("MotionCommand")) {
 		// parse as MotionCommand and apply to ego vehicle
 		setlevel4to5::MotionCommand motionCommand;
@@ -143,8 +143,8 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 		//TODO uncomment when receiveMotionCommand is fully implemented and remove error message
 		//carlaInterface.receiveMotionCommand(motionCommand);
 		std::cerr << "Implementation of MotionCommand is not finished yet" << std::endl;
-	}
-	else if (std::string::npos != varName.find("TrafficUpdate")) {
+	}*/
+	if (std::string::npos != varName.find("TrafficUpdate")) {
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {
