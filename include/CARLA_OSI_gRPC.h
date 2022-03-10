@@ -111,7 +111,7 @@ private:
 	// parse index from OSMP variable name, if present
 	virtual uint32_t getIndex(const std::string_view osmp_name);
 
-	virtual int deserializeAndSet(const std::string& base_name,const std::string& message);
+	virtual int deserializeAndSet(const std::string& base_name, const std::string& message);
 	virtual std::string getAndSerialize(const std::string& base_name);
 
 	// generate a SensorView that holds only ground truth. Can be used as input for osi3::SensorView generating OSI sensors;

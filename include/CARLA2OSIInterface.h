@@ -145,18 +145,18 @@ public:
 	Throws std::bad_variant_access if id doesn't correspond to a regular carla actor
 	*/
 	std::string actorIdToRoleName(const osi3::Identifier& id);
-	
+
 	/**
 	Retruns the stepsize.
 	\return step size
 	*/
-	float getDeltaSeconds() {return deltaSeconds;}
-	
+	float getDeltaSeconds() { return deltaSeconds; }
+
 	/**
 	Returns the hero id.
 	\return hero id
 	*/
-	float getHeroId() {return heroId; }
+	float getHeroId() { return heroId; }
 
 private:
 

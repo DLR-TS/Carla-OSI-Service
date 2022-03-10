@@ -178,7 +178,7 @@ std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
 {
 	carla::ActorId actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&id));
 	std::string role;
-	try	{//mutex scope
+	try {//mutex scope
 		std::scoped_lock lock(actorRole2IDMap_mutex);
 		//look up from right to left -> retrieve role for given id
 		role = actorRole2IDMap.right.at(actorId);
@@ -625,8 +625,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				trafficLights->AddAllocated(bulb.release());
 			}
 		}
-		else{
-			std::cout << typeID << " not parsed to groundtruth" <<  std::endl;
+		else {
+			std::cout << typeID << " not parsed to groundtruth" << std::endl;
 		}
 	}
 
@@ -640,7 +640,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 void CARLA2OSIInterface::clearData()
 {
 	if (!world) {
-    std::cerr << "No world" << std::endl;
+		std::cerr << "No world" << std::endl;
 		throw new std::exception();
 	}
 	{//mutex scope
@@ -689,7 +689,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else if (debug){
+	else if (debug) {
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
@@ -700,7 +700,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 			std::string varName = iter->second;
 			varName2MessageMap[varName] = std::move(sensorView);
 		}
-		else if (debug){
+		else if (debug) {
 			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
 		}
 	}
@@ -792,7 +792,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	}
 	auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&trafficUpdate.mutable_update()->id()));
 	auto actor = world->GetActor(TrafficId);
-	if (actor == nullptr){
+	if (actor == nullptr) {
 		std::cout << "Actor not found! No position updates will be done!" << std::endl;
 		return 0;
 	}

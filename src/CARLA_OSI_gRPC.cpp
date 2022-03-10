@@ -39,7 +39,7 @@ void CARLA_OSI_client::StopServer()
 	Logging.close();
 }
 
-grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const CoSiMa::rpc::CarlaConfig * config, CoSiMa::rpc::Int32 * response)
+grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response)
 {
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
 		CoSiMa::rpc::SensorViewSensorMountingPosition mountingPosition;
@@ -51,7 +51,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const Co
 	return grpc::Status::OK;
 }
 
-grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiMa::rpc::Empty * request, CoSiMa::rpc::Double * response)
+grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
 	if (scenarioRunnerDoesTick) {
 		if (!initialDoStep) {
@@ -65,7 +65,8 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiM
 			smphSignalSRToCosima.acquire();
 		}
 		response->set_value(carlaInterface.getDeltaSeconds());
-	} else {
+	}
+	else {
 		response->set_value(carlaInterface.doStep());
 	}
 	if (logHeartbeat != -1) {
@@ -82,7 +83,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiM
 	return grpc::Status::OK;
 }
 
-grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::String * request, CoSiMa::rpc::Bytes * response)
+grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::Bytes* response)
 {
 	std::string message = getAndSerialize(request->value());
 	response->set_value(message);
@@ -92,7 +93,7 @@ grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext * context, con
 	return grpc::Status::OK;
 }
 
-grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, const CoSiMa::rpc::NamedBytes * request, CoSiMa::rpc::Int32 * response)
+grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::NamedBytes* request, CoSiMa::rpc::Int32* response)
 {
 	if (logEnabled) {
 		Logging << "In:" << request->name() << ":" << request->value() << std::endl;
@@ -103,12 +104,16 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, con
 
 float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 {
+
+	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
+	if (debug) {
+		std::cout << "Set TrafficCommand" << std::endl;
+	}
+
 	//Cosima can compute
 	smphSignalSRToCosima.release();
 	//Cosima has computed timestep
 	smphSignalCosimaToSR.acquire();
-
-	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
 
 	return carlaInterface.getDeltaSeconds();
 }
@@ -151,19 +156,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 	}
 
 	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-	/*
-	if (std::string::npos != varName.find("MotionCommand")) {
-		// parse as MotionCommand and apply to ego vehicle
-		setlevel4to5::MotionCommand motionCommand;
-		if (!motionCommand.ParseFromString(message)) {
-			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
-			return -322;
-		}
 
-		//TODO uncomment when receiveMotionCommand is fully implemented and remove error message
-		//carlaInterface.receiveMotionCommand(motionCommand);
-		std::cerr << "Implementation of MotionCommand is not finished yet" << std::endl;
-	}*/
 	if (std::string::npos != varName.find("TrafficUpdate")) {
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
@@ -256,7 +249,7 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 		}
 		copyMountingPositions(iter->second, sensorView);
 	}
-	else 	if (debug)
+	else if (debug)
 	{
 		std::cout << "No sensor found with name: " << varName << " Can not set mounting position.\n";
 		if (sensorMountingPositionMap.size() != 0) {
