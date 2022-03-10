@@ -146,6 +146,9 @@ public:
 	*/
 	std::string actorIdToRoleName(const osi3::Identifier& id);
 
+	// prepare a GroundTruth object with values from the current map which won't change 
+	void parseStationaryMapObjects();
+
 	/**
 	Retruns the stepsize.
 	\return step size
@@ -162,9 +165,6 @@ private:
 
 	std::string_view getPrefix(std::string_view name);
 	osi3::Timestamp* parseTimestamp();
-	// prepare a GroundTruth object with values from the current map which won't change 
-	//TODO return type
-	void parseStationaryMapObjects();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 

@@ -1,14 +1,13 @@
-# CARLA OSI Service for SETLevel4to5
+# CARLA OSI Service for SETLevel
 
 A client service for CARLA simulator. Translates World and sensor outputs into OSI messages
 
-# manual build (on Linux)
+# manual build
 in root folder:
 ```sh
  mkdir build && cd build
  cmake .. -DCMAKE_BUILD_TYPE=Release
- cmake --build . --target CARLA_OSI_Service 
- cmake --install . # not yet defined
+ cmake --build . --target CARLA_OSI_Service
 ```
 
 ## Installation Guide
@@ -25,15 +24,10 @@ Some dependencies are retrieved using CMake's FetchContent Module. To override t
 
 ## Used Libraries
 
-carla 0.9.9.4
+carla 0.9.10
 catch2
 cmake-conan 0.15
 open-simulation-interface
-
-## Fix for current osi problems
-
-Either don't build protobuffer as shared library or copy libprotobufd.dll and libprotocd.dll in cache folder from bin to lib\open-simulation-interface since the generation of pb.cc and pb.h files is not working right now.
-ToDo: Fix this issue
 
 ## Fix for Waypoint.cpp error
 
