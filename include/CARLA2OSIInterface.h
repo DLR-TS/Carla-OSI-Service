@@ -72,8 +72,12 @@ class CARLA2OSIInterface
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	pugi::xml_document xodr;
+	//hero id
+	uint64_t heroId = 0;
 	// Print debug information
 	bool debug;
+	//delta seconds in each time step
+	float deltaSeconds;
 
 public:
 
@@ -141,6 +145,18 @@ public:
 	Throws std::bad_variant_access if id doesn't correspond to a regular carla actor
 	*/
 	std::string actorIdToRoleName(const osi3::Identifier& id);
+	
+	/**
+	Retruns the stepsize.
+	\return step size
+	*/
+	float getDeltaSeconds() {return deltaSeconds;}
+	
+	/**
+	Returns the hero id.
+	\return hero id
+	*/
+	float getHeroId() {return heroId; }
 
 private:
 

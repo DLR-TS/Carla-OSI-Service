@@ -575,7 +575,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					std::string role_name = attribute.GetValue();
 					if ("hero" == role_name) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
-						//groundTruth->set_allocated_host_vehicle_id(vehicle->mutable_id());
+						//saved for trafficCommand message from scenario runner
+						heroId = vehicle->id().value();
 					}
 				}
 			}
@@ -714,6 +715,8 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 
 	//do action accordingly
 	int TrafficActionType = 0;//TODO Placeholder at the moment
+	//hero has a routing action in OpenScenario
+	//Routing Action has an Oriented Point
 
 	switch (TrafficActionType) {
 	case 0:

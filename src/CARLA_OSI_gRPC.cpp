@@ -53,17 +53,32 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext * context, const Co
 
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext * context, const CoSiMa::rpc::Empty * request, CoSiMa::rpc::Double * response)
 {
-	response->set_value(carlaInterface.doStep());
-  if (logHeartbeat != -1){
-	  Logging << "Do step" << std::endl;
-	  logHeartbeatCounter++;
-	  if (logHeartbeatCounter >= logHeartbeat) {
-		  logHeartbeatCounter = 0;
-		  logEnabled = true;
-	  } else {
-		  logEnabled = false;
-	  }
-  }
+	if (scenarioRunnerDoesTick) {
+		if (!initialDoStep) {
+			initialDoStep = false;
+			smphSignalSRToCosima.acquire();
+		}
+		else {
+			//Cosima has computed timestep
+			smphSignalCosimaToSR.release();
+			//Wait for Scenario Runner
+			smphSignalSRToCosima.acquire();
+		}
+		response->set_value(carlaInterface.getDeltaSeconds());
+	} else {
+		response->set_value(carlaInterface.doStep());
+	}
+	if (logHeartbeat != -1) {
+		Logging << "Do step" << std::endl;
+		logHeartbeatCounter++;
+		if (logHeartbeatCounter >= logHeartbeat) {
+			logHeartbeatCounter = 0;
+			logEnabled = true;
+		}
+		else {
+			logEnabled = false;
+		}
+	}
 	return grpc::Status::OK;
 }
 
@@ -86,11 +101,16 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext * context, con
 	return grpc::Status::OK;
 }
 
-void CARLA_OSI_client::serializeTrafficCommand(const osi3::TrafficCommand & command)
+float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 {
-	//command.traffic_participant_id() to role name and append to variable name
-  std::string role = carlaInterface.actorIdToRoleName(command.traffic_participant_id());
-	varName2MessageMap["TrafficCommand{" + role + "}"] = command.SerializeAsString();
+	//Cosima can compute
+	smphSignalSRToCosima.release();
+	//Cosima has computed timestep
+	smphSignalCosimaToSR.acquire();
+
+	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
+
+	return carlaInterface.getDeltaSeconds();
 }
 
 std::string_view CARLA_OSI_client::getPrefix(std::string_view name)
@@ -191,10 +211,11 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		// OSMPGroundTruthInit
 		message = carlaInterface.getLatestGroundTruth();
 	}
-	else if (std::string::npos != varName.rfind("OSMPTrafficCommandIn", 0)) {
-		// OSMPTrafficCommandIn
-		//TODO retrieve and serialize TrafficCommand when it is supported by CARLA2OSIInterface
-		std::cerr << __FUNCTION__ << ": Requested unimplemented message of type OSMPTrafficCommand" << std::endl;
+	else if (std::string::npos != varName.rfind("OSMPTrafficCommand", 0)) {
+		// OSMPTrafficCommand
+		//set hero ID in traffic command message
+		trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(carlaInterface.getHeroId());
+		message = trafficCommandForEgoVehicle;
 	}
 
 	// if the CARLA OSI interface did provide a message, return its string serialization;
@@ -234,7 +255,8 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 			std::cout << "Searched successfully for sensor " << varName << " Copy mounting position to sensorview message." << std::endl;
 		}
 		copyMountingPositions(iter->second, sensorView);
-	} else 	if (debug)
+	}
+	else 	if (debug)
 	{
 		std::cout << "No sensor found with name: " << varName << " Can not set mounting position.\n";
 		if (sensorMountingPositionMap.size() != 0) {

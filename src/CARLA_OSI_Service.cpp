@@ -18,6 +18,7 @@ int main(int argc, char *argv[])
 	std::string server_address = "0.0.0.0:51425";
 	int logHeartbeatRate = -1;//no logs
 	bool debug = false;
+	bool sr = false;
 
 	for (int i = 1; i < argc; i++) {
 		if (isNumber(argv[i])) {
@@ -28,6 +29,10 @@ int main(int argc, char *argv[])
 			debug = true;
 			std::cout << "Running with additional debug prints." << std::endl;
 		}
+		else if (std::string(argv[i]) == "-sr") {
+			sr = true;
+			std::cout << "Wait for scenario runner connection." << std::endl;
+		}
 		else {
 			server_address = argv[i];
 			std::cout << "Server listens on: " << server_address << std::endl;
@@ -37,7 +42,7 @@ int main(int argc, char *argv[])
 		std::cout << "no-log option enabled" << std::endl;
 	}
 
-	CARLA_OSI_client client(server_address, logHeartbeatRate, debug);
+	CARLA_OSI_client client(server_address, logHeartbeatRate, debug, sr);
 
 	client.StartServer();
 
