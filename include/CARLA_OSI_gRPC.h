@@ -41,7 +41,6 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	bool debug = false;
 	//Scenario Runner Synchronisation
 	bool scenarioRunnerDoesTick = false;
-	bool initialDoStep = true;
 	Semaphore smphSignalCosimaToSR;
 	Semaphore smphSignalSRToCosima;
 

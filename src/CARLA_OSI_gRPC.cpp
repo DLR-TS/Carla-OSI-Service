@@ -48,28 +48,25 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	}
 	response->set_value(
 		carlaInterface.initialise(config->carla_host(), config->carla_port(), config->transaction_timeout(), config->delta_seconds(), debug));
+	if (scenarioRunnerDoesTick) {
+		//wait for connection from scenario runner
+		if (debug) {
+			std::cout << "Waiting for scenario runner." << std::endl;
+		}
+		smphSignalSRToCosima.acquire();
+		//parse stationary objects, since they could be changed by a new map loaded by the scenario runner
+		carlaInterface.parseStationaryMapObjects();
+	}
 	return grpc::Status::OK;
 }
 
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
 	if (scenarioRunnerDoesTick) {
-		if (!initialDoStep) {
-			initialDoStep = false;
-			//wait for connection from scenario runner
-			if (debug) {
-				std::cout << "Waiting for scenario runner." << std::endl;
-			}
-			smphSignalSRToCosima.acquire();
-			//parse stationary objects, since they could be changed by a new map loaded by the scenario runner
-			carlaInterface.parseStationaryMapObjects();
-		}
-		else {
-			//Cosima has computed timestep
-			smphSignalCosimaToSR.release();
-			//Wait for Scenario Runner
-			smphSignalSRToCosima.acquire();
-		}
+		//Cosima has computed timestep
+		smphSignalCosimaToSR.release();
+		//Wait for Scenario Runner
+		smphSignalSRToCosima.acquire();
 		response->set_value(carlaInterface.getDeltaSeconds());
 	}
 	else {
