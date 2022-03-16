@@ -55,7 +55,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		}
 		smphSignalSRToCosima.acquire();
 		//parse stationary objects, since they could be changed by a new map loaded by the scenario runner
-		carlaInterface.parseStationaryMapObjects();
+		carlaInterface.reloadWorld();
 	}
 	return grpc::Status::OK;
 }
@@ -107,16 +107,19 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext* context, cons
 
 float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 {
-
-	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
 	if (debug) {
-		std::cout << "Set TrafficCommand" << std::endl;
+		std::cout << __FUNCTION__ << std::endl;
 	}
+	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
 
 	//Cosima can compute
 	smphSignalSRToCosima.release();
 	//Cosima has computed timestep
 	smphSignalCosimaToSR.acquire();
+
+	if (debug) {
+		std::cout << "Send delta to scenario runner: " << carlaInterface.getDeltaSeconds() << std::endl;
+	}
 
 	return carlaInterface.getDeltaSeconds();
 }

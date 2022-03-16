@@ -34,7 +34,7 @@
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 
-int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug) {
+int CARLA2OSIInterface::initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug) {
 	this->debug = debug;
 
 	try {
@@ -153,6 +153,12 @@ double CARLA2OSIInterface::doStep() {
 std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTruth()
 {
 	return latestGroundTruth;
+}
+
+void CARLA2OSIInterface::reloadWorld() {
+	this->world = std::make_unique<carla::client::World>(std::move(this->client->GetWorld()));
+	this->map = world->GetMap();
+	parseStationaryMapObjects();
 }
 
 std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)

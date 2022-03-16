@@ -108,13 +108,18 @@ public:
 	* print extra debug information
 	* \return Success status.
 	*/
-	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug);
+	virtual int initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
 	\return Time in seconds advanced during step
 	*/
 	virtual double doStep();
+
+	/**
+	* Reload the world from carla (world, map, static objects)
+	*/
+	void CARLA2OSIInterface::reloadWorld();
 
 	/**
 	Retrieve ground truth message generated during last step
