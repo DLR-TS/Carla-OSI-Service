@@ -54,8 +54,9 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			std::cout << "Waiting for scenario runner." << std::endl;
 		}
 		smphSignalSRToCosima.acquire();
-		//parse stationary objects, since they could be changed by a new map loaded by the scenario runner
-		carlaInterface.reloadWorld();
+		//data could be changed by a new map loaded by the scenario runner
+		carlaInterface.loadWorld();
+		carlaInterface.parseStationaryMapObjects();
 	}
 	return grpc::Status::OK;
 }
@@ -65,12 +66,20 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 	if (scenarioRunnerDoesTick) {
 		//Cosima has computed timestep
 		smphSignalCosimaToSR.release();
-		//Wait for Scenario Runner
+		//wait for Scenario Runner
 		smphSignalSRToCosima.acquire();
+		
+		//update changes in carla
+		carlaInterface.fetchActorsFromCarla();
 		response->set_value(carlaInterface.getDeltaSeconds());
 	}
-	else {
-		response->set_value(carlaInterface.doStep());
+	else 
+	{
+		//independent mode without scenario runner
+		auto timestep = carlaInterface.doStep();
+		//update changes in carla
+		carlaInterface.fetchActorsFromCarla();
+		response->set_value(timestep);
 	}
 	if (logHeartbeat != -1) {
 		Logging << "Do step" << std::endl;
@@ -107,6 +116,7 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext* context, cons
 
 float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 {
+	
 	if (debug) {
 		std::cout << __FUNCTION__ << std::endl;
 	}
@@ -121,6 +131,10 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 		std::cout << "Send delta to scenario runner: " << carlaInterface.getDeltaSeconds() << std::endl;
 	}
 
+	//control is given back to the scenario runner.
+	//The state of the simulation can change.
+	//The cached ground truth is now invalid.
+	carlaInterface.invalidateLatestGroundTruth();
 	return carlaInterface.getDeltaSeconds();
 }
 

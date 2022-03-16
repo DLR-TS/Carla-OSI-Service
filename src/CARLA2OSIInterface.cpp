@@ -42,20 +42,14 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, float transa
 		//connect
 		this->client = std::make_unique<carla::client::Client>(host, port);
 		this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
-		this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
-		this->map = world->GetMap();
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
 		return -1;
 	}
 
-	//assure server is in synchronous mode
-	auto settings = world->GetSettings();
-	settings.fixed_delta_seconds = deltaSeconds;
-	settings.synchronous_mode = true;
-	this->world->ApplySettings(settings);
-
+	loadWorld();
+	applyWorldSettings();
 	parseStationaryMapObjects();
 
 	// perform a tick to fill actor and message lists
@@ -67,11 +61,7 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, float transa
 double CARLA2OSIInterface::doStep() {
 	if (!world) {
 		std::cerr << "No world" << std::endl;
-#ifdef __linux__
 		throw std::exception();
-#else
-		throw std::exception("No world");
-#endif //!__linux__
 	}
 	else if (this->world->GetId() != this->client->GetWorld().GetId()) {
 		// change of world id indicates map reload or map change
@@ -79,29 +69,19 @@ double CARLA2OSIInterface::doStep() {
 		this->clearData();
 	}
 
-	// track actors added/removed by simulation interfaces
-	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
-	auto worldActors = world->GetActors();
-	// compare actor ids, not actors
-	for (auto actor : *worldActors)
-	{
-		worldActorIDs.insert(actor->GetId());
-	}
-	CarlaUtility::twoWayDifference(
-		activeActors.begin(), activeActors.end(),
-		worldActorIDs.begin(), worldActorIDs.end(),
-		std::inserter(addedActors, addedActors.begin()),
-		std::inserter(removedActors, removedActors.begin())
-	);
-
 	world->Tick(client->GetTimeout());
 	//world->WaitForTick(this->transactionTimeout);
+	validLatestGroundTruth = false;
 
-	// track actors added/removed by Carla
-	addedActors.clear();
-	removedActors.clear();
-	worldActorIDs.clear();
-	worldActors = world->GetActors();
+	// only accurate if using fixed time step, as activated during initialise()
+	return world->GetSnapshot().GetTimestamp().delta_seconds;
+}
+
+void CARLA2OSIInterface::fetchActorsFromCarla() {
+
+	// track actors added/removed inside Carla
+	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
+	auto worldActors = world->GetActors();
 	// compare actor ids, not actors
 	for (auto actor : *worldActors)
 	{
@@ -144,22 +124,35 @@ double CARLA2OSIInterface::doStep() {
 			}
 		}
 	}
-
-	latestGroundTruth = parseWorldToGroundTruth();
-
-	// only accurate if using fixed time step, as activated during initialise()
-	return world->GetSnapshot().GetTimestamp().delta_seconds;
 }
 
 std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTruth()
 {
+	if (validLatestGroundTruth) {
+		latestGroundTruth = parseWorldToGroundTruth();
+		validLatestGroundTruth = true;
+	}
 	return latestGroundTruth;
 }
 
-void CARLA2OSIInterface::reloadWorld() {
+void CARLA2OSIInterface::loadWorld() {
 	this->world = std::make_unique<carla::client::World>(std::move(this->client->GetWorld()));
 	this->map = world->GetMap();
-	parseStationaryMapObjects();
+}
+
+void CARLA2OSIInterface::applyWorldSettings() {
+	auto settings = world->GetSettings();
+	if (settings.fixed_delta_seconds.has_value() &&
+		settings.fixed_delta_seconds.value() == deltaSeconds &&
+		settings.synchronous_mode) {
+		if (debug) {
+			std::cout << "Settings of Carla Server are already correct and do not need to be changed" << std::endl;
+		}
+		return;
+	}
+	settings.fixed_delta_seconds = deltaSeconds;
+	settings.synchronous_mode = true;
+	this->world->ApplySettings(settings);
 }
 
 std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)
@@ -206,7 +199,6 @@ std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 	return std::string_view();
 }
 
-
 osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 {
 	osi3::Timestamp* osiTime = new osi3::Timestamp();
@@ -217,7 +209,6 @@ osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 	osiTime->set_nanos(google::protobuf::uint32(fractional *1e9));
 	return osiTime;
 }
-
 
 void CARLA2OSIInterface::parseStationaryMapObjects()
 {

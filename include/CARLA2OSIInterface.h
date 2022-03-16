@@ -70,6 +70,8 @@ class CARLA2OSIInterface
 	std::unique_ptr<osi3::GroundTruth> staticMapTruth;
 	// latest world ground truth, calculated during doStep()
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
+	// invalid latest ground truth
+	bool validLatestGroundTruth = false;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	pugi::xml_document xodr;
 	//hero id
@@ -117,9 +119,20 @@ public:
 	double doStep();
 
 	/**
-	* Reload the world from carla (world, map, static objects)
+	* Fetch the actors in carla and update cache.
+	* Should be called after a doStep()
 	*/
-	void reloadWorld();
+	void fetchActorsFromCarla();
+
+	/**
+	* Load the world from carla (world and map)
+	*/
+	void loadWorld();
+	
+	/**
+	* Apply specific settings to the world
+	*/
+	void applyWorldSettings();
 
 	/**
 	Retrieve ground truth message generated during last step
@@ -165,6 +178,11 @@ public:
 	\return hero id
 	*/
 	float getHeroId() { return heroId; }
+
+	/**
+	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
+	*/
+	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
 
 private:
 
