@@ -8,9 +8,7 @@ void carla::srunner::TrafficCommandReceiver::setCallback(TrafficCommandCallback 
 grpc::Status carla::srunner::TrafficCommandReceiver::SendCommand(::grpc::ServerContext * context, const osi3::TrafficCommand * command, ::srunner::osi::client::Float * response)
 {
 	if (_callback) {
-		float time_step = _callback(*command);
-		std::cout << "Time step as response: " << time_step << std::endl;
-		response->set_value(time_step);
+		response->set_value(_callback(*command));
 	}
 	return ::grpc::Status::OK;
 }

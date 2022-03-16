@@ -108,31 +108,31 @@ public:
 	* print extra debug information
 	* \return Success status.
 	*/
-	virtual int initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug);
+	int initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
 	\return Time in seconds advanced during step
 	*/
-	virtual double doStep();
+	double doStep();
 
 	/**
 	* Reload the world from carla (world, map, static objects)
 	*/
-	void CARLA2OSIInterface::reloadWorld();
+	void reloadWorld();
 
 	/**
 	Retrieve ground truth message generated during last step
 	\return Latest world state as osi3::GroundTruth
 	*/
-	virtual std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
+	std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
 	/**
 	Retrieve CARLA Sensor output from the sensor with the given role name. Messages are cached and updated during a sensor's tick.
 	\param sensor_role_name Role attribute of the carla::client::Sensor
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
-	virtual std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
+	std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
 
 	/**
 	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.

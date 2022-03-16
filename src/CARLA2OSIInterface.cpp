@@ -36,6 +36,7 @@
 
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug) {
 	this->debug = debug;
+	this->deltaSeconds = deltaSeconds;
 
 	try {
 		//connect
