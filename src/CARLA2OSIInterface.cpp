@@ -128,7 +128,7 @@ void CARLA2OSIInterface::fetchActorsFromCarla() {
 
 std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTruth()
 {
-	if (validLatestGroundTruth) {
+	if (!validLatestGroundTruth) {
 		latestGroundTruth = parseWorldToGroundTruth();
 		validLatestGroundTruth = true;
 	}
