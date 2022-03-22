@@ -237,7 +237,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	}
 	//TODO maybe parse Road Objects Record of OpenDrive file, if present - corresponds to OSI's StationaryObject
 
-	std::vector<carla::rpc::StationaryMapObject> roadMarkings;
+//	std::vector<carla::rpc::StationaryMapObject> roadMarkings;
 
 	auto stationaryMapObjects = world->GetStationaryMapObjects();
 	for (auto& mapObject : stationaryMapObjects) {
@@ -250,10 +250,11 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		}
 
 		//TODO don't parse RoadMarkings as stationary object but add them to their lane
-		if (mapObject.semantic_tag == carla::rpc::CityObjectLabel::RoadLines) {
-			roadMarkings.push_back(std::move(mapObject));
-			continue;
-		}
+		//Map information inside message is not used in SetLevel and VVM
+		//if (mapObject.semantic_tag == carla::rpc::CityObjectLabel::RoadLines) {
+		//	roadMarkings.push_back(std::move(mapObject));
+		//	continue;
+		//}
 		//TODO Skip meshes of roads and sidewalks, but not curbs
 
 		auto stationaryObject = staticMapTruth->add_stationary_object();
@@ -364,7 +365,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
-	auto lanes = staticMapTruth->mutable_lane();
+/*	auto lanes = staticMapTruth->mutable_lane();
 	auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
 	auto topology = map->GetTopology();
 	lanes->Reserve(topology.size());
@@ -498,6 +499,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		//lanes->Add(std::move(lane));
 		lanes->AddAllocated(lane.release());
 	}
+	*/
 	std::cout << "Finished parsing of topology" << std::endl;
 }
 
@@ -789,6 +791,10 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	}
 	auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&trafficUpdate.mutable_update()->id()));
 	auto actor = world->GetActor(TrafficId);
+	if (actor == nullptr){
+		std::cout << "Actor not found! No position updates will be done!" << std::endl;
+		return 0;
+	}
 	if (TrafficId != actor->GetId()) {
 		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;
 		return 2;
