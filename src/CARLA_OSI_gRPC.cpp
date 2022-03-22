@@ -131,7 +131,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 	}
 
 	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-
+	/*
 	if (std::string::npos != varName.find("MotionCommand")) {
 		// parse as MotionCommand and apply to ego vehicle
 		setlevel4to5::MotionCommand motionCommand;
@@ -143,8 +143,8 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 		//TODO uncomment when receiveMotionCommand is fully implemented and remove error message
 		//carlaInterface.receiveMotionCommand(motionCommand);
 		std::cerr << "Implementation of MotionCommand is not finished yet" << std::endl;
-	}
-	else if (std::string::npos != varName.find("TrafficUpdate")) {
+	}*/
+	if (std::string::npos != varName.find("TrafficUpdate")) {
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {
@@ -356,7 +356,7 @@ void CARLA_OSI_client::printSensorViewMessage(std::shared_ptr<osi3::SensorView> 
 			std::cout << "   HostVehicleID: " << groundTruth.host_vehicle_id().value() << "\n";
 		}
 		if (groundTruth.stationary_object_size()) {
-			std::cout << "STATIONARY OBJECTS NOT YET IMPLEMENTED!\n";
+			std::cout << "STATIONARY OBJECTS NOT YET IMPLEMENTED! There are " << groundTruth.stationary_object_size() << " objects.\n";
 		}
 		if (groundTruth.moving_object_size()) {
 			std::cout << "   MovingObjects:\n";
@@ -396,7 +396,9 @@ void CARLA_OSI_client::printSensorViewMessage(std::shared_ptr<osi3::SensorView> 
 						std::cout << "         Orientation Acceleration:\n            ";
 						printOsiOrientation3d(base.orientation_acceleration());
 					}
-					//base_polygon
+					if (base.base_polygon_size()) {
+						std::cout << "         Base Polygon Size: " << base.base_polygon_size() << "\n";
+					}
 				}
 				if (movingObject.has_type()) {
 					std::cout << "      Type: " << movingObject.type() << "\n";
@@ -444,7 +446,71 @@ void CARLA_OSI_client::printSensorViewMessage(std::shared_ptr<osi3::SensorView> 
 				//color_description
 			}
 		}
-		//traffic_sign
+		if (groundTruth.traffic_sign_size()) {
+			std::cout << "   TrafficSign:\n";
+			for (const osi3::TrafficSign &trafficSign : groundTruth.traffic_sign()) {
+				if (trafficSign.has_id()) {
+					std::cout << "      ID: " << trafficSign.id().value() << "\n";
+				}
+				if (trafficSign.has_main_sign()) {
+					std::cout << "      Main Sign:\n";
+					if (trafficSign.main_sign().has_base()) {
+						std::cout << "         Base:\n";
+						if (trafficSign.main_sign().base().has_dimension()) {
+							std::cout << "            Dimension:\n"
+								<< "               Length:" << trafficSign.main_sign().base().dimension().length()
+								<< " Width: " << trafficSign.main_sign().base().dimension().width()
+								<< " Height: " << trafficSign.main_sign().base().dimension().height() << "\n";
+						}
+						if (trafficSign.main_sign().base().has_position()) {
+							std::cout << "            Position:\n               ";
+							printOsiVector(trafficSign.main_sign().base().position());
+						}
+						if (trafficSign.main_sign().base().has_orientation()) {
+							std::cout << "            Orientation:\n               ";
+							printOsiOrientation3d(trafficSign.main_sign().base().orientation());
+						}
+						if (trafficSign.main_sign().base().base_polygon_size()) {
+							std::cout << "            Base Polygon Size: " << trafficSign.main_sign().base().base_polygon_size();
+						}
+					}
+					if (trafficSign.main_sign().has_classification()) {
+						std::cout << "         Classification:\n";
+						if (trafficSign.main_sign().classification().has_variability()) {
+							std::cout << "               Variability: " << trafficSign.main_sign().classification().variability() << "\n";
+						}
+						if (trafficSign.main_sign().classification().has_type()) {
+							std::cout << "               Type: " << trafficSign.main_sign().classification().type() << "\n";
+						}
+						if (trafficSign.main_sign().classification().has_value()) {
+							std::cout << "               Value:\n";
+							if (trafficSign.main_sign().classification().value().has_value()) {
+								std::cout << "                  Value: " << trafficSign.main_sign().classification().value().value() << "\n";
+							}
+							if (trafficSign.main_sign().classification().value().has_value_unit()) {
+								std::cout << "                  Value Unit: " << trafficSign.main_sign().classification().value().value_unit() << "\n";
+							}
+							if (trafficSign.main_sign().classification().value().has_text()) {
+								std::cout << "                  Text: " << trafficSign.main_sign().classification().value().text() << "\n";
+							}
+						}
+						if (trafficSign.main_sign().classification().has_direction_scope()) {
+							std::cout << "               Direction Scope: " << trafficSign.main_sign().classification().direction_scope() << "\n";
+						}
+						//assigned_lane_id
+						//vertically_mirrored
+						//is_out_of_service
+						//country
+						//country_revicion
+						//code
+						//sub_code
+					}
+					//model_reference
+				}
+				//supplementary_sign
+				//source_reference
+			}
+		}
 		//traffic_light
 		//road_marking
 		//lane_boundary
