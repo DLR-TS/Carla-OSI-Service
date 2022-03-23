@@ -51,6 +51,13 @@
 #include "sl45_motioncommand.pb.h"
 #include "sl45_vehiclecommunicationdata.pb.h"
 
+struct RuntimeParameter {
+	bool sync = true;
+	bool verbose = false;
+	//Server address deliberately chosen to accept any connection
+	std::string serverAddress = "0.0.0.0:51425";
+};
+
 class CARLA2OSIInterface
 {
 	typedef std::variant<std::shared_ptr<osi3::SensorView>, std::shared_ptr<osi3::FeatureData>, std::shared_ptr<osi3::TrafficCommand>> cachedOSIMessageType;
@@ -72,8 +79,8 @@ class CARLA2OSIInterface
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	pugi::xml_document xodr;
-	// Print debug information
-	bool debug;
+	// Parameters set by runtime
+	RuntimeParameter runtimeParameter;
 
 public:
 
@@ -100,11 +107,11 @@ public:
 	* transaction timeout in seconds
 	* \var deltaSeconds
 	* simulation time delta per tick
-	* \var debug
-	* print extra debug information
+	* \var runtimeParameter
+	* parameters set by start of program
 	* \return Success status.
 	*/
-	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug);
+	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, RuntimeParameter& runtimeParameter);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
@@ -160,7 +167,6 @@ private:
 	Called during doStep when the world's id has changed.
 	*/
 	virtual void clearData();
-
 
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
 
