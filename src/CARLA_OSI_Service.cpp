@@ -26,12 +26,36 @@ int main(int argc, char *argv[])
 			runtimeParameter.staticObjectsInGroundTruthMessage = false;
 			std::cout << "Does not send static objects in ground truth messages.\n";
 		}
+		else if (parameter == "-dynamicTimestamps") {
+			runtimeParameter.dynamicTimestamps = true;
+			std::cout << "Set timestamp accordingly to realtime."
+				<< "The step size differs accordingly to calculation times of the connected models."
+				<< "Only use this option with sync.\n";
+		}
+		else if (parameter == "-h" || parameter == "--help") {
+			std::cout << "Normal options for Carla OSI Service:\n"
+				<< "-async            : simulator runs asynchronous\n"
+				<< "-d or -v          : verbose log\n"
+				<< "-sr               : connection with scenario runner\n"
+				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n" 
+				<< "Experimental options:\n"
+				<< "-noStaticObjects  : sending ground truth messages only with dynamic objects\n"
+				<< "-dynamicTimestamps: dynamic timestamps for special real time mode" << std::endl;
+			exit(0);
+		}
 		else {
 			runtimeParameter.serverAddress = argv[i];
 			std::cout << "Server listens on: " << runtimeParameter.serverAddress << "\n";
 		}
 	}
 	std::cout << std::endl;
+
+	if (runtimeParameter.dynamicTimestamps && !runtimeParameter.sync) {
+		std::cout << "Invalid parameter combination. Can not run asynchron with dynamic step sizes.\n"
+			<< "Dynamic step sizes option shall be used if connected models work in realtime.\n"
+			<< "The main simulation shall compute accordingly to the elapsed time." << std::endl;
+		exit(0);
+	}
 
 	CARLA_OSI_client client(runtimeParameter);
 	client.StartServer();

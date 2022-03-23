@@ -10,6 +10,8 @@
 #include <string>
 #include <mutex>
 #include <shared_mutex>
+#include <chrono>
+#include <ctime>
 
 #include "pugixml.hpp"
 #include <boost/bimap.hpp>
@@ -56,6 +58,7 @@ struct RuntimeParameter {
 	bool verbose = false;
 	bool scenarioRunnerDoesTick = false;
 	bool staticObjectsInGroundTruthMessage = true;
+	bool dynamicTimestamps = false;
 	//Server address deliberately chosen to accept any connection
 	std::string serverAddress = "0.0.0.0:51425";
 };
@@ -89,6 +92,9 @@ class CARLA2OSIInterface
 	float deltaSeconds;
 	// Parameters set by runtime
 	RuntimeParameter runtimeParameter;
+	//Timestamps for dynamic step size sync mode
+	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
+
 
 public:
 

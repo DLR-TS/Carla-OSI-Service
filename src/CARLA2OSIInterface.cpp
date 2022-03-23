@@ -69,6 +69,17 @@ double CARLA2OSIInterface::doStep() {
 		this->clearData();
 	}
 
+	if (runtimeParameter.dynamicTimestamps) {
+		auto end = std::chrono::system_clock::now();
+
+		std::chrono::duration<double> elapsed_seconds = end - last_timestamp;
+		last_timestamp = end;
+
+		auto settings = world->GetSettings();
+		settings.fixed_delta_seconds = elapsed_seconds.count();
+		this->world->ApplySettings(settings);
+	}
+
 	//tick not needed if in asynchronous mode
 	if (runtimeParameter.sync) {
 		world->Tick(client->GetTimeout());
@@ -698,7 +709,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else if (runtimeParameter.verbose){
+	else if (runtimeParameter.verbose) {
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
@@ -709,7 +720,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 			std::string varName = iter->second;
 			varName2MessageMap[varName] = std::move(sensorView);
 		}
-		else if (runtimeParameter.verbose){
+		else if (runtimeParameter.verbose) {
 			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
 		}
 	}
