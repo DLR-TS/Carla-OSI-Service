@@ -55,6 +55,7 @@ struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
 	bool scenarioRunnerDoesTick = false;
+	bool staticObjectsInGroundTruthMessage = true;
 	//Server address deliberately chosen to accept any connection
 	std::string serverAddress = "0.0.0.0:51425";
 };

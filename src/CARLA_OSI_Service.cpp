@@ -12,21 +12,26 @@ int main(int argc, char *argv[])
 		std::string parameter = std::string(argv[i]);
 		if (parameter == "-d" || parameter == "-v") {
 			runtimeParameter.verbose = true;
-			std::cout << "Running with additional debug prints." << std::endl;
+			std::cout << "Running with additional debug prints.\n";
 		}
 		else if (std::string(argv[i]) == "-sr") {
 			runtimeParameter.scenarioRunnerDoesTick = true;
-			std::cout << "Wait for scenario runner connection." << std::endl;
+			std::cout << "Wait for scenario runner connection.\n";
 		}
 		else if (parameter == "-async") {
 			runtimeParameter.sync = false;
-			std::cout << "Running in asychronous mode." << std::endl;
+			std::cout << "Running in asychronous mode.\n";
+		}
+		else if (parameter == "-noStaticObjects") {
+			runtimeParameter.staticObjectsInGroundTruthMessage = false;
+			std::cout << "Does not send static objects in ground truth messages.\n";
 		}
 		else {
 			runtimeParameter.serverAddress = argv[i];
-			std::cout << "Server listens on: " << runtimeParameter.serverAddress << std::endl;
+			std::cout << "Server listens on: " << runtimeParameter.serverAddress << "\n";
 		}
 	}
+	std::cout << std::endl;
 
 	CARLA_OSI_client client(runtimeParameter);
 	client.StartServer();
