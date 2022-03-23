@@ -34,8 +34,8 @@
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 
-int CARLA2OSIInterface::initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug) {
-	this->debug = debug;
+int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, RuntimeParameter& runtimeParams) {
+	this->runtimeParameter = runtimeParams;
 	this->deltaSeconds = deltaSeconds;
 
 	try {
@@ -69,7 +69,10 @@ double CARLA2OSIInterface::doStep() {
 		this->clearData();
 	}
 
-	world->Tick(client->GetTimeout());
+	//tick not needed if in asynchronous mode
+	if (runtimeParameter.sync) {
+		world->Tick(client->GetTimeout());
+	}
 	//world->WaitForTick(this->transactionTimeout);
 	validLatestGroundTruth = false;
 
@@ -142,10 +145,13 @@ void CARLA2OSIInterface::loadWorld() {
 
 void CARLA2OSIInterface::applyWorldSettings() {
 	auto settings = world->GetSettings();
+	//set sync or async operational mode
+	settings.synchronous_mode = runtimeParameter.sync;
+
 	if (settings.fixed_delta_seconds.has_value() &&
 		settings.fixed_delta_seconds.value() == deltaSeconds &&
 		settings.synchronous_mode) {
-		if (debug) {
+		if (runtimeParameter.verbose) {
 			std::cout << "Settings of Carla Server are already correct and do not need to be changed" << std::endl;
 		}
 		return;
@@ -242,7 +248,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 		//do not parse the CameraActor spawned by Carla
 		if (mapObject.name.find("CameraActor") == 0 || mapObject.name.find("Plane") != std::string::npos) {
-			if (debug)
+			if (runtimeParameter.verbose)
 				std::cout << "Not parsing " << mapObject.name << " Carla.\n";
 			continue;
 		}
@@ -263,11 +269,11 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		auto base = stationaryObject->mutable_base();
 		auto[dimension, position] = carla_osi::geometry::toOSI(mapObject.bounding_box);
 
-		if (!debug && dimension->length() * dimension->width() * dimension->height() >= 1000) {
+		if (!runtimeParameter.verbose && dimension->length() * dimension->width() * dimension->height() >= 1000) {
 			std::cout << "Large volume of stationary object detected. Name: " << mapObject.name << std::endl;
 		}
 
-		if (debug) {
+		if (runtimeParameter.verbose) {
 			std::cout << "OSI-Dimensions: " << dimension->length() << " " << dimension->width() << " " << dimension->height()
 				<< " OSI-Position: " << mapObject.transform.location.x << " " << mapObject.transform.location.y << " " << mapObject.transform.location.z
 				<< " OSI-Rotation: " << mapObject.transform.rotation.roll << " " << mapObject.transform.rotation.pitch << " " << mapObject.transform.rotation.yaw
@@ -583,7 +589,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
 
-			if (debug) {
+			if (runtimeParameter.verbose) {
 				std::cout << "OSI-Dimensions: " << vehicle->base().dimension().length() << " " << vehicle->base().dimension().width() << " " << vehicle->base().dimension().height()
 					<< " OSI-Position: " << vehicle->base().position().x() << " " << vehicle->base().position().y() << " " << vehicle->base().position().z()
 					<< " OSI-Rotation: " << vehicle->base().orientation().roll() << " " << vehicle->base().orientation().pitch() << " " << vehicle->base().orientation().yaw()
@@ -689,7 +695,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else if (debug) {
+	else if (runtimeParameter.verbose){
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
@@ -700,7 +706,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 			std::string varName = iter->second;
 			varName2MessageMap[varName] = std::move(sensorView);
 		}
-		else if (debug) {
+		else if (runtimeParameter.verbose){
 			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
 		}
 	}
@@ -807,6 +813,14 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 		&& trafficUpdate.mutable_update()->mutable_base()->has_orientation()) {
 		auto position = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
 		auto orientation = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
+		//do not set height, pitch an roll of vehicles in asynchronous mode
+		//these would break the visualization
+		//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
+		if (!runtimeParameter.sync) {
+			position.z = actor->GetLocation().z;
+			orientation.pitch = actor->GetTransform().rotation.pitch;
+			orientation.roll = actor->GetTransform().rotation.roll;
+		}
 		actor->SetTransform(carla::geom::Transform(position, orientation));
 	}
 

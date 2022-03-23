@@ -34,19 +34,15 @@
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
 
-	std::ofstream Logging;
-	bool logEnabled = false;
-	int logHeartbeatCounter = 0;
-	int logHeartbeat = 0;
-	bool debug = false;
 	//Scenario Runner Synchronisation
 	bool scenarioRunnerDoesTick = false;
 	Semaphore smphSignalCosimaToSR;
 	Semaphore smphSignalSRToCosima;
 
+	RuntimeParameter runtimeParameter;
+
 #pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;
-	const std::string server_address;
 	const std::chrono::milliseconds transaction_timeout;
 	std::unique_ptr<std::thread> server_thread;
 #pragma endregion
@@ -69,16 +65,20 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 public:
 
 	CARLA_OSI_client(const std::string& server_address)
-		: server_address(server_address), transaction_timeout(std::chrono::milliseconds(5000)),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
+		: transaction_timeout(std::chrono::milliseconds(5000)),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
+		this->runtimeParameter.serverAddress = server_address;
+	};
 
-	CARLA_OSI_client(const std::string& server_address, const int heartbeatRate, const bool debug, const bool sr)
-		: server_address(server_address), logHeartbeat(heartbeatRate), debug(debug), scenarioRunnerDoesTick(sr), transaction_timeout(std::chrono::milliseconds(5000)),
+	CARLA_OSI_client(const RuntimeParameter& runtimeParameter)
+		: runtimeParameter(runtimeParameter), transaction_timeout(std::chrono::milliseconds(5000)),
 		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
 
 	CARLA_OSI_client(const std::string& server_address, const std::chrono::milliseconds transaction_timeout)
-		: server_address(server_address), transaction_timeout(transaction_timeout),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
+		: transaction_timeout(transaction_timeout),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
+		this->runtimeParameter.serverAddress = server_address;
+	};
 
 	~CARLA_OSI_client() {
 		if (server)
