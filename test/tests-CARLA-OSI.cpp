@@ -285,7 +285,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][Traffi
 
 	osi3::TrafficCommand trafficCommand;
 	trafficCommand.mutable_traffic_participant_id()->set_value(0);
-	google::protobuf::Empty empty;
+	srunner::osi::client::Float floatMessage;
 
 	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
 	CARLA_OSI_client server(gRPCHost);
@@ -293,7 +293,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][Traffi
 	server.StartServer(true);
 
 	auto context = CreateDeadlinedClientContext(5.0);
-	stub.SendCommand(context.get(), trafficCommand, &empty);
+	stub.SendCommand(context.get(), trafficCommand, &floatMessage);
 
 	// Unmatched actor id resolves to empty role name
 	CoSiMa::rpc::String rpcBaseName;
@@ -319,7 +319,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 
 	osi3::TrafficCommand trafficCommand;
 	trafficCommand.mutable_traffic_participant_id()->set_value(0);
-	google::protobuf::Empty empty;
+	srunner::osi::client::Float floatMessage;
 
 	// client accessing the CARLA server and grpc service/server for CoSiMa base interface
 	CARLA_OSI_client server(gRPCHost);
@@ -361,7 +361,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 	CHECK(status.ok());
 	
 	context = CreateDeadlinedClientContext(transactionTimeout);
-	status = osiStub.SendCommand(context.get(), trafficCommand, &empty);
+	status = osiStub.SendCommand(context.get(), trafficCommand, &floatMessage);
 	REQUIRE(status.error_code() == grpc::StatusCode::OK);
 
 	// Unmatched actor id resolves to empty role name
@@ -384,7 +384,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 	serializedResponse.Clear();
 
 	context = CreateDeadlinedClientContext(transactionTimeout);
-	status = osiStub.SendCommand(context.get(), trafficCommand, &empty);
+	status = osiStub.SendCommand(context.get(), trafficCommand, &floatMessage);
 	REQUIRE(status.error_code() == grpc::StatusCode::OK);
 	
 	context = CreateDeadlinedClientContext(transactionTimeout);

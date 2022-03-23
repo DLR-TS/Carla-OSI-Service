@@ -7,13 +7,13 @@
 
 #include "CARLA2OSIInterface.h"
 
+#include <thread>
 #include <chrono>
 #include <filesystem>
 #include <iostream>
 #include <fstream>
 #include <optional>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include <grpc/grpc.h>
@@ -28,20 +28,21 @@
 #include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
 #include "osi_common.pb.h"
 
+#include "Semaphore.h"
 #include "ScenarioRunner/TrafficCommandReceiver.h"
 
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
 
-	std::ofstream Logging;
-	bool logEnabled = false;
-	int logHeartbeatCounter = 0;
-	int logHeartbeat = 0;
-	bool debug = false;
+	//Scenario Runner Synchronisation
+	bool scenarioRunnerDoesTick = false;
+	Semaphore smphSignalCosimaToSR;
+	Semaphore smphSignalSRToCosima;
+
+	RuntimeParameter runtimeParameter;
 
 #pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;
-	const std::string server_address;
 	const std::chrono::milliseconds transaction_timeout;
 	std::unique_ptr<std::thread> server_thread;
 #pragma endregion
@@ -59,19 +60,25 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 
 	carla::srunner::TrafficCommandReceiver trafficCommandReceiver;
 
+	std::shared_ptr<osi3::TrafficCommand> trafficCommandForEgoVehicle;
+
 public:
 
 	CARLA_OSI_client(const std::string& server_address)
-		: server_address(server_address), transaction_timeout(std::chrono::milliseconds(5000)),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
+		: transaction_timeout(std::chrono::milliseconds(5000)),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
+		this->runtimeParameter.serverAddress = server_address;
+	};
 
-	CARLA_OSI_client(const std::string& server_address, const int heartbeatRate, const bool debug)
-		: server_address(server_address), logHeartbeat(heartbeatRate), debug(debug), transaction_timeout(std::chrono::milliseconds(5000)),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
+	CARLA_OSI_client(const RuntimeParameter& runtimeParameter)
+		: runtimeParameter(runtimeParameter), transaction_timeout(std::chrono::milliseconds(5000)),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
 
 	CARLA_OSI_client(const std::string& server_address, const std::chrono::milliseconds transaction_timeout)
-		: server_address(server_address), transaction_timeout(transaction_timeout),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::serializeTrafficCommand, this, std::placeholders::_1)) {};
+		: transaction_timeout(transaction_timeout),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
+		this->runtimeParameter.serverAddress = server_address;
+	};
 
 	~CARLA_OSI_client() {
 		if (server)
@@ -103,7 +110,7 @@ private:
 	// parse index from OSMP variable name, if present
 	virtual uint32_t getIndex(const std::string_view osmp_name);
 
-	virtual int deserializeAndSet(const std::string& base_name,const std::string& message);
+	virtual int deserializeAndSet(const std::string& base_name, const std::string& message);
 	virtual std::string getAndSerialize(const std::string& base_name);
 
 	// generate a SensorView that holds only ground truth. Can be used as input for osi3::SensorView generating OSI sensors;
@@ -112,7 +119,7 @@ private:
 
 	// Serialize given trafficCommand into varName2MessageMap
 	// Callback function passed to TrafficCommandReceiver
-	void serializeTrafficCommand(const osi3::TrafficCommand& command);
+	float saveTrafficCommand(const osi3::TrafficCommand& command);
 };
 
 #endif //!CARLAOSIGRPC_H
