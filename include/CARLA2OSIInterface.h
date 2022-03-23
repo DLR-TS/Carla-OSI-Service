@@ -71,7 +71,7 @@ class CARLA2OSIInterface
 	// latest world ground truth, calculated during doStep()
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
-	pugi::xml_document xodr;
+	//pugi::xml_document xodr;
 	// Print debug information
 	bool debug;
 

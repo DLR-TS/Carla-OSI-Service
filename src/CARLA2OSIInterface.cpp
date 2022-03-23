@@ -199,7 +199,6 @@ std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
 	return std::string_view();
 }
 
-
 osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 {
 	osi3::Timestamp* osiTime = new osi3::Timestamp();
@@ -211,17 +210,16 @@ osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 	return osiTime;
 }
 
-
 void CARLA2OSIInterface::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 
-	const carla::road::Map& roadMap = map->GetMap();
+//	const carla::road::Map& roadMap = map->GetMap();
 
-	staticMapTruth->set_map_reference(map->GetName());
+	//staticMapTruth->set_map_reference(map->GetName());
 
 	// parse OpenDRIVE for retrieving information dropped in Carla
-	auto result = xodr.load_string(map->GetOpenDrive().c_str());
+	//auto result = xodr.load_string(map->GetOpenDrive().c_str());
 
 	auto stationaryObjects = staticMapTruth->mutable_stationary_object();
 	//TODO parse map parts that won't change during simulation
