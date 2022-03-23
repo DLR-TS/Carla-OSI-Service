@@ -34,27 +34,22 @@
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 
-int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug) {
+int CARLA2OSIInterface::initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug) {
 	this->debug = debug;
+	this->deltaSeconds = deltaSeconds;
 
 	try {
 		//connect
 		this->client = std::make_unique<carla::client::Client>(host, port);
 		this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
-		this->world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
-		this->map = world->GetMap();
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
 		return -1;
 	}
 
-	//assure server is in synchronous mode
-	auto settings = world->GetSettings();
-	settings.fixed_delta_seconds = deltaSeconds;
-	settings.synchronous_mode = true;
-	this->world->ApplySettings(settings);
-
+	loadWorld();
+	applyWorldSettings();
 	parseStationaryMapObjects();
 
 	// perform a tick to fill actor and message lists
@@ -66,11 +61,7 @@ int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double trans
 double CARLA2OSIInterface::doStep() {
 	if (!world) {
 		std::cerr << "No world" << std::endl;
-#ifdef __linux__
 		throw std::exception();
-#else
-		throw std::exception("No world");
-#endif //!__linux__
 	}
 	else if (this->world->GetId() != this->client->GetWorld().GetId()) {
 		// change of world id indicates map reload or map change
@@ -78,29 +69,19 @@ double CARLA2OSIInterface::doStep() {
 		this->clearData();
 	}
 
-	// track actors added/removed by simulation interfaces
-	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
-	auto worldActors = world->GetActors();
-	// compare actor ids, not actors
-	for (auto actor : *worldActors)
-	{
-		worldActorIDs.insert(actor->GetId());
-	}
-	CarlaUtility::twoWayDifference(
-		activeActors.begin(), activeActors.end(),
-		worldActorIDs.begin(), worldActorIDs.end(),
-		std::inserter(addedActors, addedActors.begin()),
-		std::inserter(removedActors, removedActors.begin())
-	);
-
 	world->Tick(client->GetTimeout());
 	//world->WaitForTick(this->transactionTimeout);
+	validLatestGroundTruth = false;
 
-	// track actors added/removed by Carla
-	addedActors.clear();
-	removedActors.clear();
-	worldActorIDs.clear();
-	worldActors = world->GetActors();
+	// only accurate if using fixed time step, as activated during initialise()
+	return world->GetSnapshot().GetTimestamp().delta_seconds;
+}
+
+void CARLA2OSIInterface::fetchActorsFromCarla() {
+
+	// track actors added/removed inside Carla
+	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
+	auto worldActors = world->GetActors();
 	// compare actor ids, not actors
 	for (auto actor : *worldActors)
 	{
@@ -143,16 +124,35 @@ double CARLA2OSIInterface::doStep() {
 			}
 		}
 	}
-
-	latestGroundTruth = parseWorldToGroundTruth();
-
-	// only accurate if using fixed time step, as activated during initialise()
-	return world->GetSnapshot().GetTimestamp().delta_seconds;
 }
 
 std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTruth()
 {
+	if (!validLatestGroundTruth) {
+		latestGroundTruth = parseWorldToGroundTruth();
+		validLatestGroundTruth = true;
+	}
 	return latestGroundTruth;
+}
+
+void CARLA2OSIInterface::loadWorld() {
+	this->world = std::make_unique<carla::client::World>(std::move(this->client->GetWorld()));
+	this->map = world->GetMap();
+}
+
+void CARLA2OSIInterface::applyWorldSettings() {
+	auto settings = world->GetSettings();
+	if (settings.fixed_delta_seconds.has_value() &&
+		settings.fixed_delta_seconds.value() == deltaSeconds &&
+		settings.synchronous_mode) {
+		if (debug) {
+			std::cout << "Settings of Carla Server are already correct and do not need to be changed" << std::endl;
+		}
+		return;
+	}
+	settings.fixed_delta_seconds = deltaSeconds;
+	settings.synchronous_mode = true;
+	this->world->ApplySettings(settings);
 }
 
 std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)
@@ -178,7 +178,7 @@ std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
 {
 	carla::ActorId actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&id));
 	std::string role;
-	try	{//mutex scope
+	try {//mutex scope
 		std::scoped_lock lock(actorRole2IDMap_mutex);
 		//look up from right to left -> retrieve role for given id
 		role = actorRole2IDMap.right.at(actorId);
@@ -575,7 +575,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					std::string role_name = attribute.GetValue();
 					if ("hero" == role_name) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
-						//groundTruth->set_allocated_host_vehicle_id(vehicle->mutable_id());
+						//saved for trafficCommand message from scenario runner
+						heroId = vehicle->id().value();
 					}
 				}
 			}
@@ -624,8 +625,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				trafficLights->AddAllocated(bulb.release());
 			}
 		}
-		else{
-			std::cout << typeID << " not parsed to groundtruth" <<  std::endl;
+		else {
+			std::cout << typeID << " not parsed to groundtruth" << std::endl;
 		}
 	}
 
@@ -639,7 +640,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 void CARLA2OSIInterface::clearData()
 {
 	if (!world) {
-    std::cerr << "No world" << std::endl;
+		std::cerr << "No world" << std::endl;
 		throw new std::exception();
 	}
 	{//mutex scope
@@ -688,7 +689,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else if (debug){
+	else if (debug) {
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 
@@ -699,7 +700,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 			std::string varName = iter->second;
 			varName2MessageMap[varName] = std::move(sensorView);
 		}
-		else if (debug){
+		else if (debug) {
 			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
 		}
 	}
@@ -714,6 +715,8 @@ void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
 
 	//do action accordingly
 	int TrafficActionType = 0;//TODO Placeholder at the moment
+	//hero has a routing action in OpenScenario
+	//Routing Action has an Oriented Point
 
 	switch (TrafficActionType) {
 	case 0:
@@ -789,7 +792,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	}
 	auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&trafficUpdate.mutable_update()->id()));
 	auto actor = world->GetActor(TrafficId);
-	if (actor == nullptr){
+	if (actor == nullptr) {
 		std::cout << "Actor not found! No position updates will be done!" << std::endl;
 		return 0;
 	}

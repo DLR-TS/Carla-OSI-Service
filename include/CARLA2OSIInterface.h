@@ -70,10 +70,16 @@ class CARLA2OSIInterface
 	std::unique_ptr<osi3::GroundTruth> staticMapTruth;
 	// latest world ground truth, calculated during doStep()
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
+	// invalid latest ground truth
+	bool validLatestGroundTruth = false;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	//pugi::xml_document xodr;
+	//hero id
+	uint64_t heroId = 0;
 	// Print debug information
 	bool debug;
+	//delta seconds in each time step
+	float deltaSeconds;
 
 public:
 
@@ -104,26 +110,42 @@ public:
 	* print extra debug information
 	* \return Success status.
 	*/
-	virtual int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, bool debug);
+	int initialise(std::string host, uint16_t port, float transactionTimeout, float deltaSeconds, bool debug);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
 	\return Time in seconds advanced during step
 	*/
-	virtual double doStep();
+	double doStep();
+
+	/**
+	* Fetch the actors in carla and update cache.
+	* Should be called after a doStep()
+	*/
+	void fetchActorsFromCarla();
+
+	/**
+	* Load the world from carla (world and map)
+	*/
+	void loadWorld();
+	
+	/**
+	* Apply specific settings to the world
+	*/
+	void applyWorldSettings();
 
 	/**
 	Retrieve ground truth message generated during last step
 	\return Latest world state as osi3::GroundTruth
 	*/
-	virtual std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
+	std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
 	/**
 	Retrieve CARLA Sensor output from the sensor with the given role name. Messages are cached and updated during a sensor's tick.
 	\param sensor_role_name Role attribute of the carla::client::Sensor
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
-	virtual std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
+	std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
 
 	/**
 	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
@@ -142,13 +164,30 @@ public:
 	*/
 	std::string actorIdToRoleName(const osi3::Identifier& id);
 
+	// prepare a GroundTruth object with values from the current map which won't change 
+	void parseStationaryMapObjects();
+
+	/**
+	Retruns the stepsize.
+	\return step size
+	*/
+	float getDeltaSeconds() { return deltaSeconds; }
+
+	/**
+	Returns the hero id.
+	\return hero id
+	*/
+	float getHeroId() { return heroId; }
+
+	/**
+	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
+	*/
+	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
+
 private:
 
 	std::string_view getPrefix(std::string_view name);
 	osi3::Timestamp* parseTimestamp();
-	// prepare a GroundTruth object with values from the current map which won't change 
-	//TODO return type
-	void parseStationaryMapObjects();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 

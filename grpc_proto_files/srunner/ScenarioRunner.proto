@@ -1,13 +1,13 @@
 syntax = "proto3";
 
-import "google/protobuf/empty.proto";
-
 import "osi_trafficcommand.proto";
-//import "osi_trafficupdate.proto";
 
 package srunner.osi.client;
 
+message Float {
+	float value = 1;
+}
+
 service OSIVehicleController {
-//  rpc VehicleControl(stream osi3.TrafficCommand) returns (stream osi3.TrafficUpdate) {}
-  rpc SendCommand(osi3.TrafficCommand) returns (google.protobuf.Empty) {}
+  rpc SendCommand(osi3.TrafficCommand) returns (Float) {}
 }

@@ -19,7 +19,7 @@
 #include "grpc_proto_files/srunner/ScenarioRunner.pb.h"
 
 namespace carla::srunner {
-	typedef std::function<void(const osi3::TrafficCommand&)> TrafficCommandCallback;
+	typedef std::function<float(const osi3::TrafficCommand&)> TrafficCommandCallback;
 
 	class TrafficCommandReceiver : public ::srunner::osi::client::OSIVehicleController::Service {
 
@@ -31,7 +31,7 @@ namespace carla::srunner {
 
 		virtual void setCallback(TrafficCommandCallback callback);
 
-		virtual ::grpc::Status SendCommand(::grpc::ServerContext* context, const osi3::TrafficCommand* command, google::protobuf::Empty* response) override;
+		virtual ::grpc::Status SendCommand(::grpc::ServerContext* context, const osi3::TrafficCommand* command, ::srunner::osi::client::Float* response) override;
 	};
 }
 
