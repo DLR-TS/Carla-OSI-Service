@@ -204,8 +204,11 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	else if (std::string::npos != varName.rfind("OSMPTrafficCommand", 0)) {
 		// OSMPTrafficCommand
 		//set hero ID in traffic command message
-		trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(carlaInterface.getHeroId());
-		message = trafficCommandForEgoVehicle;
+		if (trafficCommandForEgoVehicle == nullptr) {
+			std::cout << "No OSMPTrafficCommand available. Use -sr paramter to enable scenario runner listener." << std::endl;
+			trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(carlaInterface.getHeroId());
+			message = trafficCommandForEgoVehicle;
+		}
 	}
 
 	// if the CARLA OSI interface did provide a message, return its string serialization;
