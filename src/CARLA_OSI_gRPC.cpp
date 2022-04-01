@@ -44,7 +44,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	}
 	response->set_value(
 		carlaInterface.initialise(config->carla_host(), config->carla_port(), config->transaction_timeout(), config->delta_seconds(), runtimeParameter));
-	if (scenarioRunnerDoesTick) {
+	if (runtimeParameter.scenarioRunnerDoesTick) {
 		std::cout << "Waiting for connetion of scenario runner." << std::endl;
 		smphSignalSRToCosima.acquire();
 		//data could be changed by a new map loaded by the scenario runner
@@ -56,7 +56,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
-	if (scenarioRunnerDoesTick) {
+	if (runtimeParameter.scenarioRunnerDoesTick) {
 		//Cosima has computed timestep
 		smphSignalCosimaToSR.release();
 		//wait for Scenario Runner
