@@ -32,6 +32,12 @@ int main(int argc, char *argv[])
 				<< "The step size differs accordingly to calculation times of the connected models."
 				<< "Only use this option with sync.\n";
 		}
+		else if (parameter == "-filter") {
+			runtimeParameter.filter = true;
+			i++;
+			runtimeParameter.filterString = std::string(argv[i]);
+			std::cout << "Filter for static objects active. Use: " << runtimeParameter.filterString << "\n";
+		}
 		else if (parameter == "-h" || parameter == "--help") {
 			std::cout << "Normal options for Carla OSI Service:\n"
 				<< "-async            : simulator runs asynchronous\n"
@@ -39,6 +45,7 @@ int main(int argc, char *argv[])
 				<< "-sr               : connection with scenario runner\n"
 				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n" 
 				<< "Experimental options:\n"
+				<< "-filter <filter>  : filter static objects depending on name\n"
 				<< "-noStaticObjects  : sending ground truth messages only with dynamic objects\n"
 				<< "-dynamicTimestamps: dynamic timestamps for special real time mode" << std::endl;
 			exit(0);

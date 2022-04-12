@@ -257,11 +257,20 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto stationaryMapObjects = world->GetStationaryMapObjects();
 	for (auto& mapObject : stationaryMapObjects) {
 
-		//do not parse the CameraActor spawned by Carla
+		//do not parse the CameraActor spawned by Carla and all actors containing Planes
 		if (mapObject.name.find("CameraActor") == 0 || mapObject.name.find("Plane") != std::string::npos) {
 			if (runtimeParameter.verbose)
-				std::cout << "Not parsing " << mapObject.name << " Carla.\n";
+				std::cout << "Not parsing " << mapObject.name << "\n";
 			continue;
+		}
+
+		//do only parse actors in filter
+		if (runtimeParameter.filter) {
+			if (mapObject.name.find(runtimeParameter.filterString) == std::string::npos) {
+				if (runtimeParameter.verbose)
+					std::cout << "Not parsing " << mapObject.name << "\n";
+				continue;
+			}
 		}
 
 		//TODO don't parse RoadMarkings as stationary object but add them to their lane
@@ -646,7 +655,8 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			}
 		}
 		else {
-			std::cout << typeID << " not parsed to groundtruth" << std::endl;
+			if (runtimeParameter.verbose)
+				std::cout << typeID << " not parsed to groundtruth." << std::endl;
 		}
 	}
 

@@ -280,7 +280,8 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 	}
 
 	if (runtimeParameter.verbose) {
-		printSensorViewMessage(sensorView);
+		std::cout << sensorView->DebugString() << std::endl;
+		//printSensorViewMessage(sensorView);
 	}
 	return sensorView;
 }

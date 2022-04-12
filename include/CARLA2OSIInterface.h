@@ -59,6 +59,8 @@ struct RuntimeParameter {
 	bool scenarioRunnerDoesTick = false;
 	bool staticObjectsInGroundTruthMessage = true;
 	bool dynamicTimestamps = false;
+	bool filter = false;
+	std::string filterString = "";
 	//Server address deliberately chosen to accept any connection
 	std::string serverAddress = "0.0.0.0:51425";
 };
