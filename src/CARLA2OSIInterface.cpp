@@ -172,6 +172,12 @@ void CARLA2OSIInterface::applyWorldSettings() {
 	this->world->ApplySettings(settings);
 }
 
+void CARLA2OSIInterface::resetWorldSettings() {
+	auto settings = world->GetSettings();
+	settings.synchronous_mode = false;
+	this->world->ApplySettings(settings);
+}
+
 std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)
 {
 	// mutex scope

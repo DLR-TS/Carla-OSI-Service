@@ -11,7 +11,6 @@
 #include <mutex>
 #include <shared_mutex>
 #include <chrono>
-#include <ctime>
 
 #include "pugixml.hpp"
 #include <boost/bimap.hpp>
@@ -61,6 +60,7 @@ struct RuntimeParameter {
 	bool dynamicTimestamps = false;
 	bool filter = false;
 	std::string filterString = "";
+	int resumeCarlaAsyncSeconds = 0;
 	//Server address deliberately chosen to accept any connection
 	std::string serverAddress = "0.0.0.0:51425";
 };
@@ -92,13 +92,12 @@ class CARLA2OSIInterface
 	uint64_t heroId = 0;
 	//delta seconds in each time step
 	float deltaSeconds;
-	// Parameters set by runtime
-	RuntimeParameter runtimeParameter;
 	//Timestamps for dynamic step size sync mode
 	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
 
-
 public:
+	// Parameters set by runtime
+	RuntimeParameter runtimeParameter;
 
 	~CARLA2OSIInterface() {
 		if (world) {
@@ -150,6 +149,11 @@ public:
 	* Apply specific settings to the world
 	*/
 	void applyWorldSettings();
+
+	/**
+	* Reset specific settings of the world
+	*/
+	void resetWorldSettings();
 
 	/**
 	Retrieve ground truth message generated during last step

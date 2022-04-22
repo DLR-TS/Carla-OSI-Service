@@ -25,6 +25,20 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 	}
 }
 
+void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
+	while (true) {
+		Sleep(client->runtimeParameter.resumeCarlaAsyncSeconds * 1000);
+		if (!client->watchdogDoStepCalled) {
+			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
+			client->carlaInterface.resetWorldSettings();
+			break;
+		}
+		else {
+			client->watchdogDoStepCalled = false;
+		}
+	}
+}
+
 void CARLA_OSI_client::StopServer()
 {
 	if (server)
@@ -37,6 +51,9 @@ void CARLA_OSI_client::StopServer()
 
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response)
 {
+	if (runtimeParameter.resumeCarlaAsyncSeconds != 0) {//option is active
+		watchdog_thread = std::make_unique<std::thread>(&CARLA_OSI_client::watchdog, this);
+	}
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
 		CoSiMa::rpc::SensorViewSensorMountingPosition mountingPosition;
 		mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
@@ -56,6 +73,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
+	watchdogDoStepCalled = true;
 	if (runtimeParameter.scenarioRunnerDoesTick) {
 		//Cosima has computed timestep
 		smphSignalCosimaToSR.release();

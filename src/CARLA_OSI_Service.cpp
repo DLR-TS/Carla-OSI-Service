@@ -38,6 +38,11 @@ int main(int argc, char *argv[])
 			runtimeParameter.filterString = std::string(argv[i]);
 			std::cout << "Filter for static objects active. Use: " << runtimeParameter.filterString << "\n";
 		}
+		else if (parameter == "-resumeAfter") {
+			i++;
+			runtimeParameter.resumeCarlaAsyncSeconds = atoi(argv[i]);
+			std::cout << "Resume Carla (Anti - Freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
+		}
 		else if (parameter == "-h" || parameter == "--help") {
 			std::cout << "Normal options for Carla OSI Service:\n"
 				<< "-async            : simulator runs asynchronous\n"
@@ -46,6 +51,7 @@ int main(int argc, char *argv[])
 				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n" 
 				<< "Experimental options:\n"
 				<< "-filter <filter>  : filter static objects depending on name\n"
+				<< "-resumeAfter <s>  : resume Carla asynchronous after s seconds (Anti-Freeze)\n"
 				<< "-noStaticObjects  : sending ground truth messages only with dynamic objects\n"
 				<< "-dynamicTimestamps: dynamic timestamps for special real time mode" << std::endl;
 			exit(0);

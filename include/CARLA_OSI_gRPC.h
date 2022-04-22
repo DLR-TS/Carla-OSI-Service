@@ -8,6 +8,7 @@
 #include "CARLA2OSIInterface.h"
 
 #include <thread>
+#include <ctime>
 #include <chrono>
 #include <filesystem>
 #include <iostream>
@@ -35,11 +36,13 @@
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
 
 	//Scenario Runner Synchronisation
-	bool scenarioRunnerDoesTick = false;
 	Semaphore smphSignalCosimaToSR;
 	Semaphore smphSignalSRToCosima;
 
 	RuntimeParameter runtimeParameter;
+
+	//thread to release Carla from step mode in async mode if simulation stopped.
+	std::unique_ptr<std::thread> watchdog_thread;
 
 #pragma region fields for the grpc service
 	std::shared_ptr<grpc::Server> server;
@@ -120,6 +123,9 @@ private:
 	// Serialize given trafficCommand into varName2MessageMap
 	// Callback function passed to TrafficCommandReceiver
 	float saveTrafficCommand(const osi3::TrafficCommand& command);
+
+	static void watchdog(CARLA_OSI_client* b);
+	bool watchdogDoStepCalled = true;
 };
 
 #endif //!CARLAOSIGRPC_H
