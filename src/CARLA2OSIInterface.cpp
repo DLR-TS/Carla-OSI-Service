@@ -1,39 +1,5 @@
 #include "CARLA2OSIInterface.h"
 
-#include <algorithm>
-#include <execution>
-#include <stdexcept>
-
-#include "Utility.h"
-#include "carla_osi/Geometry.h"
-#include "carla_osi/Identifiers.h"
-#include "carla_osi/Lanes.h"
-#include "carla_osi/TrafficSignals.h"
-
-#include <carla/client/ActorBlueprint.h>
-#include <carla/client/ActorList.h>
-#include <carla/client/BlueprintLibrary.h>
-#include <carla/client/Sensor.h>
-#include <carla/client/TimeoutException.h>
-#include <carla/client/Timestamp.h>
-#include <carla/client/TrafficSign.h>
-#include <carla/client/TrafficLight.h>
-#include <carla/client/Vehicle.h>
-#include <carla/client/Walker.h>
-#include <carla/geom/BoundingBox.h>
-#include <carla/geom/Location.h>
-#include <carla/geom/Transform.h>
-#include <carla/geom/Vector3D.h>
-#include <carla/geom/Rotation.h>
-#include <carla/image/ImageIO.h>
-#include <carla/image/ImageView.h>
-#include <carla/road/Lane.h>
-#include <carla/rpc/ObjectLabel.h>
-#include <carla/rpc/StationaryMapObject.h>
-#include <carla/sensor/data/Image.h>
-#include <carla/sensor/data/LidarMeasurement.h>
-#include <carla/sensor/data/RadarMeasurement.h>
-
 int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, RuntimeParameter& runtimeParams) {
 	this->runtimeParameter = runtimeParams;
 	this->deltaSeconds = deltaSeconds;
@@ -966,4 +932,61 @@ int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motion
 	//MotionCommand is not specified as a Sl4to5 OSMP Message
 
 	return 0;
+}
+
+void CARLA2OSIInterface::writeLog() {
+	if (!logFile.is_open()) {
+		logFile.open(runtimeParameter.logFileName);
+		logFile << "Timestamp,Actor1_ID,Actor1_x,Actor1_y,Actor1_heading,Actor2_ID,Actor2_x,Actor2_y,Actor2_heading,Actor3_ID,Actor3_x,Actor3_y,Actor3_heading,Actor4_ID,Actor4_x,Actor4_y,Actor4_heading,Actor5_ID,Actor5_x,Actor5_y,Actor5_heading\n";
+	}
+
+	//parseWorldToGroundTruth();//to get the data from the osi representation???
+
+	if (!all5ActorsSpawned) {
+		//ego
+		actors[0].id = std::to_string(latestGroundTruth->host_vehicle_id().value());
+
+		//other actors
+		for (const auto& movingObject : latestGroundTruth->moving_object()) {
+			for (auto& logData : actors) {
+				if (logData.id != "NaN") {
+					if (logData.id == std::to_string(movingObject.id().value())) {
+						//already inserted
+						break;
+					}
+				}
+				else {
+					//insert id
+					logData.id = std::to_string(movingObject.id().value());
+				}
+			}
+		}
+		if (latestGroundTruth->moving_object_size() == actors.size()) {
+			all5ActorsSpawned = true;
+		}
+	}
+
+	//log all vehicles
+	for (const auto& movingObject : latestGroundTruth->moving_object()) {
+		for (auto& logData : actors) {
+			if (logData.id == std::to_string(movingObject.id().value())) {
+				logData.x = movingObject.base().position().x();
+				logData.y = movingObject.base().position().y();
+				logData.yaw = movingObject.base().orientation().yaw() * 180 / M_PI;
+			}
+		}
+	}
+
+	//write all data
+	char separator = ',';
+	logFile << world->GetSnapshot().GetTimestamp().elapsed_seconds << separator;//time as floating point
+
+	for (const auto& logData : actors) {
+		logFile << logData.id << separator
+			<< logData.x << separator
+			<< logData.y << separator
+			<< logData.yaw << separator;
+	}
+	//end line and flush data
+	logFile << std::endl;
 }

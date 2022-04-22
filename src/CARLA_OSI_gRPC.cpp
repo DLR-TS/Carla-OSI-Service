@@ -1,9 +1,5 @@
 ﻿#include "CARLA_OSI_gRPC.h"
 
-#include <limits.h>
-#include "Utility.h"
-#include "carla_osi/Identifiers.h"
-
 void CARLA_OSI_client::StartServer(const bool nonBlocking)
 {
 	if (server)
@@ -91,6 +87,10 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		//update changes in carla
 		carlaInterface.fetchActorsFromCarla();
 		response->set_value(timestep);
+	}
+
+	if (runtimeParameter.log) {
+	
 	}
 
 	return grpc::Status::OK;

@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+#include <limits.h>
+
 #include <grpc/grpc.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_builder.h>
@@ -27,9 +29,12 @@
 #include "grpc_proto_files/base_interface/BaseInterface.pb.h"
 #include "grpc_proto_files/base_interface/CARLAInterface.grpc.pb.h"
 #include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
+
 #include "osi_common.pb.h"
 
 #include "Semaphore.h"
+#include "Utility.h"
+#include "carla_osi/Identifiers.h"
 #include "ScenarioRunner/TrafficCommandReceiver.h"
 
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface

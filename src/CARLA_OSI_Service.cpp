@@ -26,6 +26,11 @@ int main(int argc, char *argv[])
 			runtimeParameter.staticObjectsInGroundTruthMessage = false;
 			std::cout << "Does not send static objects in ground truth messages.\n";
 		}
+		else if (parameter == "-log") {
+			runtimeParameter.log = true;
+			runtimeParameter.logFileName == std::string(argv[++i]);
+			std::cout << "Log to " << ".csv\n";
+		}
 		else if (parameter == "-dynamicTimestamps") {
 			runtimeParameter.dynamicTimestamps = true;
 			std::cout << "Set timestamp accordingly to realtime."
@@ -34,13 +39,11 @@ int main(int argc, char *argv[])
 		}
 		else if (parameter == "-filter") {
 			runtimeParameter.filter = true;
-			i++;
-			runtimeParameter.filterString = std::string(argv[i]);
+			runtimeParameter.filterString = std::string(argv[++i]);
 			std::cout << "Filter for static objects active. Use: " << runtimeParameter.filterString << "\n";
 		}
 		else if (parameter == "-resumeAfter") {
-			i++;
-			runtimeParameter.resumeCarlaAsyncSeconds = atoi(argv[i]);
+			runtimeParameter.resumeCarlaAsyncSeconds = atoi(argv[++i]);
 			std::cout << "Resume Carla (Anti - Freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
 		}
 		else if (parameter == "-h" || parameter == "--help") {
@@ -48,6 +51,7 @@ int main(int argc, char *argv[])
 				<< "-async            : simulator runs asynchronous\n"
 				<< "-d or -v          : verbose log\n"
 				<< "-sr               : connection with scenario runner\n"
+				<< "-log <path>       : log <path>.csv\n"
 				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n" 
 				<< "Experimental options:\n"
 				<< "-filter <filter>  : filter static objects depending on name\n"

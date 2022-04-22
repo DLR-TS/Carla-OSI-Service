@@ -11,17 +11,43 @@
 #include <mutex>
 #include <shared_mutex>
 #include <chrono>
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <execution>
+#include <stdexcept>
 
-#include "pugixml.hpp"
 #include <boost/bimap.hpp>
 #include <boost/foreach.hpp>
 
 #include <carla/client/Actor.h>
+#include <carla/client/ActorBlueprint.h>
+#include <carla/client/ActorList.h>
+#include <carla/client/BlueprintLibrary.h>
 #include <carla/client/Client.h>
-#include <carla/client/World.h>
 #include <carla/client/Map.h>
 #include <carla/client/Sensor.h>
 #include <carla/sensor/SensorData.h>
+#include <carla/client/TimeoutException.h>
+#include <carla/client/Timestamp.h>
+#include <carla/client/TrafficSign.h>
+#include <carla/client/TrafficLight.h>
+#include <carla/client/Vehicle.h>
+#include <carla/client/Walker.h>
+#include <carla/client/World.h>
+#include <carla/geom/BoundingBox.h>
+#include <carla/geom/Location.h>
+#include <carla/geom/Transform.h>
+#include <carla/geom/Vector3D.h>
+#include <carla/geom/Rotation.h>
+#include <carla/image/ImageIO.h>
+#include <carla/image/ImageView.h>
+#include <carla/road/Lane.h>
+#include <carla/rpc/ObjectLabel.h>
+#include <carla/rpc/StationaryMapObject.h>
+#include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/LidarMeasurement.h>
+#include <carla/sensor/data/RadarMeasurement.h>
 
 //uncomment include if needed
 #include "osi_common.pb.h"
@@ -52,6 +78,16 @@
 #include "sl45_motioncommand.pb.h"
 #include "sl45_vehiclecommunicationdata.pb.h"
 
+#include "Utility.h"
+#include "carla_osi/Geometry.h"
+#include "carla_osi/Identifiers.h"
+#include "carla_osi/Lanes.h"
+#include "carla_osi/TrafficSignals.h"
+
+#include "pugixml.hpp"
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
@@ -60,6 +96,8 @@ struct RuntimeParameter {
 	bool dynamicTimestamps = false;
 	bool filter = false;
 	std::string filterString = "";
+	bool log = false;
+	std::string logFileName = "";
 	int resumeCarlaAsyncSeconds = 0;
 	//Server address deliberately chosen to accept any connection
 	std::string serverAddress = "0.0.0.0:51425";
@@ -144,7 +182,7 @@ public:
 	* Load the world from carla (world and map)
 	*/
 	void loadWorld();
-	
+
 	/**
 	* Apply specific settings to the world
 	*/
@@ -205,7 +243,17 @@ public:
 	*/
 	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
 
+	/**
+	Write the log.
+	*/
+	void writeLog();
+
 private:
+
+	std::ofstream logFile;
+	bool all5ActorsSpawned = false;
+	struct logData { std::string id = "NaN"; double x{ NAN }, y{ NAN }, yaw{ NAN }; };
+	std::vector<logData> actors = std::vector<logData>(5);//5 from SetLevel SUC2 MS2
 
 	std::string_view getPrefix(std::string_view name);
 	osi3::Timestamp* parseTimestamp();
@@ -227,7 +275,6 @@ private:
 	void sendTrafficCommand(carla::ActorId actorId);
 
 	//input
-
 	/**
 	Read motion command message from ego vehicle and update position, rotation and velocity of CARLA actor.
 	\param actorId
