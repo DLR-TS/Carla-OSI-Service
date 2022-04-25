@@ -108,8 +108,6 @@ public:
 	virtual grpc::Status SetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::NamedBytes* request, CoSiMa::rpc::Int32* response) override;
 
 private:
-	//print the whole SensorViewMessage for debugging
-	void printSensorViewMessage(std::shared_ptr<osi3::SensorView> sensorView);
 	void printOsiVector(osi3::Vector3d vector3d);
 	void printOsiOrientation3d(osi3::Orientation3d orientation3d);
 
