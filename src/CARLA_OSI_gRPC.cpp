@@ -23,7 +23,7 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 
 void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 	while (true) {
-		Sleep(client->runtimeParameter.resumeCarlaAsyncSeconds * 1000);
+		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
 		if (!client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
 			client->carlaInterface.resetWorldSettings();
@@ -70,6 +70,11 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
 	watchdogDoStepCalled = true;
+
+	if (runtimeParameter.log) {
+		carlaInterface.writeLog();
+	}
+
 	if (runtimeParameter.scenarioRunnerDoesTick) {
 		//Cosima has computed timestep
 		smphSignalCosimaToSR.release();
@@ -87,10 +92,6 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		//update changes in carla
 		carlaInterface.fetchActorsFromCarla();
 		response->set_value(timestep);
-	}
-
-	if (runtimeParameter.log) {
-	
 	}
 
 	return grpc::Status::OK;
