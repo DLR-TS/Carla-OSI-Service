@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 		else if (parameter == "-l" || parameter == "-log") {
 			runtimeParameter.log = true;
 			runtimeParameter.logFileName = std::string(argv[++i]);
-			std::cout << "Log to std::cout and " << runtimeParameter.logFileName << ".csv\n";
+			std::cout << "Log to std::cout and " << runtimeParameter.logFileName << "\n";
 		}
 		else if (parameter == "-dynamicTimestamps") {
 			runtimeParameter.dynamicTimestamps = true;
