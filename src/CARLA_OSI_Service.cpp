@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 			runtimeParameter.verbose = true;
 			std::cout << "Running with additional debug prints.\n";
 		}
-		else if (std::string(argv[i]) == "-sr") {
+		else if (parameter == "-sr") {
 			runtimeParameter.scenarioRunnerDoesTick = true;
 			std::cout << "Wait for scenario runner connection.\n";
 		}
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 		}
 		else if (parameter == "-l" || parameter == "-log") {
 			runtimeParameter.log = true;
-			runtimeParameter.logFileName == std::string(argv[++i]);
+			runtimeParameter.logFileName = std::string(argv[++i]);
 			std::cout << "Log to std::cout and " << runtimeParameter.logFileName << ".csv\n";
 		}
 		else if (parameter == "-dynamicTimestamps") {
