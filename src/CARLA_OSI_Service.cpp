@@ -26,10 +26,10 @@ int main(int argc, char *argv[])
 			runtimeParameter.staticObjectsInGroundTruthMessage = false;
 			std::cout << "Does not send static objects in ground truth messages.\n";
 		}
-		else if (parameter == "-log") {
+		else if (parameter == "-l" || parameter == "-log") {
 			runtimeParameter.log = true;
 			runtimeParameter.logFileName == std::string(argv[++i]);
-			std::cout << "Log to " << ".csv\n";
+			std::cout << "Log to std::cout and " << ".csv\n";
 		}
 		else if (parameter == "-dynamicTimestamps") {
 			runtimeParameter.dynamicTimestamps = true;

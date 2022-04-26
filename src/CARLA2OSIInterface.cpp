@@ -937,7 +937,12 @@ int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motion
 void CARLA2OSIInterface::writeLog() {
 	if (!logFile.is_open()) {
 		logFile.open(runtimeParameter.logFileName);
-		logFile << "Timestamp,Actor1_ID,Actor1_x,Actor1_y,Actor1_heading,Actor2_ID,Actor2_x,Actor2_y,Actor2_heading,Actor3_ID,Actor3_x,Actor3_y,Actor3_heading,Actor4_ID,Actor4_x,Actor4_y,Actor4_heading,Actor5_ID,Actor5_x,Actor5_y,Actor5_heading\n";
+		if (runtimeParameter.verbose) {
+			std::cout << "Write to " << runtimeParameter.logFileName << std::endl;
+		}
+		std::string header = "Timestamp,Actor1_ID,Actor1_x,Actor1_y,Actor1_heading,Actor2_ID,Actor2_x,Actor2_y,Actor2_heading,Actor3_ID,Actor3_x,Actor3_y,Actor3_heading,Actor4_ID,Actor4_x,Actor4_y,Actor4_heading,Actor5_ID,Actor5_x,Actor5_y,Actor5_heading\n";
+		logFile << header;
+		std::cout << header;
 	}
 
 	//parseWorldToGroundTruth();//to get the data from the osi representation???
@@ -979,14 +984,21 @@ void CARLA2OSIInterface::writeLog() {
 
 	//write all data
 	char separator = ',';
-	logFile << world->GetSnapshot().GetTimestamp().elapsed_seconds << separator;//time as floating point
+	double seconds = world->GetSnapshot().GetTimestamp().elapsed_seconds;
+	logFile << seconds << separator;//time as floating point
+	std::cout << seconds << separator;
 
 	for (const auto& logData : actors) {
 		logFile << logData.id << separator
 			<< logData.x << separator
 			<< logData.y << separator
 			<< logData.yaw << separator;
+		std::cout << logData.id << separator
+			<< logData.x << separator
+			<< logData.y << separator
+			<< logData.yaw << separator;
 	}
 	//end line and flush data
 	logFile << std::endl;
+	std::cout << std::endl;
 }
