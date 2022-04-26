@@ -963,11 +963,13 @@ void CARLA2OSIInterface::writeLog() {
 				else {
 					//insert id
 					logData.id = std::to_string(movingObject.id().value());
+					std::cout << "Temp: insert " << logData.id;
 				}
 			}
 		}
 		if (latestGroundTruth->moving_object_size() == actors.size()) {
 			all5ActorsSpawned = true;
+			std::cout << "All ids final" << std::endl;
 		}
 	}
 
