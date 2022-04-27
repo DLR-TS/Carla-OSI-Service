@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 				<< "-async            : simulator runs asynchronous\n"
 				<< "-d or -v          : verbose log\n"
 				<< "-sr               : connection with scenario runner\n"
-				<< "-log <path>       : log <path>.csv\n"
+				<< "-log <path>       : log data in file: <path>\n"
 				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n" 
 				<< "Experimental options:\n"
 				<< "-filter <filter>  : filter static objects depending on name\n"
