@@ -9,4 +9,4 @@ WORKDIR /setlevel
 RUN mkdir logs
 
 COPY CARLA_OSI_Service /setlevel/
-CMD ./CARLA_OSI_Service -d -sr
+CMD ./CARLA_OSI_Service -d -sr -log log.csv
