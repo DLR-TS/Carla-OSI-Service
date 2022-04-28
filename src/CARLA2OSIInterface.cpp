@@ -986,18 +986,18 @@ void CARLA2OSIInterface::writeLog() {
 	//write all data
 	char separator = ',';
 	double seconds = world->GetSnapshot().GetTimestamp().elapsed_seconds;
-	logFile << seconds << separator;//time as floating point
-	std::cout << seconds << separator;
+	logFile << seconds;//time as floating point
+	std::cout << seconds;
 
 	for (const auto& logData : actors) {
-		logFile << logData.id << separator
+		logFile << separator<< logData.id << separator
 			<< logData.x << separator
 			<< logData.y << separator
-			<< logData.yaw << separator;
-		std::cout << logData.id << separator
+			<< logData.yaw ;
+		std::cout << separator << logData.id << separator
 			<< logData.x << separator
 			<< logData.y << separator
-			<< logData.yaw << separator;
+			<< logData.yaw;
 	}
 	//end line and flush data
 	logFile << std::endl;
