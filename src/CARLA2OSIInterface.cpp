@@ -94,7 +94,7 @@ void CARLA2OSIInterface::fetchActorsFromCarla() {
 						actorRole2IDMap.insert(value);
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
-						if (0 == actor->GetTypeId().rfind("sensor.", 0)) {
+						if (runtimeParameter.carlaSensors && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
 							sensor->Listen([this, sensor](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData); });
 						}
@@ -947,7 +947,7 @@ void CARLA2OSIInterface::writeLog() {
 
 	//parseWorldToGroundTruth();//to get the data from the osi representation???
 
-	if (!all5ActorsSpawned) {
+	if (!allXActorsSpawned) {
 		//ego
 		actors[0].id = std::to_string(latestGroundTruth->host_vehicle_id().value());
 
@@ -968,7 +968,7 @@ void CARLA2OSIInterface::writeLog() {
 			}
 		}
 		if (latestGroundTruth->moving_object_size() == actors.size()) {
-			all5ActorsSpawned = true;
+			allXActorsSpawned = true;
 		}
 	}
 

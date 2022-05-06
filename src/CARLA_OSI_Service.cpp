@@ -46,6 +46,10 @@ int main(int argc, char *argv[])
 			runtimeParameter.resumeCarlaAsyncSeconds = atoi(argv[++i]);
 			std::cout << "Resume Carla (Anti - Freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
 		}
+		else if (parameter == "-carlaSensors") {
+			runtimeParameter.carlaSensors = true;
+			std::cout << "Use listeners on sensors spawned in Carla.\n";
+		}
 		else if (parameter == "-h" || parameter == "--help") {
 			std::cout << "Normal options for Carla OSI Service:\n"
 				<< "-async            : simulator runs asynchronous\n"
@@ -57,6 +61,7 @@ int main(int argc, char *argv[])
 				<< "-filter <filter>  : filter static objects depending on name\n"
 				<< "-resumeAfter <s>  : resume Carla asynchronous after s seconds (Anti-Freeze)\n"
 				<< "-noStaticObjects  : sending ground truth messages only with dynamic objects\n"
+				<< "-carlaSensors     : listen to sensors spawned in carla\n"
 				<< "-dynamicTimestamps: dynamic timestamps for special real time mode" << std::endl;
 			exit(0);
 		}

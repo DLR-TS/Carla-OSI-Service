@@ -99,6 +99,7 @@ struct RuntimeParameter {
 	bool log = false;
 	std::string logFileName = "";
 	int resumeCarlaAsyncSeconds = 0;
+	bool carlaSensors = false;
 	//Server address deliberately chosen to accept any connection
 	std::string serverAddress = "0.0.0.0:51425";
 };
@@ -251,7 +252,7 @@ public:
 private:
 
 	std::ofstream logFile;
-	bool all5ActorsSpawned = false;
+	bool allXActorsSpawned = false;
 	struct logData { std::string id = "NaN"; double x{ NAN }, y{ NAN }, yaw{ NAN }; };
 	std::vector<logData> actors = std::vector<logData>(5);//5 from SetLevel SUC2 MS2
 
