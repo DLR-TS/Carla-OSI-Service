@@ -189,7 +189,7 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 	return osiTrafficLights;
 }
 
-std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
+/*std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
 	const carla::SharedPtr<const carla::client::TrafficLight> actor,
 	const std::vector<carla::rpc::TrafficLightHeads> heads) {
 
@@ -270,4 +270,4 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 	}
 
 	return osiTrafficLights;
-}
+}*/

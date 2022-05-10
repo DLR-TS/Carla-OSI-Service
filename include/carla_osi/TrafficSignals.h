@@ -9,7 +9,7 @@
 #include <carla/client/TrafficSign.h>
 #include <carla/client/TrafficLight.h>
 #include <carla/geom/BoundingBox.h>
-#include <carla/rpc/TrafficLightHead.h>
+//#include <carla/rpc/TrafficLightHead.h>
 
 #include <osi_common.pb.h>
 #include <osi_trafficlight.pb.h>
@@ -34,8 +34,8 @@ namespace carla_osi::traffic_signals {
 	/// A traffic light in carla describes traffic light heads, while the osi structure describes only a bulb of a
 	/// traffic light head, thus needing a set of traffic light structures to describe a traffic light head. 
 	/// E.g. a common traffic light head with red, amber and green lights has to be described with 3 osi traffic lights
-	std::vector<std::unique_ptr<osi3::TrafficLight>> getOSITrafficLight(const carla::SharedPtr<const carla::client::TrafficLight> actor,
-		const std::vector<carla::rpc::TrafficLightHeads> heads);
+	//std::vector<std::unique_ptr<osi3::TrafficLight>> getOSITrafficLight(const carla::SharedPtr<const carla::client::TrafficLight> actor,
+	//	const std::vector<carla::rpc::TrafficLightHeads> heads);
 }
 
 #endif //!TRAFFICSIGNALS_H

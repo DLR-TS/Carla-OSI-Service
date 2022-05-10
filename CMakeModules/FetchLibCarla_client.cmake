@@ -13,7 +13,7 @@ endif(NOT COMMAND FetchContent_Declare)
 FetchContent_Declare(
   LibCarla_client
   GIT_REPOSITORY https://github.com/carla-simulator/carla.git
-  GIT_TAG dev
+  GIT_TAG 0.9.13
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla
