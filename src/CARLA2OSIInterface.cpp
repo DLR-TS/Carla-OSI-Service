@@ -337,32 +337,15 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		stationaryObject->set_model_reference(mapObject.name);
 	}
 
-	/*auto traffic = world->GetActors()->Filter("traffic.*");
-#ifdef WIN32
-	//auto trafficLight = traffic->Filter("traffic.traffic_light");
-	std::unique_ptr<std::vector<carla::SharedPtr<carla::client::Actor>>> trafficSigns =
-		std::make_unique<std::vector<carla::SharedPtr<carla::client::Actor>>>();
-	std::copy_if(traffic->begin(), traffic->end(), std::inserter(*trafficSigns, trafficSigns->begin()),
-		[](carla::SharedPtr<carla::client::Actor> actor) {return 0 != actor->GetTypeId().rfind("traffic.traffic_light", 0); });
-#else
-	// fnmatch supports negation
-	auto trafficSigns = traffic->Filter("!traffic.traffic_light");
-#endif*/
+	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
+	auto signs = world->GetEnvironmentObjects(0x12u);//0x12 are TrafficSigns
 
-	auto signs = world->GetEnvironmentObjects(0x12u);//TODO
 	for (auto& sign : signs) {
-		//auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, bbox/*, xodr*/); sign.bounding_box
-	}
-
-	/*auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
-	for (auto trafficSign : *trafficSigns) {
-		// class Actor has no generic way of retrieving its bounding box -> custom api
-		bbox = world->GetActorBoundingBox(trafficSign->GetId());
+		auto trafficSign = world->GetActor(sign.id);
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
-		// pass bbox to getOSITrafficSign since the sign's bbox doesn't describe its occupied volume
-		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, bbox/*, xodr*//*);
+		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, sign.bounding_box/*, xodr*/);
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
-	}*/
+	}
 
 /*	auto lanes = staticMapTruth->mutable_lane();
 	auto laneBoundaries = staticMapTruth->mutable_lane_boundary();

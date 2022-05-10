@@ -1,5 +1,5 @@
 #include "carla_osi/TrafficSignals.h"
-/*
+
 // enable math definitons (M_PI) using MSVC
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -10,7 +10,7 @@
 
 std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign(
 	const carla::SharedPtr<const carla::client::TrafficSign> actor,
-	const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*//*)
+	const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/)
 {
 
 	std::cout << "parsing a traffic sign" << std::endl;
@@ -105,7 +105,7 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 }
 
 std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
-	const carla::SharedPtr<const carla::client::TrafficLight> actor/*,/*, const  pugi::xml_document& xodr*//*)
+	const carla::SharedPtr<const carla::client::TrafficLight> actor/*,/*, const  pugi::xml_document& xodr*/)
 {
 
 	std::cout << "parsing a traffic light with the old function" << std::endl;
@@ -271,4 +271,3 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 
 	return osiTrafficLights;
 }
-*/
