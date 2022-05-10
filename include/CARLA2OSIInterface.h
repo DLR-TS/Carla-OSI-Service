@@ -44,7 +44,6 @@
 #include <carla/image/ImageView.h>
 #include <carla/road/Lane.h>
 #include <carla/rpc/ObjectLabel.h>
-#include <carla/rpc/StationaryMapObject.h>
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
@@ -147,7 +146,7 @@ public:
 			//Unfreeze the server and Unreal Editor, useful for development
 			auto settings = world->GetSettings();
 			settings.synchronous_mode = false;
-			world->ApplySettings(settings);
+			world->ApplySettings(settings, settingsDuration);
 			world->Tick(client->GetTimeout());
 			std::cout << "CARLA2OSIInterface: Disabled synchronous mode of Carla server" << std::endl;
 		}
@@ -264,9 +263,9 @@ private:
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 
 	/**
-	Clear mapping data and preparsed messages and reparse stationary/environment map objects.
+	Clear mapping data and preparsed messages and reparse environment objects.
 	Mapping data consists of the actor to role name mapping and sensor to sensor message mappings.
-	The preparsed message describes the stationary/environment map objects and will be reconstructed.
+	The preparsed message describes theenvironment objects and will be reconstructed.
 
 	Called during doStep when the world's id has changed.
 	*/

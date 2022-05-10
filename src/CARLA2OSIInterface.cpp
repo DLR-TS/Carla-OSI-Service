@@ -215,18 +215,16 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 	// Static props apparently aren't part of the actor list, so this list is empty
 	auto staticProps = world->GetActors()->Filter("static.prop.*");
-	carla::geom::BoundingBox bbox;
-	for (auto prop : *staticProps) {
-		// class Actor has no generic way of retrieving its bounding box -> custom api
-		bbox = world->GetActorBoundingBox(prop->GetId());
-		// parse as StationaryObject
-		stationaryObjects->AddAllocated(CarlaUtility::toOSI(prop, bbox));
+	auto props = world->GetEnvironmentObjects(0xFF);
+
+	for (auto& prop : props) {
+		stationaryObjects->AddAllocated(CarlaUtility::toOSI(carla::MakeShared<const carla::rpc::EnvironmentObject>(prop), world->GetActor(prop.id)->GetTypeId()));
 	}
 	//TODO maybe parse Road Objects Record of OpenDrive file, if present - corresponds to OSI's StationaryObject
 
 //	std::vector<carla::rpc::StationaryMapObject> roadMarkings;
 
-	auto stationaryMapObjects = world->GetStationaryMapObjects();
+	auto stationaryMapObjects = world->GetEnvironmentObjects(0xFF);//0xFF = any
 	for (auto& mapObject : stationaryMapObjects) {
 
 		//do not parse the CameraActor spawned by Carla and all actors containing Planes
@@ -236,7 +234,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			continue;
 		}
 
-		//do only parse actors in filter
+		//do only parse actors in filter set by user per runtime parameter
 		if (runtimeParameter.filter) {
 			if (mapObject.name.find(runtimeParameter.filterString) == std::string::npos) {
 				if (runtimeParameter.verbose)
@@ -284,9 +282,9 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 		// Use the first tag that is not categorized as none or other
 
-		carla::rpc::CityObjectLabel label = mapObject.semantic_tag;
+		carla::rpc::CityObjectLabel label = mapObject.type;
 
-		switch (mapObject.semantic_tag)
+		switch (mapObject.type)
 		{
 		default:
 			//will be set to other if no other tag is available
@@ -299,7 +297,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		case carla::rpc::CityObjectLabel::RailTrack:
 		case carla::rpc::CityObjectLabel::Static:
 		case carla::rpc::CityObjectLabel::Terrain://Grass, ground-level vegetation, soil or sand. These areas are not meant to be driven on. This label includes a possibly delimiting curb.
-			//std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.semantic_tag << std::endl;
+			//std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.type << std::endl;
 			// no break by design
 		case carla::rpc::CityObjectLabel::Other://other
 			classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
@@ -339,7 +337,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		stationaryObject->set_model_reference(mapObject.name);
 	}
 
-	auto traffic = world->GetActors()->Filter("traffic.*");
+	/*auto traffic = world->GetActors()->Filter("traffic.*");
 #ifdef WIN32
 	//auto trafficLight = traffic->Filter("traffic.traffic_light");
 	std::unique_ptr<std::vector<carla::SharedPtr<carla::client::Actor>>> trafficSigns =
@@ -349,17 +347,22 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 #else
 	// fnmatch supports negation
 	auto trafficSigns = traffic->Filter("!traffic.traffic_light");
-#endif
+#endif*/
 
-	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
+	auto signs = world->GetEnvironmentObjects(0x12u);//TODO
+	for (auto& sign : signs) {
+		//auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, bbox/*, xodr*/); sign.bounding_box
+	}
+
+	/*auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	for (auto trafficSign : *trafficSigns) {
 		// class Actor has no generic way of retrieving its bounding box -> custom api
 		bbox = world->GetActorBoundingBox(trafficSign->GetId());
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
 		// pass bbox to getOSITrafficSign since the sign's bbox doesn't describe its occupied volume
-		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, bbox/*, xodr*/);
+		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, bbox/*, xodr*//*);
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
-	}
+	}*/
 
 /*	auto lanes = staticMapTruth->mutable_lane();
 	auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
@@ -612,7 +615,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					carla_osi::id_mapping::getOSIWaypointId(closestWaypoint).release());
 			}
 		}
-		else if ("traffic.traffic_light" == typeID) {
+		/*else if ("traffic.traffic_light" == typeID) {
 			carla::SharedPtr<const carla::client::TrafficLight> trafficLight = boost::dynamic_pointer_cast<carla::client::TrafficLight>(actor);
 			//TODO parse carla::client::TrafficLight as a set of osi3::TrafficLight
 			//a osi3::TrafficLight describes a single bulb of a traffic light
@@ -625,7 +628,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			for (auto& bulb : bulbs) {
 				trafficLights->AddAllocated(bulb.release());
 			}
-		}
+		}*/
 		else {
 			if (runtimeParameter.verbose)
 				std::cout << typeID << " not parsed to groundtruth." << std::endl;

@@ -32,7 +32,7 @@ std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIJunctionId(carla:
 	return toOSI(junction->GetId(), carla_osi::id_mapping::CarlaUniqueID_e::JuncID);
 }
 
-std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIEnvironmentObjectId(const carla::rpc::StationaryMapObject& object)
+std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIEnvironmentObjectId(const carla::rpc::EnvironmentObject& object)
 {
 	return toOSI(object.id, carla_osi::id_mapping::CarlaUniqueID_e::EnvironmentObject);
 }

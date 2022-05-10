@@ -10,34 +10,23 @@
 #include "boost/gil/io/write_view.hpp"
 #include "boost/gil/extension/io/png.hpp"
 
-osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr< const carla::client::Actor> actor, carla::geom::BoundingBox& bbox)
-{
+osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference) {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
-	prop->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
-
 	osi3::BaseStationary* base = prop->mutable_base();
-	// bounding boxes are only available for Junction, Vehicle and Walker, not for Actor as generalization (though there is a protected GetBoundingBox() member in ActorState)
-	// also mentioned in https://github.com/carla-simulator/carla/issues/3186, https://github.com/carla-simulator/carla/issues/3025 and https://github.com/carla-simulator/carla/issues/1766
-	// The attribute behind the protected field is misused for traffic signs and traffic lights and holds their active area instead
-	//auto [dimension, position] = CarlaUtility::toOSI( actor-> Get BoundingBox() );
-	// The bounding box has to be given as argument. To circumvent the described limitation, World::GetActorBoundingBox(ActorId) is added
-	auto[dimension, position] = carla_osi::geometry::toOSI(bbox);
+	osi3::StationaryObject_Classification* classification = prop->mutable_classification();
+
+	auto[dimension, position] = carla_osi::geometry::toOSI(environmentObject->bounding_box);
 	base->set_allocated_dimension(dimension.release());
-	auto transform = actor->GetTransform();
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(carla_osi::geometry::toOSI(environmentObject->transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(environmentObject->transform.rotation).release());
 
-	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
-
-	//TODO Carla doesn't seem to offer information needed for osi3::StationaryObject::Classification. Using default instance
-	auto classification = prop->mutable_classification();//creates default instance as side-effect
 	classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
-	//TODO fill with information from OpenDRIVE file, if available
-
-	prop->set_model_reference(actor->GetTypeId());
-
+	prop->set_allocated_id(carla_osi::id_mapping::toOSI(environmentObject->id).release());
+	
+	prop->set_model_reference(model_reference);
 	return prop;
 }
+
 
 std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
 {

@@ -15,7 +15,6 @@
 #include <carla/road/element/Waypoint.h>
 #include <carla/road/Map.h>
 #include <carla/rpc/ActorId.h>
-#include <carla/rpc/StationaryMapObject.h>
 
 #include "osi_common.pb.h"
 
@@ -78,7 +77,7 @@ namespace carla_osi {
 
 		std::unique_ptr<osi3::Identifier> getOSIActorId(carla::SharedPtr<const carla::client::Actor> actor);
 		std::unique_ptr<osi3::Identifier> getOSITrafficLightId(carla::SharedPtr<const carla::client::TrafficLight> trafficLight, const int index);
-		std::unique_ptr<osi3::Identifier> getOSIEnvironmentObjectId(const carla::rpc::StationaryMapObject& object);
+		std::unique_ptr<osi3::Identifier> getOSIEnvironmentObjectId(const carla::rpc::EnvironmentObject& object);
 		std::unique_ptr<osi3::Identifier> getOSIJunctionId(carla::SharedPtr<const carla::client::Junction> junction);
 		std::unique_ptr<osi3::Identifier> getOSIWaypointId(carla::SharedPtr<const carla::client::Waypoint> waypoint);
 		// same as above, but mark as inner or outer boundary id (second argument)

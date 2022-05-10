@@ -12,12 +12,8 @@ endif(NOT COMMAND FetchContent_Declare)
 # LibCarla itself
 FetchContent_Declare(
   LibCarla_client
-  # original repository
   GIT_REPOSITORY https://github.com/carla-simulator/carla.git
-  # forked repository with OSI-specific additions for SETLevel4to5
-  #GIT_REPOSITORY https://gitlab.dlr.de/setlevel/carla-osi.git
-  # Branch or tag to checkout, e.g. 0.9.10.1 or master
-  GIT_TAG 0.9.11 # OSI-specific branch in fork
+  GIT_TAG dev
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla
