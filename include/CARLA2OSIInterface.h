@@ -133,6 +133,8 @@ class CARLA2OSIInterface
 	float deltaSeconds;
 	//Timestamps for dynamic step size sync mode
 	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
+	//settings are applied for 1 day
+	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
 public:
 	// Parameters set by runtime

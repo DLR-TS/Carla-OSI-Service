@@ -43,7 +43,7 @@ double CARLA2OSIInterface::doStep() {
 
 		auto settings = world->GetSettings();
 		settings.fixed_delta_seconds = elapsed_seconds.count();
-		this->world->ApplySettings(settings);
+		this->world->ApplySettings(settings, settingsDuration);
 	}
 
 	//tick not needed if in asynchronous mode
@@ -135,13 +135,13 @@ void CARLA2OSIInterface::applyWorldSettings() {
 	}
 	settings.fixed_delta_seconds = deltaSeconds;
 	settings.synchronous_mode = true;
-	this->world->ApplySettings(settings);
+	this->world->ApplySettings(settings, settingsDuration);
 }
 
 void CARLA2OSIInterface::resetWorldSettings() {
 	auto settings = world->GetSettings();
 	settings.synchronous_mode = false;
-	this->world->ApplySettings(settings);
+	this->world->ApplySettings(settings, settingsDuration);
 }
 
 std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)

@@ -13,12 +13,11 @@ endif(NOT COMMAND FetchContent_Declare)
 FetchContent_Declare(
   LibCarla_client
   # original repository
-  #GIT_REPOSITORY https://github.com/carla-simulator/carla.git
+  GIT_REPOSITORY https://github.com/carla-simulator/carla.git
   # forked repository with OSI-specific additions for SETLevel4to5
-  #GIT_REPOSITORY git@gitlab.dlr.de:setlevel4to5/carla-osi.git
-  GIT_REPOSITORY https://gitlab.dlr.de/setlevel4to5/carla-osi.git
+  #GIT_REPOSITORY https://gitlab.dlr.de/setlevel/carla-osi.git
   # Branch or tag to checkout, e.g. 0.9.10.1 or master
-  GIT_TAG carla-osi-0.9.10 # OSI-specific branch in fork
+  GIT_TAG 0.9.11 # OSI-specific branch in fork
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
   PREFIX lib/Carla
