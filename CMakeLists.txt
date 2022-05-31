@@ -45,7 +45,7 @@ include(${CMAKE_BINARY_DIR}/conan.cmake REQUIRED)
 conan_check(VERSION 1.29.0)
 
 # get dependencies distributed as conan packages
-conan_cmake_run(CONANFILE conanfile.txt 
+conan_cmake_run(CONANFILE conanfile.txt
                 BASIC_SETUP CMAKE_TARGETS
                 BUILD outdated)# option 'outdated' not only builds missing packages as does 'missing', but also packages with a newer recipe revision
 
@@ -124,7 +124,7 @@ set(COSIMA_GRPC_PROTO_FILES
 )
 add_library(CARLA_OSI_gRPC_Lib ${COSIMA_GRPC_PROTO_FILES})
 generate_grpc_cpp(TARGET CARLA_OSI_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR})
-target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC grpc++)
+target_link_libraries(CARLA_OSI_gRPC_Lib PUBLIC grpc++ grpc++_reflection)
 target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
 # receiver for ScenarioRunner TrafficCommands
@@ -133,7 +133,7 @@ set(SCENARIO_RUNNER_TRAFFIC_COMMAND_PROTO_FILES
 )
 add_library(CARLA_OSI_ScenarioRunner_gRPC_Lib ${SCENARIO_RUNNER_TRAFFIC_COMMAND_PROTO_FILES})
 generate_grpc_cpp(TARGET CARLA_OSI_ScenarioRunner_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR})
-target_link_libraries(CARLA_OSI_ScenarioRunner_gRPC_Lib PUBLIC grpc++)
+target_link_libraries(CARLA_OSI_ScenarioRunner_gRPC_Lib PUBLIC grpc++ grpc++_reflection)
 target_include_directories(CARLA_OSI_ScenarioRunner_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
 # CALRA_OSI_gRPC_Lib depends on OSI because it reuses some messages as submessage (at least for sensor mounting positions)
