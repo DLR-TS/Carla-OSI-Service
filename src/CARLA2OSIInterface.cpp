@@ -199,13 +199,129 @@ osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 	return osiTime;
 }
 
+void CARLA2OSIInterface::parseEnvironmentObjects() {
+
+	struct CityObjectLabel{
+		bool None = false;
+		bool Buildings = false;
+		bool Fences = false;
+		bool Other = false;
+		//bool Pedestrians = false; no static object
+		bool Poles = false;
+		bool RoadLines = false;
+		bool Roads = false;
+		bool Sidewalks = false;
+		bool TrafficSigns = false;
+		bool Vegetation = false;
+		//bool Vehicles = false; no static object
+		bool Walls = false;
+		//bool Sky = false;
+		bool Ground = false;
+		bool Bridge = false;
+		bool RailTrack = false;
+		bool GuardRail = false;
+		bool TrafficLight = false;
+		bool Static = false;
+		//bool Dynamic = false;
+		bool Water = false;
+		bool Terrain = false;
+		bool Any = false;
+	} options;
+
+	staticMapTruth = std::make_unique<osi3::GroundTruth>();
+	std::vector<carla::rpc::EnvironmentObject> props{};
+
+	if (options.None) {
+		return;
+	}
+	if (options.Any) {
+		props = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
+		return;
+	}
+	//specialized types
+	//carla::rpc::CityObjectLabel::Pedestrians is not a static object
+	//carla::rpc::CityObjectLabel::TrafficSigns is handled at an other point
+	//carla::rpc::CityObjectLabel::Vehicle is not a static object
+	//carla::rpc::CityObjectLabel::Sky is not a static object
+	//carla::rpc::CityObjectLabel::TrafficLight is handled at an other point
+	//carla::rpc::CityObjectLabel::Dynamic is not a static object
+
+	if (options.Buildings) //Buildings:
+	{
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Buildings);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Fences) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Fences);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Other) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Other);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Poles) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Poles);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.RoadLines) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RoadLines);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Roads) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Roads);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Sidewalks) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Sidewalks);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Vegetation) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Vegetation);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Walls) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Walls);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Ground) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Ground);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Bridge) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Bridge);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.RailTrack) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RailTrack);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.GuardRail) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::GuardRail);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Static) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Static);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Water) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+	if (options.Terrain) {
+		auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
+		props.insert(props.end(), buildings.begin(), buildings.end());
+	}
+
+	//parse
+}
+
 void CARLA2OSIInterface::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 
-//	const carla::road::Map& roadMap = map->GetMap();
+	const carla::road::Map& roadMap = map->GetMap();
 
-	//staticMapTruth->set_map_reference(map->GetName());
+	staticMapTruth->set_map_reference(map->GetName());
 
 	// parse OpenDRIVE for retrieving information dropped in Carla
 	//auto result = xodr.load_string(map->GetOpenDrive().c_str());
@@ -214,17 +330,16 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	//TODO parse map parts that won't change during simulation
 
 	// Static props apparently aren't part of the actor list, so this list is empty
-	auto staticProps = world->GetActors()->Filter("static.prop.*");
-	auto props = world->GetEnvironmentObjects(0xFF);
-
-	for (auto& prop : props) {
-		stationaryObjects->AddAllocated(CarlaUtility::toOSI(carla::MakeShared<const carla::rpc::EnvironmentObject>(prop), world->GetActor(prop.id)->GetTypeId()));
-	}
+	//auto props = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
+	//
+	//for (auto& prop : props) {
+	//	stationaryObjects->AddAllocated(CarlaUtility::toOSI(carla::MakeShared<const carla::rpc::EnvironmentObject>(prop), world->GetActor(prop.id)->GetTypeId()));
+	//}
 	//TODO maybe parse Road Objects Record of OpenDrive file, if present - corresponds to OSI's StationaryObject
 
 //	std::vector<carla::rpc::StationaryMapObject> roadMarkings;
 
-	auto stationaryMapObjects = world->GetEnvironmentObjects(0xFF);//0xFF = any
+	auto stationaryMapObjects = world->GetEnvironmentObjects(0xFF);
 	for (auto& mapObject : stationaryMapObjects) {
 
 		//do not parse the CameraActor spawned by Carla and all actors containing Planes

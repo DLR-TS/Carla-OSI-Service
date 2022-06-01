@@ -228,6 +228,8 @@ public:
 	// prepare a GroundTruth object with values from the current map which won't change 
 	void parseStationaryMapObjects();
 
+	void parseEnvironmentObjects();
+
 	/**
 	Retruns the stepsize.
 	\return step size
