@@ -5,6 +5,7 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 	if (server)
 		server->Shutdown(std::chrono::system_clock::now() + transaction_timeout);
 	grpc::ServerBuilder builder;
+	grpc::reflection::InitProtoReflectionServerBuilderPlugin();
 	builder.AddListeningPort(runtimeParameter.serverAddress, grpc::InsecureServerCredentials());
 	builder.RegisterService(static_cast<CoSiMa::rpc::BaseInterface::Service*>(this));
 	builder.RegisterService(static_cast<CoSiMa::rpc::CARLAInterface::Service*>(this));

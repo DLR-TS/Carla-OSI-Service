@@ -24,6 +24,7 @@
 #include <grpcpp/server_builder.h>
 #include <grpcpp/server_context.h>
 #include <grpcpp/security/server_credentials.h>
+#include <grpcpp/ext/proto_server_reflection_plugin.h>
 
 #include "grpc_proto_files/base_interface/BaseInterface.grpc.pb.h"
 #include "grpc_proto_files/base_interface/BaseInterface.pb.h"
