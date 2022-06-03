@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.12)
 include(FetchContent)
 
+file(READ ${PROJECT_SOURCE_DIR}/.TOKEN ACCESS_TOKEN_GITLAB)
+string(REGEX REPLACE "\n$" "" ACCESS_TOKEN_GITLAB_STRIPPED ${ACCESS_TOKEN_GITLAB})
+
 FetchContent_Declare(
   osi
-  GIT_REPOSITORY https://gitlab.setlevel.de/deliverables/architecture/open-simulation-interface.git
+  GIT_REPOSITORY https://${ACCESS_TOKEN_GITLAB_STRIPPED}@gitlab.setlevel.de/deliverables/architecture/open-simulation-interface.git
   GIT_TAG "sl45/v3.2.2"
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE

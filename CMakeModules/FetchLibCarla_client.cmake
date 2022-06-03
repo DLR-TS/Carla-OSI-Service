@@ -8,6 +8,8 @@ if(NOT COMMAND FetchContent_Declare)
 	include(FetchContent)
 endif(NOT COMMAND FetchContent_Declare)
 
+file(READ ${PROJECT_SOURCE_DIR}/.TOKEN ACCESS_TOKEN_GITLAB)
+string(REGEX REPLACE "\n$" "" ACCESS_TOKEN_GITLAB_STRIPPED ${ACCESS_TOKEN_GITLAB})
 
 # LibCarla itself
 FetchContent_Declare(
@@ -16,7 +18,7 @@ FetchContent_Declare(
   #GIT_REPOSITORY https://github.com/carla-simulator/carla.git
   # forked repository with OSI-specific additions for SETLevel4to5
   #GIT_REPOSITORY git@gitlab.dlr.de:setlevel4to5/carla-osi.git
-  GIT_REPOSITORY https://gitlab.dlr.de/setlevel4to5/carla-osi.git
+  GIT_REPOSITORY https://${ACCESS_TOKEN_GITLAB_STRIPPED}@gitlab.setlevel.de/deliverables/tool-implementations/researchimplementation/carla-osi.git
   # Branch or tag to checkout, e.g. 0.9.10.1 or master
   GIT_TAG carla-osi-0.9.10 # OSI-specific branch in fork
   GIT_SHALLOW TRUE

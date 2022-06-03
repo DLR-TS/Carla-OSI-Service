@@ -2,7 +2,19 @@
 
 A client service for CARLA simulator. Translates World and sensor outputs into OSI messages
 
+# docker build
+
+Create personal access token (PAT) in GitLab.
+Create .TOKEN file in project root.
+
+Paste PAT in file: \<username\>:\<accesstoken\>
+
+```sh
+ docker build -t setlevel:carlaosiservice .
+```
+
 # manual build
+
 in root folder:
 ```sh
  mkdir build && cd build
