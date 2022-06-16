@@ -1,19 +1,19 @@
-# CARLA OSI Service for SETLevel
+# CARLA OSI Service
 
-A client service for CARLA simulator. Translates World and sensor outputs into OSI messages
+A client service for CARLA simulator.\
+Translates world into Ground Truth OSI message and updates traffic participants by TrafficUpdate OSI Message.\
+Synchronizes with Carla Scenario Runner (SETLevel version).\
+Is used by CoSiMa as a base simulator.\
+Many different configurations are available through runtime parameters. Use -h or --help for details.
 
-# docker build
+# Installation Guide
 
-Create personal access token (PAT) in GitLab.
-Create .TOKEN file in project root.
+preparations:
+install (conan.io)[conan.io]
 
-Paste PAT in file: \<username\>:\<accesstoken\>
+add conan.exe to PATH environment variable
 
-```sh
- docker build -t setlevel:carlaosiservice .
-```
-
-# manual build
+## Linux
 
 in root folder:
 ```sh
@@ -22,23 +22,33 @@ in root folder:
  cmake --build . --target CARLA_OSI_Service
 ```
 
-## Installation Guide
+## Docker
 
-preparations:
-install (conan.io)[conan.io]
+Create personal access token (PAT) for gitlab.setlevel.de.
+Create .TOKEN file in project root.
 
-add conan.exe to PATH environment variable
+Paste PAT in file: \<username\>:\<accesstoken\>
 
-use cmake for project generation
+```sh
+ docker build -t setlevel:carlaosiservice .
+```
 
-# CMake FetchContent Overrides
-Some dependencies are retrieved using CMake's FetchContent Module. To override their source in your local repository, create a file named 'CMake_FetchContent_Overrides.cmake' and use the FetchContent_declare() to declare your desired replacement. The will be included by the root CmakeLists.txt file. CMake_FetchContent_Overrides.cmake is ignored and thus will not be added to the global repository
+## Windows with MSVC 2017
 
-## Used Libraries
+Open the folder in Visual Studio and use the cmake integration.
 
-carla 0.9.10
-catch2
-cmake-conan 0.15
+## CMake FetchContent Overrides
+
+Some dependencies are retrieved using CMake's FetchContent Module.
+To override their source in your local repository, create a file named 'CMake_FetchContent_Overrides.cmake' and use the FetchContent_declare() to declare your desired replacement.
+They will be included by the root CmakeLists.txt file.
+CMake_FetchContent_Overrides.cmake is ignored and thus will not be added to the global repository.
+
+# Used Libraries
+
+carla 0.9.10\
+catch2\
+cmake-conan 0.15\
 open-simulation-interface
 
 ## Fix for Waypoint.cpp error
