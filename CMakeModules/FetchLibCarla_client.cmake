@@ -8,8 +8,13 @@ if(NOT COMMAND FetchContent_Declare)
 	include(FetchContent)
 endif(NOT COMMAND FetchContent_Declare)
 
-file(READ ${PROJECT_SOURCE_DIR}/.TOKEN ACCESS_TOKEN_GITLAB)
-string(REGEX REPLACE "\n$" "" ACCESS_TOKEN_GITLAB_STRIPPED ${ACCESS_TOKEN_GITLAB})
+if (EXISTS ${PROJECT_SOURCE_DIR}/.TOKEN)
+    file(READ ${PROJECT_SOURCE_DIR}/.TOKEN ACCESS_TOKEN_GITLAB)
+    string(REGEX REPLACE "\n$" "" ACCESS_TOKEN_GITLAB_STRIPPED ${ACCESS_TOKEN_GITLAB})
+else()
+    message(No .TOKEN file found!)
+    set(ACCESS_TOKEN_GITLAB_STRIPPED "")
+endif()
 
 # LibCarla itself
 FetchContent_Declare(
