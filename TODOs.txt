@@ -1,4 +1,0 @@
-carla-osi-lib:
-~ dimension and type of stationary objects (props in carla don't report a bounding box, related issues: https://github.com/carla-simulator/carla/issues/3186, https://github.com/carla-simulator/carla/issues/3025 and https://github.com/carla-simulator/carla/issues/1766)
-~ differentiation of vehicle types for vehicle_classification.type currently uses type MEDIUM_CAR for everything except for 2 wheeled vehicles because CARLA does not discern vehicles as detailed as OSI
-~ BaseStationary.dimension as part of TrafficLight or TrafficSign should only describe the signal/sign itself. Other parts, for example the pole of a traffic sign, need to be described as StationaryObject. Models in CARLA describe traffic signs and lights with a single mesh and their bounding box is unrelated, describing the trigger box instead.
