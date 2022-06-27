@@ -14,6 +14,8 @@
 #include <osi_lane.pb.h>
 #include <osi_roadmarking.pb.h>
 
+#include "carla_osi/Identifiers.h"
+
 namespace carla_osi::lanes {
 
 	google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> GetOSILanePairings(

@@ -1,7 +1,5 @@
 #include "carla_osi/Lanes.h"
 
-#include "carla_osi/Identifiers.h"
-
 google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> carla_osi::lanes::GetOSILanePairings(
 	const carla::road::Map& roadMap, const carla::road::element::Waypoint& roadStart, const carla::road::element::Waypoint& roadEnd)
 {

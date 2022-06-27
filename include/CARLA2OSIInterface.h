@@ -87,21 +87,6 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-struct RuntimeParameter {
-	bool sync = true;
-	bool verbose = false;
-	bool scenarioRunnerDoesTick = false;
-	bool staticObjectsInGroundTruthMessage = true;
-	bool dynamicTimestamps = false;
-	bool filter = false;
-	std::string filterString = "";
-	bool log = false;
-	std::string logFileName = "";
-	int resumeCarlaAsyncSeconds = 0;
-	bool carlaSensors = false;
-	//Server address deliberately chosen to accept any connection
-	std::string serverAddress = "0.0.0.0:51425";
-};
 
 struct CityObjectLabel {
 	bool None = false;
@@ -128,6 +113,24 @@ struct CityObjectLabel {
 	bool Water = false;
 	bool Terrain = false;
 	bool Any = false;
+};
+
+struct RuntimeParameter {
+	bool sync = true;
+	bool verbose = false;
+	bool scenarioRunnerDoesTick = false;
+	bool staticObjectsInGroundTruthMessage = true;
+	bool dynamicTimestamps = false;
+	bool filter = false;
+	std::string filterString = "";
+	bool log = false;
+	std::string logFileName = "";
+	int resumeCarlaAsyncSeconds = 0;
+	bool carlaSensors = false;
+	//Server address deliberately chosen to accept any connection
+	std::string serverAddress = "0.0.0.0:51425";
+	//parsing options
+	CityObjectLabel options;
 };
 
 class CARLA2OSIInterface
@@ -161,8 +164,6 @@ class CARLA2OSIInterface
 	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
-	//parsing options
-	CityObjectLabel options;
 
 public:
 	// Parameters set by runtime
@@ -257,7 +258,7 @@ public:
 	// prepare a GroundTruth object with values from the current map which won't change 
 	void parseStationaryMapObjects();
 
-	void parseEnvironmentObjects();
+	std::vector<carla::rpc::EnvironmentObject> filterEnvironmentObjects();
 
 	/**
 	Retruns the stepsize.

@@ -26,11 +26,20 @@
 #include <carla/geom/Transform.h>
 #include <carla/geom/Vector3D.h>
 #include <carla/geom/Vector2D.h>
+#include "carla/image/ImageView.h"
 #include <carla/road/RoadTypes.h>
 #include <carla/rpc/VehicleLightState.h>
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
+
+#include "carla_osi/Geometry.h"
+#include "carla_osi/Identifiers.h"
+#include "carla_osi/TrafficSignals.h"
+
+#include "boost/gil.hpp"
+#include "boost/gil/io/write_view.hpp"
+#include "boost/gil/extension/io/png.hpp"
 
 //#include "pugixml.hpp"
 
@@ -59,12 +68,10 @@
 #include "osi_trafficsign.pb.h"
 //#include "osi_version.pb.h"
 
-//TODO no object needed => no class needed, but we also don't want to use namespaces...
-//class CarlaUtility {
 namespace CarlaUtility {
 
 	// Only specialized actors have a bounding box, therefore it has to be passed as additional argument
-	osi3::StationaryObject* toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference);
+	osi3::StationaryObject* toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference, bool verbose);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Walker> walker);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> vehicle);

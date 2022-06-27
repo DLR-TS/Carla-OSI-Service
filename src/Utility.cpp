@@ -1,26 +1,77 @@
 #include "Utility.h"
 
-#include "carla_osi/Geometry.h"
-#include "carla_osi/Identifiers.h"
-#include "carla_osi/TrafficSignals.h"
-
-#include "carla/image/ImageView.h"
-
-#include "boost/gil.hpp"
-#include "boost/gil/io/write_view.hpp"
-#include "boost/gil/extension/io/png.hpp"
-
-osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference) {
+osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference, bool verbose) {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
 	osi3::BaseStationary* base = prop->mutable_base();
 	osi3::StationaryObject_Classification* classification = prop->mutable_classification();
 
 	auto[dimension, position] = carla_osi::geometry::toOSI(environmentObject->bounding_box);
+	
+	if (!verbose && dimension->length() * dimension->width() * dimension->height() >= 1000) {
+		std::cout << "Large volume of stationary object detected. Name: " << environmentObject->name << std::endl;
+	}
+
+	if (verbose) {
+		std::cout << "OSI-Dimensions: " << dimension->length() << " " << dimension->width() << " " << dimension->height()
+			<< " OSI-Position: " << environmentObject->transform.location.x << " " << environmentObject->transform.location.y << " " << environmentObject->transform.location.z
+			<< " OSI-Rotation: " << environmentObject->transform.rotation.roll << " " << environmentObject->transform.rotation.pitch << " " << environmentObject->transform.rotation.yaw
+			<< " Name: " << environmentObject->name
+			<< std::endl;
+	}
+
 	base->set_allocated_dimension(dimension.release());
 	base->set_allocated_position(carla_osi::geometry::toOSI(environmentObject->transform.location).release());
 	base->set_allocated_orientation(carla_osi::geometry::toOSI(environmentObject->transform.rotation).release());
 
-	classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
+	switch (environmentObject->type)
+	{
+	default:
+		//will be set to other if no other tag is available
+	case carla::rpc::CityObjectLabel::Pedestrians:
+	case carla::rpc::CityObjectLabel::RoadLines://road line
+	case carla::rpc::CityObjectLabel::Roads://road
+	case carla::rpc::CityObjectLabel::Sidewalks://sidewalks, also includes a possibly delimiting curb, traffic islands (the walkable part), and pedestrian zones
+	case carla::rpc::CityObjectLabel::Ground:
+	case carla::rpc::CityObjectLabel::Water:
+	case carla::rpc::CityObjectLabel::RailTrack:
+	case carla::rpc::CityObjectLabel::Static:
+	case carla::rpc::CityObjectLabel::Terrain://Grass, ground-level vegetation, soil or sand. These areas are not meant to be driven on. This label includes a possibly delimiting curb.
+		//std::cerr << "Encountered an unmappable stationary map object of value " << (int)mapObject.type << std::endl;
+		// no break by design
+	case carla::rpc::CityObjectLabel::Other://other
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_OTHER);
+		break;
+	case carla::rpc::CityObjectLabel::Buildings://buildings
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BUILDING);
+		break;
+	case carla::rpc::CityObjectLabel::Fences:
+	case carla::rpc::CityObjectLabel::GuardRail:
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BARRIER);
+		break;
+	case carla::rpc::CityObjectLabel::Poles://poles
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_POLE);
+		break;
+	case carla::rpc::CityObjectLabel::Vegetation://vegetation, also includes trees (cannot differentiate from StationaryObject_Classification_Type_TYPE_VEGETATION)
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_VEGETATION);
+		break;
+	case carla::rpc::CityObjectLabel::Walls://walls
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_WALL);
+		break;
+	case carla::rpc::CityObjectLabel::Bridge:
+		classification->set_type(osi3::StationaryObject_Classification_Type_TYPE_BRIDGE);
+		break;
+	case carla::rpc::CityObjectLabel::None://should have no collision, also should not be returned as part of stationaryObject
+	case carla::rpc::CityObjectLabel::Sky:
+		//unmapped
+		break;
+	case carla::rpc::CityObjectLabel::Dynamic://should be parsed as osi3::MovingObject
+	case carla::rpc::CityObjectLabel::Vehicles://vehicles should be mapped to osi3::MovingObject, even though the corresponding StationaryObject returned by Carla will never move
+	case carla::rpc::CityObjectLabel::TrafficSigns://traffic signs without their poles are part of osi3::TrafficSign
+	case carla::rpc::CityObjectLabel::TrafficLight://traffic light boxes without their poles are part of osi3::TrafficLight
+		//TODO Parse as respective Type (see previous comments)
+		break;
+	}
+
 	prop->set_allocated_id(carla_osi::id_mapping::toOSI(environmentObject->id).release());
 	
 	prop->set_model_reference(model_reference);
