@@ -3,7 +3,7 @@
 int main(int argc, char *argv[])
 {
 	std::cout << "Welcome to CARLA-OSI client\n" <<
-		"Compiled for Carla OSI Version 0.9.10\n" << std::endl;
+		"Compiled for Carla OSI Version 0.9.13\n" << std::endl;
 
 	std::cout << "Current directory: " << std::filesystem::current_path() << "\n" << std::endl;
 	RuntimeParameter runtimeParameter;

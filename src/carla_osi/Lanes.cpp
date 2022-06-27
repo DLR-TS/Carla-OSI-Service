@@ -20,6 +20,24 @@ google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> carl
 	return lanePairings;
 }
 
+google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> carla_osi::lanes::GetOSILanePairings(
+	const carla::road::Map& roadMap, const carla::traffic_manager::WaypointPtr& roadStart, const  carla::traffic_manager::WaypointPtr& roadEnd)
+{
+	google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> lanePairings;
+
+	//add antecesseor/successor pairs
+	for (const auto& inbound : roadStart->GetPrevious(10)) {
+		for (const auto& outbound : roadEnd->GetNext(10)) {
+			auto pair = lanePairings.Add();
+
+			pair->set_allocated_antecessor_lane_id(carla_osi::id_mapping::getOSIWaypointId(inbound).release());
+
+			pair->set_allocated_successor_lane_id(carla_osi::id_mapping::getOSIWaypointId(outbound).release());
+		}
+	}
+	return lanePairings;
+}
+
 std::pair<std::unique_ptr<osi3::LaneBoundary::Classification>, std::unique_ptr<osi3::LaneBoundary::Classification>>
 carla_osi::lanes::parseLaneBoundary(const carla::road::element::LaneMarking& laneMarking) {
 

@@ -103,6 +103,33 @@ struct RuntimeParameter {
 	std::string serverAddress = "0.0.0.0:51425";
 };
 
+struct CityObjectLabel {
+	bool None = false;
+	bool Buildings = false;
+	bool Fences = false;
+	bool Other = false;
+	//bool Pedestrians = false; no static object
+	bool Poles = false;
+	bool RoadLines = false;
+	bool Roads = false;
+	bool Sidewalks = false;
+	bool TrafficSigns = false;
+	bool Vegetation = false;
+	//bool Vehicles = false; no static object
+	bool Walls = false;
+	//bool Sky = false;
+	bool Ground = false;
+	bool Bridge = false;
+	bool RailTrack = false;
+	bool GuardRail = false;
+	bool TrafficLight = false;
+	bool Static = false;
+	//bool Dynamic = false;
+	bool Water = false;
+	bool Terrain = false;
+	bool Any = false;
+};
+
 class CARLA2OSIInterface
 {
 	typedef std::variant<std::shared_ptr<osi3::SensorView>, std::shared_ptr<osi3::FeatureData>, std::shared_ptr<osi3::TrafficCommand>> cachedOSIMessageType;
@@ -134,6 +161,8 @@ class CARLA2OSIInterface
 	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
+	//parsing options
+	CityObjectLabel options;
 
 public:
 	// Parameters set by runtime

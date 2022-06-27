@@ -47,6 +47,16 @@ std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIWaypointId(carla:
 	}
 }
 
+std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIWaypointId(carla::SharedPtr<const carla::traffic_manager::WaypointPtr> waypoint)
+{
+	if (waypoint.get()->get()->IsJunction()) {
+		return toOSI(waypoint.get()->get()->GetJunctionId(), carla_osi::id_mapping::CarlaUniqueID_e::JuncID);
+	}
+	else {
+		return toOSI(waypoint.get()->get()->GetRoadId(), waypoint->get()->GetLaneId(), waypoint->get()->GetSectionId(), RoadIDLaneID);
+	}
+}
+
 std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIWaypointBoundaryId(carla::SharedPtr<const carla::client::Waypoint> waypoint, const carla_osi::id_mapping::RoadIDType_e type)
 {
 	if (carla_osi::id_mapping::RoadIDType_e::LaneIDSectionID == type) {
@@ -68,7 +78,6 @@ std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIWaypointId(const 
 			waypoint.lane_id, waypoint.section_id, carla_osi::id_mapping::RoadIDLaneID);
 	}
 }
-
 
 std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::toOSI(const uint32_t id, carla_osi::id_mapping::CarlaUniqueID_e type)
 {

@@ -201,34 +201,6 @@ osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 
 void CARLA2OSIInterface::parseEnvironmentObjects() {
 
-	struct CityObjectLabel{
-		bool None = false;
-		bool Buildings = false;
-		bool Fences = false;
-		bool Other = false;
-		//bool Pedestrians = false; no static object
-		bool Poles = false;
-		bool RoadLines = false;
-		bool Roads = false;
-		bool Sidewalks = false;
-		bool TrafficSigns = false;
-		bool Vegetation = false;
-		//bool Vehicles = false; no static object
-		bool Walls = false;
-		//bool Sky = false;
-		bool Ground = false;
-		bool Bridge = false;
-		bool RailTrack = false;
-		bool GuardRail = false;
-		bool TrafficLight = false;
-		bool Static = false;
-		//bool Dynamic = false;
-		bool Water = false;
-		bool Terrain = false;
-		bool Any = false;
-	} options;
-
-	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 	std::vector<carla::rpc::EnvironmentObject> props{};
 
 	if (options.None) {
@@ -312,7 +284,8 @@ void CARLA2OSIInterface::parseEnvironmentObjects() {
 		props.insert(props.end(), buildings.begin(), buildings.end());
 	}
 
-	//parse
+	//parse to OSI
+	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 }
 
 void CARLA2OSIInterface::parseStationaryMapObjects()
@@ -462,7 +435,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
-/*	auto lanes = staticMapTruth->mutable_lane();
+	auto lanes = staticMapTruth->mutable_lane();
 	auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
 	auto topology = map->GetTopology();
 	lanes->Reserve(topology.size());
@@ -482,9 +455,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
 		auto&[endpoints, lane, boundaries] = tuple;
 		auto&[laneStart, laneEnd] = *endpoints;
-		// The same as laneStart, but represented as carla::road type
-		auto roadStart = laneStart->GetWaypoint();
-		auto roadEnd = laneEnd->GetWaypoint();
 		if (laneStart->IsJunction() && laneEnd->IsJunction()) {
 			auto junction = laneStart->GetJunction();
 
@@ -503,7 +473,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			for (const auto&[inbound, outbound] : waypoints) {
 				// OSI lane_pairing needs an antecessor/successor pair
 				auto pairs = carla_osi::lanes::GetOSILanePairings(roadMap,
-					inbound->GetWaypoint(), outbound->GetWaypoint());
+					inbound, outbound);
 				lanePairings->MergeFrom(pairs);
 			}
 
@@ -563,7 +533,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 			}
 
 			//add antecesseor/successor pairs
-			classification->mutable_lane_pairing()->MergeFrom(carla_osi::lanes::GetOSILanePairings(roadMap, roadStart, roadEnd));
+			classification->mutable_lane_pairing()->MergeFrom(carla_osi::lanes::GetOSILanePairings(roadMap, laneStart, laneEnd));
 
 			// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
 			// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
@@ -596,7 +566,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		//lanes->Add(std::move(lane));
 		lanes->AddAllocated(lane.release());
 	}
-	*/
+	
 	std::cout << "Finished parsing of topology" << std::endl;
 }
 

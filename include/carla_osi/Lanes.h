@@ -8,6 +8,7 @@
 #include <carla/client/Junction.h>
 #include <carla/client/Map.h>
 #include <carla/road/RoadTypes.h>
+#include <carla/trafficmanager/SimpleWaypoint.h>
 
 #include <osi_common.pb.h>
 #include <osi_lane.pb.h>
@@ -17,7 +18,9 @@ namespace carla_osi::lanes {
 
 	google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> GetOSILanePairings(
 		const carla::road::Map& roadMap, const carla::road::element::Waypoint& roadStart, const carla::road::element::Waypoint& roadEnd);
-
+	google::protobuf::RepeatedPtrField<osi3::Lane::Classification::LanePairing> GetOSILanePairings(
+		const carla::road::Map& roadMap, const carla::traffic_manager::WaypointPtr& roadStart, const carla::traffic_manager::WaypointPtr& roadEnd);
+	
 	/*
 	parsing from carla roadmarking to osi laneboundary
 
