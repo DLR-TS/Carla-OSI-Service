@@ -327,147 +327,149 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
-	auto lanes = staticMapTruth->mutable_lane();
-	auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
-	auto topology = map->GetTopology();
-	lanes->Reserve(topology.size());
-	std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
+	if (!runtimeParameter.noMapNetworkInGroundTruth) {
+		auto lanes = staticMapTruth->mutable_lane();
+		auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
+		auto topology = map->GetTopology();
+		lanes->Reserve(topology.size());
+		std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
 
-	// use a vector as replacement for a python-zip-like view, as boost::combine() (boost version 1.72) cannot
-	// be used with execution policies and ranges-v3 (with similar ranges::views::zip) requires at least 
-	// Visual Studio 2019 on Windows
-	using zip_type = std::vector<std::tuple<carla::client::Map::TopologyList::value_type*, std::unique_ptr<osi3::Lane>, google::protobuf::RepeatedPtrField<osi3::LaneBoundary>>>;
-	zip_type combined(topology.size());
-	for (size_t i = 0; i < topology.size(); i++) {
-		std::get<0>(combined[i]) = &topology[i];
-		std::get<1>(combined[i]) = std::make_unique<osi3::Lane>();
-	}
-
-	const carla::road::Map& roadMap = map->GetMap();
-
-	// execute in parallel to increase performance for large maps
-	std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
-		auto&[endpoints, lane, boundaries] = tuple;
-		auto&[laneStart, laneEnd] = *endpoints;
-		if (laneStart->IsJunction() && laneEnd->IsJunction()) {
-			auto junction = laneStart->GetJunction();
-
-			// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
-			// => store all lanes that form this junction
-			// TODO find and parse all free lane boundaries for this junction
-
-			lane->set_allocated_id(carla_osi::id_mapping::getOSIJunctionId(junction).release());
-
-			auto classification = lane->mutable_classification();
-			classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
-
-			auto waypoints = junction->GetWaypoints();
-			auto lanePairings = classification->mutable_lane_pairing();
-			lanePairings->Reserve(waypoints.size());
-			for (const auto&[inbound, outbound] : waypoints) {
-				// OSI lane_pairing needs an antecessor/successor pair
-				auto pairs = carla_osi::lanes::GetOSILanePairings(roadMap,
-					inbound, outbound);
-				lanePairings->MergeFrom(pairs);
-			}
-
+		// use a vector as replacement for a python-zip-like view, as boost::combine() (boost version 1.72) cannot
+		// be used with execution policies and ranges-v3 (with similar ranges::views::zip) requires at least 
+		// Visual Studio 2019 on Windows
+		using zip_type = std::vector<std::tuple<carla::client::Map::TopologyList::value_type*, std::unique_ptr<osi3::Lane>, google::protobuf::RepeatedPtrField<osi3::LaneBoundary>>>;
+		zip_type combined(topology.size());
+		for (size_t i = 0; i < topology.size(); i++) {
+			std::get<0>(combined[i]) = &topology[i];
+			std::get<1>(combined[i]) = std::make_unique<osi3::Lane>();
 		}
-		else {
-			// A lane that is not a junction. Waypoints of endpoint pair map to a OSI lane
-			//auto lane = lanes->Add();
-			auto roadId = laneStart->GetRoadId();
-			auto laneId = laneStart->GetLaneId();
-			auto sectionId = laneStart->GetSectionId();
-			lane->set_allocated_id(carla_osi::id_mapping::getOSIWaypointId(laneStart).release());
 
-			auto classification = lane->mutable_classification();
+		const carla::road::Map& roadMap = map->GetMap();
 
-			if (carla::road::Lane::LaneType::Driving == laneStart->GetType()) {
-				// centerline is only defined for lanes of type driving, except for junctions
-				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_DRIVING);
+		// execute in parallel to increase performance for large maps
+		std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
+			auto&[endpoints, lane, boundaries] = tuple;
+			auto&[laneStart, laneEnd] = *endpoints;
+			if (laneStart->IsJunction() && laneEnd->IsJunction()) {
+				auto junction = laneStart->GetJunction();
 
-				//get all waypoints until the lane's end, approximately 10cm apart. osi3::Lane::Classification expects its centerline have a deviation of at most 5cm when followed linearly
-				//TOCHECK Optimization reduce number of waypoints - especially straight segments offer a more sparse representation
-				auto waypoints = laneStart->GetNextUntilLaneEnd(0.1f);
-				if (waypoints.size()) {
-					classification->set_centerline_is_driving_direction(true);
-				}
-				else {
-					// laneStart was not the start point (?)
-					waypoints = laneEnd->GetNextUntilLaneEnd(0.1f);
-					//DEBUG
-					std::cout << __FUNCTION__ << " DEBUG: Encountered a lane defined in reversed direction" << std::endl;
-					classification->set_centerline_is_driving_direction(false);
+				// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+				// => store all lanes that form this junction
+				// TODO find and parse all free lane boundaries for this junction
 
-					////switch endpoints so we don't have to test the direction again
-					//auto tmp = laneStart;
-					//laneStart = laneEnd;
-					//laneEnd = tmp;
-				}
-				//translate waypoints to OSI centerline
-				auto centerline = classification->mutable_centerline();
-				centerline->Reserve(waypoints.size());
-				for (const auto& waypoint : waypoints) {
-					auto location = waypoint->GetTransform().location;
-					centerline->AddAllocated(carla_osi::geometry::toOSI(location).release());
+				lane->set_allocated_id(carla_osi::id_mapping::getOSIJunctionId(junction).release());
+
+				auto classification = lane->mutable_classification();
+				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION);
+
+				auto waypoints = junction->GetWaypoints();
+				auto lanePairings = classification->mutable_lane_pairing();
+				lanePairings->Reserve(waypoints.size());
+				for (const auto&[inbound, outbound] : waypoints) {
+					// OSI lane_pairing needs an antecessor/successor pair
+					auto pairs = carla_osi::lanes::GetOSILanePairings(roadMap,
+						inbound, outbound);
+					lanePairings->MergeFrom(pairs);
 				}
 
-				//add left neighbouring lane
-				for (auto& neighbouringLane : { laneStart->GetLeft() }) {
-					if (neighbouringLane) {
-						classification->mutable_left_adjacent_lane_id()->AddAllocated(
-							carla_osi::id_mapping::getOSIWaypointId(neighbouringLane).release());
-					}
-				}
-				//add right neighbouring lane
-				for (auto& neighbouringLane : { laneStart->GetRight() }) {
-					if (neighbouringLane) {
-						classification->mutable_right_adjacent_lane_id()->AddAllocated(
-							carla_osi::id_mapping::getOSIWaypointId(neighbouringLane).release());
-					}
-				}
 			}
 			else {
-				// A NonDriving lane. Intersections and Driving have already been handled
-				classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_NONDRIVING);
-			}
+				// A lane that is not a junction. Waypoints of endpoint pair map to a OSI lane
+				//auto lane = lanes->Add();
+				auto roadId = laneStart->GetRoadId();
+				auto laneId = laneStart->GetLaneId();
+				auto sectionId = laneStart->GetSectionId();
+				lane->set_allocated_id(carla_osi::id_mapping::getOSIWaypointId(laneStart).release());
 
-			//add antecesseor/successor pairs
-			classification->mutable_lane_pairing()->MergeFrom(carla_osi::lanes::GetOSILanePairings(roadMap, laneStart, laneEnd));
+				auto classification = lane->mutable_classification();
 
-			// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
-			// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
-			// cases, each lane will define its own side of the lane boundary.
-			auto boundary = carla_osi::lanes::parseLaneBoundary(*endpoints);
-			auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = boundary;
-			if (0 < left_lane_boundary_id) {
-				classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
+				if (carla::road::Lane::LaneType::Driving == laneStart->GetType()) {
+					// centerline is only defined for lanes of type driving, except for junctions
+					classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_DRIVING);
+
+					//get all waypoints until the lane's end, approximately 10cm apart. osi3::Lane::Classification expects its centerline have a deviation of at most 5cm when followed linearly
+					//TOCHECK Optimization reduce number of waypoints - especially straight segments offer a more sparse representation
+					auto waypoints = laneStart->GetNextUntilLaneEnd(0.1f);
+					if (waypoints.size()) {
+						classification->set_centerline_is_driving_direction(true);
+					}
+					else {
+						// laneStart was not the start point (?)
+						waypoints = laneEnd->GetNextUntilLaneEnd(0.1f);
+						//DEBUG
+						std::cout << __FUNCTION__ << " DEBUG: Encountered a lane defined in reversed direction" << std::endl;
+						classification->set_centerline_is_driving_direction(false);
+
+						////switch endpoints so we don't have to test the direction again
+						//auto tmp = laneStart;
+						//laneStart = laneEnd;
+						//laneEnd = tmp;
+					}
+					//translate waypoints to OSI centerline
+					auto centerline = classification->mutable_centerline();
+					centerline->Reserve(waypoints.size());
+					for (const auto& waypoint : waypoints) {
+						auto location = waypoint->GetTransform().location;
+						centerline->AddAllocated(carla_osi::geometry::toOSI(location).release());
+					}
+
+					//add left neighbouring lane
+					for (auto& neighbouringLane : { laneStart->GetLeft() }) {
+						if (neighbouringLane) {
+							classification->mutable_left_adjacent_lane_id()->AddAllocated(
+								carla_osi::id_mapping::getOSIWaypointId(neighbouringLane).release());
+						}
+					}
+					//add right neighbouring lane
+					for (auto& neighbouringLane : { laneStart->GetRight() }) {
+						if (neighbouringLane) {
+							classification->mutable_right_adjacent_lane_id()->AddAllocated(
+								carla_osi::id_mapping::getOSIWaypointId(neighbouringLane).release());
+						}
+					}
+				}
+				else {
+					// A NonDriving lane. Intersections and Driving have already been handled
+					classification->set_type(osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_NONDRIVING);
+				}
+
+				//add antecesseor/successor pairs
+				classification->mutable_lane_pairing()->MergeFrom(carla_osi::lanes::GetOSILanePairings(roadMap, laneStart, laneEnd));
+
+				// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
+				// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
+				// cases, each lane will define its own side of the lane boundary.
+				auto boundary = carla_osi::lanes::parseLaneBoundary(*endpoints);
+				auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = boundary;
+				if (0 < left_lane_boundary_id) {
+					classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
+				}
+				if (0 < right_lane_boundary_id) {
+					classification->add_right_lane_boundary_id()->set_value(right_lane_boundary_id);
+				}
+				boundaries.MergeFrom(parsedBoundaries);
 			}
-			if (0 < right_lane_boundary_id) {
-				classification->add_right_lane_boundary_id()->set_value(right_lane_boundary_id);
-			}
-			boundaries.MergeFrom(parsedBoundaries);
+			//TODO osi3::Lane::Classification::road_condition
 		}
-		//TODO osi3::Lane::Classification::road_condition
-	}
-	);
+		);
 
-	// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
-	// => remove duplicates
-	std::set<uint64_t> junctionIds;
-	for (auto& zipped : combined) {
-		auto&[_, lane, boundaries] = zipped;
-		if (osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION == lane->classification().type()) {
-			if (junctionIds.count(lane->id().value())) {
-				continue;
+		// OSI Junction have a different defintion, listing the lanes connected to the junction, but not the paths through the junction
+		// => remove duplicates
+		std::set<uint64_t> junctionIds;
+		for (auto& zipped : combined) {
+			auto&[_, lane, boundaries] = zipped;
+			if (osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION == lane->classification().type()) {
+				if (junctionIds.count(lane->id().value())) {
+					continue;
+				}
+				junctionIds.insert(lane->id().value());
 			}
-			junctionIds.insert(lane->id().value());
+			//lanes->Add(std::move(lane));
+			lanes->AddAllocated(lane.release());
 		}
-		//lanes->Add(std::move(lane));
-		lanes->AddAllocated(lane.release());
+		std::cout << "Finished parsing of topology" << std::endl;
 	}
-	
-	std::cout << "Finished parsing of topology" << std::endl;
+
 }
 
 std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()

@@ -131,6 +131,7 @@ struct RuntimeParameter {
 	std::string serverAddress = "0.0.0.0:51425";
 	//parsing options
 	CityObjectLabel options;
+	bool noMapNetworkInGroundTruth = false;
 };
 
 class CARLA2OSIInterface

@@ -75,12 +75,17 @@ int main(int argc, char *argv[])
 			if (cityObjectLabelFilter.find("Terrain") != std::string::npos) runtimeParameter.options.Terrain = true;
 			if (cityObjectLabelFilter.find("Any") != std::string::npos) runtimeParameter.options.Any = true;
 		}
+		else if (parameter == "-noMapNetwork"){
+			runtimeParameter.noMapNetworkInGroundTruth = true;
+			std::cout << "Run with no map network in ground truth messages.\n";
+		}
 		else if (parameter == "-h" || parameter == "--help") {
 			std::cout << "Normal options for Carla OSI Service:\n"
 				<< "-async            : simulator runs asynchronous\n"
 				<< "-d or -v          : verbose log\n"
 				<< "-sr               : connection with scenario runner\n"
 				<< "-log <path>       : log data in file: <path>\n"
+				<< "-noMapNetwork     : not fill lane, lane_boundary and road marking in Ground Truth message\n"
 				<< "-CityObjectLabel <labels>: all labels in one string\n"
 				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n" 
 				<< "Experimental options:\n"
