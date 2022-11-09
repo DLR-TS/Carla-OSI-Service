@@ -147,7 +147,7 @@ set(SCENARIO_RUNNER_TRAFFIC_COMMAND_PROTO_FILES
     grpc_proto_files/srunner/ScenarioRunner.proto
 )
 add_library(CARLA_OSI_ScenarioRunner_gRPC_Lib ${SCENARIO_RUNNER_TRAFFIC_COMMAND_PROTO_FILES})
-generate_grpc_cpp(TARGET CARLA_OSI_ScenarioRunner_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR})
+generate_grpc_cpp(TARGET CARLA_OSI_ScenarioRunner_gRPC_Lib IMPORT_DIRS ${CONAN_INCLUDE_DIRS_PROTOBUF} ${osi_SOURCE_DIR} ${osi_BINARY_DIR})
 target_link_libraries(CARLA_OSI_ScenarioRunner_gRPC_Lib PUBLIC grpc++ grpc++_reflection)
 target_include_directories(CARLA_OSI_ScenarioRunner_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 

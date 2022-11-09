@@ -758,152 +758,78 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	//OSI documentation:
 	//Only the id, base member (without dimension and base_polygon),
 	//and the vehicle_classification.light_state members are considered in
-	//updates, all other members can be left undefined, and will be
+	//updates, all other members can be left undefined, and wiudll be
 	//ignored by the receiver of this message.
 
-	if (!trafficUpdate.has_update() && trafficUpdate.mutable_update()->has_id()) {
-		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate read traffic with no id." << std::endl;
+	if (trafficUpdate.update_size() == 0) {
+		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate No update." << std::endl;
 		return 3;
 	}
-	auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&trafficUpdate.mutable_update()->id()));
-	auto actor = world->GetActor(TrafficId);
-	if (actor == nullptr) {
-		std::cout << "Actor not found! No position updates will be done!" << std::endl;
-		return 0;
-	}
-	if (TrafficId != actor->GetId()) {
-		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;
-		return 2;
-	}
-
-
-	//BASE
-	if (trafficUpdate.mutable_update()->mutable_base()->has_position()
-		&& trafficUpdate.mutable_update()->mutable_base()->has_orientation()) {
-		auto position = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->position());
-		auto orientation = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->orientation());
-		//do not set height, pitch an roll of vehicles in asynchronous mode
-		//these would break the visualization
-		//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
-		if (!runtimeParameter.sync) {
-			position.z = actor->GetLocation().z;
-			orientation.pitch = actor->GetTransform().rotation.pitch;
-			orientation.roll = actor->GetTransform().rotation.roll;
+	for (auto& update : trafficUpdate.update()) {
+		auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
+		auto actor = world->GetActor(TrafficId);
+		if (actor == nullptr) {
+			std::cout << "Actor not found! No position updates will be done!" << std::endl;
+			return 0;
 		}
-		actor->SetTransform(carla::geom::Transform(position, orientation));
-	}
-
-	//Velocity
-	if (trafficUpdate.mutable_update()->mutable_base()->has_velocity()) {
-		actor->SetTargetVelocity(carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->velocity()));
-	}
-
-	//Acceleration can not be set in CARLA
-	//GetAcceleration() calculates the acceleration with the actor's velocity
-	//if (trafficUpdate.mutable_update()->mutable_base()->has_acceleration()) {
-		//auto acceleration = carla_osi::geometry::toCarla(&trafficUpdate.mutable_update()->mutable_base()->acceleration());
-	//}
-
-	//Orientation
-	if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_rate()) {
-		const auto orientationRate = carla_osi::geometry::toCarla(trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_rate());
-
-		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
-		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
-	}
-
-	//Acceleration can not be set in CARLA
-	//GetAcceleration() calculates the acceleration with the actor's velocity
-	//if (trafficUpdate.mutable_update()->mutable_base()->has_orientation_acceleration()){
-		//const osi3::Orientation3d* accelerationRoll = trafficUpdate.mutable_update()->mutable_base()->mutable_orientation_acceleration();
-	//}
-
-	//LIGHTSTATE
-	if (trafficUpdate.mutable_update()->mutable_vehicle_classification()->has_light_state()) {
-		auto indicatorState = CarlaUtility::toCarla(trafficUpdate.mutable_update()->mutable_vehicle_classification()->mutable_light_state());
-		auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
-
-		vehicleActor->SetLightState(indicatorState);
-	}
-	return 0;
-}
-
-int CARLA2OSIInterface::receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand) {
-	// MotionCommand describes a 2D trajectory to follow
-
-	//TODO MotionCommand has no id field -> verify message applies to ego vehicle
-
-	carla::SharedPtr<carla::client::Actor> actor;
-	{// mutex scope
-		// using shared lock - read only access
-		std::shared_lock lock(actorRole2IDMap_mutex);
-		//TODO how to safely retrieve the ego vehicle? 
-		// ego vehicle in Carla usually is named 'hero'
-		if (0 == actorRole2IDMap.left.count("hero")) {
-			return -100;
+		if (TrafficId != actor->GetId()) {
+			std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;
+			return 2;
 		}
-		auto actorId = actorRole2IDMap.left.at("hero");
-		actor = world->GetActor(actorId);
+
+
+		//BASE
+		if (update.base().has_position()
+			&& update.base().has_orientation()) {
+			auto position = carla_osi::geometry::toCarla(&update.base().position());
+			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
+			//do not set height, pitch an roll of vehicles in asynchronous mode
+			//these would break the visualization
+			//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
+			if (!runtimeParameter.sync) {
+				position.z = actor->GetLocation().z;
+				orientation.pitch = actor->GetTransform().rotation.pitch;
+				orientation.roll = actor->GetTransform().rotation.roll;
+			}
+			actor->SetTransform(carla::geom::Transform(position, orientation));
+		}
+
+		//Velocity
+		if (update.base().has_velocity()) {
+			actor->SetTargetVelocity(carla_osi::geometry::toCarla(&update.base().velocity()));
+		}
+
+		//Acceleration can not be set in CARLA
+		//GetAcceleration() calculates the acceleration with the actor's velocity
+		//if (update.mutable_base()->has_acceleration()) {
+			//auto acceleration = carla_osi::geometry::toCarla(&update.mutable_base()->acceleration());
+		//}
+
+		//Orientation
+		if (update.base().has_orientation_rate()) {
+			const auto orientationRate = carla_osi::geometry::toCarla(&update.base().orientation_rate());
+
+			//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
+			actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
+		}
+
+		//Acceleration can not be set in CARLA
+		//GetAcceleration() calculates the acceleration with the actor's velocity
+		//if (update.mutable_base()->has_orientation_acceleration()){
+			//const osi3::Orientation3d* accelerationRoll = update.mutable_base()->mutable_orientation_acceleration();
+		//}
+
+		//LIGHTSTATE
+		if (update.vehicle_classification().has_light_state()) {
+			auto classification = update.vehicle_classification();
+			auto light_state = classification.mutable_light_state();
+			auto carla_light_state  = CarlaUtility::toCarla(light_state);
+			//auto indicatorState = CarlaUtility::toCarla(update.vehicle_classification().light_state());
+			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+
+			vehicleActor->SetLightState(carla_light_state);
+		}
 	}
-	//From OSI documentation:
-	// The motion command comprises of the trajectory the vehicle should
-	// follow on, as well as the current dynamic state which contains
-	// the vehicle's localization and dynamic properties.
-
-	//TODO add checks?
-	motionCommand.version();
-	motionCommand.timestamp();
-
-	//From OSI documentation
-	// The coordinate system is right handed, a heading of zero equalling
-	// the object being heading in x-direction.
-	// All coordinates and orientations are relative to the global ground
-	// truth frame.
-	//
-	// Units are [m] for positions, [m/s] for velocities, [m/s^2] for
-	// accelerations and [rad] for angles.
-
-	//TODO check timestamp of current state?
-	motionCommand.current_state().timestamp();
-
-	//Position and Orientation
-	osi3::Vector3d vector;
-	vector.set_x(motionCommand.current_state().position_x());
-	vector.set_y(motionCommand.current_state().position_y());
-
-	osi3::Orientation3d orientation;
-	orientation.set_yaw(motionCommand.current_state().heading_angle());
-
-	//convert to CARLA
-	carla::geom::Location location = carla_osi::geometry::toCarla(&vector);
-	carla::geom::Rotation rotation = carla_osi::geometry::toCarla(&orientation);
-
-	actor->SetTransform(carla::geom::Transform(location, rotation));
-
-	//Velocity
-	if (motionCommand.current_state().has_velocity()) {
-		double velocityTotal = motionCommand.current_state().velocity();
-
-		//extract angles from rotation
-		double angle_x = cos(rotation.yaw * M_1_PI / 180.0);
-		double angle_z = sin(rotation.yaw * M_1_PI / 180.0);
-
-		//y is upward in CARLA
-		carla::geom::Vector3D velocity(angle_x * velocityTotal, 0, angle_z * velocityTotal);
-		actor->SetTargetVelocity(velocity);
-	}
-
-	//Acceleration can not be set in CARLA
-	//GetAcceleration() calculates the acceleration with the actor's velocity
-	//double acceleration = motionCommand.current_state().acceleration();
-	//Curvature can not be set in CARLA since it is operated in synchronous mode
-	//double curvature = motionCommand.current_state().curvature();
-
-	//Trajectory
-	//CARLA can not handle locations for future timestamps
-	//TODO write TrajectoryHandler to handle vehicle trajectory in this client?
-	//MotionCommand is not specified as a Sl4to5 OSMP Message
-
 	return 0;
 }
 

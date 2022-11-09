@@ -10,7 +10,6 @@ WORKDIR /carlaosiservice/build
 COPY . /carlaosiservice/
 
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
-RUN rm /carlaosiservice/.TOKEN
 RUN cmake --build . --target CARLA_OSI_Service -j 8
 
 FROM ubuntu

@@ -74,8 +74,6 @@
 //#include "osi_trafficsign.pb.h"
 #include "osi_trafficupdate.pb.h"
 //#include "osi_version.pb.h"
-#include "sl45_motioncommand.pb.h"
-#include "sl45_vehiclecommunicationdata.pb.h"
 
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
@@ -309,13 +307,6 @@ private:
 	//output
 	void sendTrafficCommand(carla::ActorId actorId);
 
-	//input
-	/**
-	Read motion command message from ego vehicle and update position, rotation and velocity of CARLA actor.
-	\param actorId
-	\return success indicator
-	*/
-	int receiveMotionCommand(setlevel4to5::MotionCommand& motionCommand);
 };
 
 #endif //!CARLAINTERFACE_H
