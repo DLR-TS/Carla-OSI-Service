@@ -12,5 +12,6 @@ COPY . /carlaosiservice/
 RUN cmake .. -DCMAKE_BUILD_TYPE=Release
 RUN cmake --build . --target CARLA_OSI_Service -j 8
 
+WORKDIR /
 RUN mkdir logs
 CMD /carlaosiservice/build/bin/CARLA_OSI_Service -log /logs/log.csv
