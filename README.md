@@ -37,3 +37,9 @@ Some dependencies are retrieved using CMake's FetchContent Module.
 To override their source in your local repository, create a file named 'CMake_FetchContent_Overrides.cmake' and use the FetchContent_declare() to declare your desired replacement. \
 They will be included by the root CmakeLists.txt file. \
 CMake_FetchContent_Overrides.cmake is ignored and thus will not be added to the global repository.
+
+# Contacts
+
+bjoern.bahn@dlr.de danny.behnecke@dlr.de
+
+This software was originally developed as part of SetLevel.
