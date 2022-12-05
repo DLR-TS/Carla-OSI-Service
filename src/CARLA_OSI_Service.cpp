@@ -3,7 +3,7 @@
 int main(int argc, char *argv[])
 {
 	std::cout << "Welcome to CARLA-OSI client\n" <<
-		"Compiled for Carla OSI Version 0.9.13\n" << std::endl;
+		"Compiled for Carla Version 0.9.13\n" << std::endl;
 
 	std::cout << "Current directory: " << std::filesystem::current_path() << "\n" << std::endl;
 	RuntimeParameter runtimeParameter;
@@ -37,6 +37,10 @@ int main(int argc, char *argv[])
 			std::cout << "Set timestamp accordingly to realtime."
 				<< "The step size differs accordingly to calculation times of the connected models."
 				<< "Only use this option with sync.\n";
+		}
+		else if (parameter == "-ego") {
+			runtimeParameter.ego = std::string(argv[++i]);
+			std::cout << "Ego: " << runtimeParameter.ego << std::endl;
 		}
 		else if (parameter == "-filter") {
 			runtimeParameter.filter = true;
@@ -84,6 +88,7 @@ int main(int argc, char *argv[])
 				<< "-async            : simulator runs asynchronous\n"
 				<< "-d or -v          : verbose log\n"
 				<< "-sr               : connection with scenario runner\n"
+				<< "-ego <name>       : name of ego vehicle in Carla\n"
 				<< "-log <path>       : log data in file: <path>\n"
 				<< "-noMapNetwork     : not fill lane, lane_boundary and road marking in Ground Truth message\n"
 				<< "-CityObjectLabel <labels>: all labels in one string\n"
