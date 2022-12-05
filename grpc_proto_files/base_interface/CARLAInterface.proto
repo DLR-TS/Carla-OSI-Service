@@ -10,10 +10,7 @@ service CARLAInterface {
 }
 
 message CarlaConfig {
-	string carla_host = 1;
-	int32 carla_port = 2;
-	double transaction_timeout = 3;
-	double delta_seconds = 4;
+	repeated string runtimeParameter = 1;
 	repeated OSISensorViewExtras sensor_view_extras = 10;
 }
 

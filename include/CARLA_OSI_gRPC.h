@@ -41,6 +41,8 @@
 // client accessing the CARLA server and grpc service/server for CoSiMa base interface
 class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoSiMa::rpc::BaseInterface::Service {
 
+	const std::string serverAddress;
+
 	//Scenario Runner Synchronisation
 	Semaphore smphSignalCosimaToSR;
 	Semaphore smphSignalSRToCosima;
@@ -75,19 +77,13 @@ public:
 
 	CARLA_OSI_client(const std::string& server_address)
 		: transaction_timeout(std::chrono::milliseconds(5000)),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
-		this->runtimeParameter.serverAddress = server_address;
-	};
-
-	CARLA_OSI_client(const RuntimeParameter& runtimeParameter)
-		: runtimeParameter(runtimeParameter), transaction_timeout(std::chrono::milliseconds(5000)),
+		serverAddress(server_address),
 		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
 
 	CARLA_OSI_client(const std::string& server_address, const std::chrono::milliseconds transaction_timeout)
 		: transaction_timeout(transaction_timeout),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
-		this->runtimeParameter.serverAddress = server_address;
-	};
+		serverAddress(server_address),
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
 
 	~CARLA_OSI_client() {
 		if (server)

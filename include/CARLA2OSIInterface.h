@@ -126,11 +126,14 @@ struct RuntimeParameter {
 	std::string logFileName = "";
 	int resumeCarlaAsyncSeconds = 0;
 	bool carlaSensors = false;
-	//Server address deliberately chosen to accept any connection
-	std::string serverAddress = "0.0.0.0:51425";
 	//parsing options
 	CityObjectLabel options;
 	bool noMapNetworkInGroundTruth = false;
+
+	std::string carlaHost = "localhost";
+	int carlaPort;
+	double transactionTimeout;
+	double deltaSeconds;
 };
 
 class CARLA2OSIInterface
@@ -184,19 +187,11 @@ public:
 
 	/**
 	* initialise the interface with the given parameters and connect to the carla server
-	* \var host
-	* host name or ip of the carla server
-	* \var port
-	* port of the carla server
-	* \var transactionTimeout
-	* transaction timeout in seconds
-	* \var deltaSeconds
-	* simulation time delta per tick
 	* \var runtimeParameter
 	* parameters set by start of program
 	* \return Success status.
 	*/
-	int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, RuntimeParameter& runtimeParameter);
+	int initialise(RuntimeParameter& runtimeParameter);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration

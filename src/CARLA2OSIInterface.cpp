@@ -1,13 +1,13 @@
 #include "CARLA2OSIInterface.h"
 
-int CARLA2OSIInterface::initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, RuntimeParameter& runtimeParams) {
+int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	this->runtimeParameter = runtimeParams;
-	this->deltaSeconds = deltaSeconds;
+	this->deltaSeconds = runtimeParams.deltaSeconds;
 
 	try {
 		//connect
-		this->client = std::make_unique<carla::client::Client>(host, port);
-		this->client->SetTimeout(std::chrono::duration<double>(transactionTimeout));
+		this->client = std::make_unique<carla::client::Client>(runtimeParams.carlaHost, runtimeParameter.carlaPort);
+		this->client->SetTimeout(std::chrono::duration<double>(runtimeParams.transactionTimeout));
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
