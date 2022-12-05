@@ -122,6 +122,7 @@ struct RuntimeParameter {
 	bool filter = false;
 	std::string filterString = "";
 	bool log = false;
+	std::string ego = "hero";
 	std::string logFileName = "";
 	int resumeCarlaAsyncSeconds = 0;
 	bool carlaSensors = false;

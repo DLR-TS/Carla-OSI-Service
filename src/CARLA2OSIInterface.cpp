@@ -547,7 +547,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 				}
 				else if ("role_name" == attribute.GetId()) {
 					std::string role_name = attribute.GetValue();
-					if ("hero" == role_name) {
+					if (role_name == runtimeParameter.ego) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
 						//saved for trafficCommand message from scenario runner
 						heroId = vehicle->id().value();
