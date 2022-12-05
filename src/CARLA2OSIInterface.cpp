@@ -35,17 +35,6 @@ double CARLA2OSIInterface::doStep() {
 		this->clearData();
 	}
 
-	if (runtimeParameter.dynamicTimestamps) {
-		auto end = std::chrono::system_clock::now();
-
-		std::chrono::duration<double> elapsed_seconds = end - last_timestamp;
-		last_timestamp = end;
-
-		auto settings = world->GetSettings();
-		settings.fixed_delta_seconds = elapsed_seconds.count();
-		this->world->ApplySettings(settings, settingsDuration);
-	}
-
 	//tick not needed if in asynchronous mode
 	if (runtimeParameter.sync) {
 		world->Tick(client->GetTimeout());
@@ -327,7 +316,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
-	if (!runtimeParameter.noMapNetworkInGroundTruth) {
+	if (runtimeParameter.mapNetworkInGroundTruth) {
 		auto lanes = staticMapTruth->mutable_lane();
 		auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
 		auto topology = map->GetTopology();
@@ -478,10 +467,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	// lanes and lane boundaries are part of the map, which shouldn't change during simulation and can be preparsed during init
 	// use staticMapTruth as a base for every new groundTruth message that already contains unchanging fields
 	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
-	//default shall be true
-	if (runtimeParameter.staticObjectsInGroundTruthMessage) {
-		groundTruth->MergeFrom(*staticMapTruth);
-	}
+	groundTruth->MergeFrom(*staticMapTruth);
 
 	auto worldActors = world->GetActors();
 	for (auto actor : *worldActors) {

@@ -117,8 +117,6 @@ struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
 	bool scenarioRunnerDoesTick = false;
-	bool staticObjectsInGroundTruthMessage = true;
-	bool dynamicTimestamps = false;
 	bool filter = false;
 	std::string filterString = "";
 	bool log = false;
@@ -128,7 +126,7 @@ struct RuntimeParameter {
 	bool carlaSensors = false;
 	//parsing options
 	CityObjectLabel options;
-	bool noMapNetworkInGroundTruth = false;
+	bool mapNetworkInGroundTruth = false;
 
 	std::string carlaHost = "localhost";
 	int carlaPort;
@@ -163,8 +161,6 @@ class CARLA2OSIInterface
 	uint64_t heroId = 0;
 	//delta seconds in each time step
 	float deltaSeconds;
-	//Timestamps for dynamic step size sync mode
-	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 

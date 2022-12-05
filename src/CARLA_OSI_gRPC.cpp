@@ -55,51 +55,41 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	for (int i = 0; i < config->runtimeparameter_size(); i++) {
 		std::string parameter = config->runtimeparameter(i);
 
-		if (parameter == "-d" || parameter == "-v") {
+		if (parameter == "-v" || parameter == "--verbose") {
 			runtimeParameter.verbose = true;
 			std::cout << "Running with additional debug prints.\n";
 		}
-		else if (parameter == "-sr") {
+		else if (parameter == "-sr" || parameter == "--scenariorunner") {
 			runtimeParameter.scenarioRunnerDoesTick = true;
 			std::cout << "Wait for scenario runner connection.\n";
 		}
-		else if (parameter == "-async") {
+		else if (parameter == "-a" || parameter == "--async") {
 			runtimeParameter.sync = false;
 			std::cout << "Running in asynchronous mode.\n";
 		}
-		else if (parameter == "-noStaticObjects") {
-			runtimeParameter.staticObjectsInGroundTruthMessage = false;
-			std::cout << "Does not send static objects in ground truth messages.\n";
-		}
-		else if (parameter == "-l" || parameter == "-log") {
+		else if (parameter == "-l" || parameter == "-logfile") {
 			runtimeParameter.log = true;
 			runtimeParameter.logFileName = config->runtimeparameter(++i);
 			std::cout << "Log to std::cout and " << runtimeParameter.logFileName << "\n";
-		}
-		else if (parameter == "-dynamicTimestamps") {
-			runtimeParameter.dynamicTimestamps = true;
-			std::cout << "Set timestamp accordingly to realtime."
-				<< "The step size differs accordingly to calculation times of the connected models."
-				<< "Only use this option with sync.\n";
 		}
 		else if (parameter == "-ego") {
 			runtimeParameter.ego = config->runtimeparameter(++i);
 			std::cout << "Ego: " << runtimeParameter.ego << std::endl;
 		}
-		else if (parameter == "-filter") {
+		else if (parameter == "--filterbyname") {
 			runtimeParameter.filter = true;
 			runtimeParameter.filterString = config->runtimeparameter(++i);
-			std::cout << "Filter for static objects active. Use: " << runtimeParameter.filterString << "\n";
+			std::cout << "Filterbyname for static objects active. Use: " << runtimeParameter.filterString << "\n";
 		}
-		else if (parameter == "-resumeAfter") {
+		else if (parameter == "--resumeAfter" || parameter == "--maxresponseinterval") {
 			runtimeParameter.resumeCarlaAsyncSeconds = std::stoi(config->runtimeparameter(++i));
-			std::cout << "Resume Carla (Anti - Freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
+			std::cout << "Max response interval for carla (anti - freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
 		}
-		else if (parameter == "-carlaSensors") {
+		else if (parameter == "--carlaSensors") {
 			runtimeParameter.carlaSensors = true;
 			std::cout << "Use listeners on sensors spawned in Carla.\n";
 		}
-		else if (parameter == "-CityObjectLabel") {
+		else if (parameter == "--cityobjectlabel") {
 			cityObjectLabelFilterSet = true;
 			std::string cityObjectLabelFilter = config->runtimeparameter(++i);
 			if (cityObjectLabelFilter.find("None") != std::string::npos) runtimeParameter.options.None = true;
@@ -123,43 +113,25 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			if (cityObjectLabelFilter.find("Terrain") != std::string::npos) runtimeParameter.options.Terrain = true;
 			if (cityObjectLabelFilter.find("Any") != std::string::npos) runtimeParameter.options.Any = true;
 		}
-		else if (parameter == "-noMapNetwork") {
-			runtimeParameter.noMapNetworkInGroundTruth = true;
-			std::cout << "Run with no map network in ground truth messages.\n";
+		else if (parameter == "--mapnetwork") {
+			runtimeParameter.mapNetworkInGroundTruth = true;
+			std::cout << "Run with map network in ground truth messages.\n";
 		}
-		else if (parameter == "-h" || parameter == "--help") {
-			std::cout << "Normal options for Carla OSI Service:\n"
-				<< "-async            : simulator runs asynchronous\n"
-				<< "-d or -v          : verbose log\n"
-				<< "-sr               : connection with scenario runner\n"
-				<< "-ego <name>       : name of ego vehicle in Carla\n"
-				<< "-log <path>       : log data in file: <path>\n"
-				<< "-noMapNetwork     : not fill lane, lane_boundary and road marking in Ground Truth message\n"
-				<< "-CityObjectLabel <labels>: all labels in one string\n"
-				<< "<ip>:<port>       : listening ip range (see gRPC) and port\n\n"
-				<< "Experimental options:\n"
-				<< "-filter <filter>  : filter static objects depending on name\n"
-				<< "-resumeAfter <s>  : resume Carla asynchronous after s seconds (Anti-Freeze)\n"
-				<< "-noStaticObjects  : sending ground truth messages only with dynamic objects\n"
-				<< "-carlaSensors     : listen to sensors spawned in carla\n"
-				<< "-dynamicTimestamps: dynamic timestamps for special real time mode" << std::endl;
-			exit(0);
-		}
-		else if (parameter == "-carlahost") {
+		else if (parameter == "--carlahost") {
 			runtimeParameter.carlaHost = config->runtimeparameter(++i);
 			std::cout << "Carla host: " << runtimeParameter.carlaHost  << "\n";
 		}
-		else if (parameter == "-carlaport") {
+		else if (parameter == "--carlaport") {
 			runtimeParameter.carlaPort = std::stoi(config->runtimeparameter(++i));
 			std::cout << "Carla port: " << runtimeParameter.carlaHost << "\n";
 		}
-		else if (parameter == "-transactiontimeout") {
+		else if (parameter == "--transactiontimeout") {
 			runtimeParameter.transactionTimeout = std::stof(config->runtimeparameter(++i));
 			std::cout << "Transaction timeout: " << runtimeParameter.carlaHost << "\n";
 		}
-		else if (parameter == "-deltaseconds") {
-		runtimeParameter.deltaSeconds = std::stof(config->runtimeparameter(++i));
-		std::cout << "Delta seconds: " << runtimeParameter.carlaHost << "\n";
+		else if (parameter == "--deltaseconds") {
+			runtimeParameter.deltaSeconds = std::stof(config->runtimeparameter(++i));
+			std::cout << "Delta seconds: " << runtimeParameter.carlaHost << "\n";
 		}
 		else {
 			std::cout << "Unkown parameter: " << parameter << "\n";
@@ -172,14 +144,6 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		runtimeParameter.options.Any = true;
 	}
 	std::cout << std::endl;
-
-	//simple check
-	if (runtimeParameter.dynamicTimestamps && !runtimeParameter.sync) {
-		std::cout << "Invalid parameter combination. Can not run asynchron with dynamic step sizes.\n"
-			<< "Dynamic step sizes option shall be used if connected models work in realtime.\n"
-			<< "The main simulation shall compute accordingly to the elapsed time." << std::endl;
-		exit(0);
-	}
 
 	//set configuration
 	if (runtimeParameter.resumeCarlaAsyncSeconds != 0) {//option is active
