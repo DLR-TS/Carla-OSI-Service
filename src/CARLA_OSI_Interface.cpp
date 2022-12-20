@@ -1,4 +1,4 @@
-#include "CARLA2OSIInterface.h"
+#include "CARLA_OSI_Interface.h"
 
 int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	this->runtimeParameter = runtimeParams;
@@ -165,16 +165,6 @@ std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
 		//empty by design
 	}
 	return role;
-}
-
-std::string_view CARLA2OSIInterface::getPrefix(std::string_view name)
-{
-	// a prefix is surrounded by '#'
-	if (2 < name.size() && '#' == name.front()) {
-		std::string_view prefix = name.substr(1, name.find('#', 1) - 1);
-		return prefix;
-	}
-	return std::string_view();
 }
 
 osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()

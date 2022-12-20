@@ -60,10 +60,6 @@ TEST_CASE("CARLA_OSI_Client", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCar
 	SECTION("Supported rpcs") {
 
 		CoSiMa::rpc::CarlaConfig config;
-		config.set_carla_host(carlaHost);
-		config.set_carla_port(carlaPort);
-		config.set_transaction_timeout(transactionTimeout);
-		config.set_delta_seconds(deltaSeconds);
 		auto response = CoSiMa::rpc::Int32();
 
 
@@ -236,10 +232,6 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	std::string baseName = "#prefix#OSMPSensorViewGroundTruth";
 
 	CoSiMa::rpc::CarlaConfig config;
-	config.set_carla_host(carlaHost);
-	config.set_carla_port(carlaPort);
-	config.set_transaction_timeout(transactionTimeout);
-	config.set_delta_seconds(deltaSeconds);
 	auto extras = config.add_sensor_view_extras();
 	extras->set_prefixed_fmu_variable_name(baseName);
 	auto mountingPosition = extras->mutable_sensor_mounting_position()->add_generic_sensor_mounting_position();
@@ -330,10 +322,6 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 	std::string carlaMap = "Town10HD";
 	const double transactionTimeout = 60;
 	CoSiMa::rpc::CarlaConfig conf;
-	conf.set_carla_host(carlaHost);
-	conf.set_carla_port(carlaPort);
-	conf.set_transaction_timeout(transactionTimeout);
-	conf.set_delta_seconds(1 / 60.);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
 	auto[client, world] = getCarlaDefaultWorld(carlaHost, carlaPort, transactionTimeout, carlaMap);

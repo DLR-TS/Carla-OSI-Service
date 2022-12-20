@@ -57,7 +57,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 
 		if (parameter == "-v" || parameter == "--verbose") {
 			runtimeParameter.verbose = true;
-			std::cout << "Running with additional debug prints.\n";
+			std::cout << "Running with verbose prints.\n";
 		}
 		else if (parameter == "-sr" || parameter == "--scenariorunner") {
 			runtimeParameter.scenarioRunnerDoesTick = true;
@@ -232,16 +232,6 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 	return carlaInterface.getDeltaSeconds();
 }
 
-std::string_view CARLA_OSI_client::getPrefix(std::string_view name)
-{
-	// a prefix is surrounded by '#'
-	if (2 < name.size() && '#' == name.front()) {
-		std::string_view prefix = name.substr(1, name.find('#', 1) - 1);
-		return prefix;
-	}
-	return std::string_view();
-}
-
 uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
 {
 	if (']' == osmp_name.back()) {
@@ -261,22 +251,13 @@ uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
 }
 
 int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
-	auto prefix = getPrefix(base_name);
-	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
-		// variable has only a prefix and no name
-		std::cerr << __FUNCTION__ << ": Tried to set a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
-		//TODO do we desire variables that have only a prefix and no name?
-		return -2;
-	}
 
-	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-
-	if (std::string::npos != varName.find("TrafficUpdate")) {
+	if (std::string::npos != base_name.find("TrafficUpdate")) {
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {
 			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
-			return -322;
+			return -1;
 		}
 
 		carlaInterface.receiveTrafficUpdate(trafficUpdate);
@@ -286,39 +267,26 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 		//TODO how to map base_name for retrieval as input?
 		varName2MessageMap[base_name] = message;
 	}
-
-
-	//TODO implement
 	return 0;
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
-	auto prefix = getPrefix(base_name);
-	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
 	std::shared_ptr<const grpc::protobuf::Message> message;
 
-	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
-		// variable has only a prefix and no name
-		std::cerr << __FUNCTION__ << ": Tried to get a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
-		//TODO do we desire variables that have only a prefix and no name?
-		//TODO return value or throw?
-		return "-2";
-	}
-
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
-	if (std::string::npos != varName.rfind("OSMPSensorViewGroundTruth", 0)) {
+	if (std::string::npos != base_name.rfind("OSMPSensorViewGroundTruth", 0)) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
 		message = getSensorViewGroundTruth(base_name);
 	}
-	else if (std::string::npos != varName.rfind("OSMPSensorView", 0)) {
+	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
 		// OSMPSensorViewIn
 		message = carlaInterface.getSensorView(base_name);
 	}
-	else if (std::string::npos != varName.rfind("OSMPGroundTruth", 0)) {
+	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
 		// OSMPGroundTruthInit
 		message = carlaInterface.getLatestGroundTruth();
 	}
-	else if (std::string::npos != varName.rfind("OSMPTrafficCommand", 0)) {
+	else if (std::string::npos != base_name.rfind("OSMPTrafficCommand", 0)) {
 		// OSMPTrafficCommand
 		//set hero ID in traffic command message
 		if (trafficCommandForEgoVehicle == nullptr) {
@@ -391,7 +359,7 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 		carla_osi::id_mapping::IDUnion sensorId;
 		//TODO make sure the type is not defined in CarlaUtility::CarlaUniqueID_e
 		sensorId.type = 100;
-		sensorId.id = sensorIds.size() + 1;
+		sensorId.id = (uint32_t)sensorIds.size() + 1;
 		sensorIds[varName] = sensorId.value;
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}

@@ -5,14 +5,9 @@
 #ifndef CARLAOSIGRPC_H
 #define CARLAOSIGRPC_H
 
-#include "CARLA2OSIInterface.h"
+#include "CARLA_OSI_Interface.h"
 
-#include <thread>
-#include <ctime>
-#include <chrono>
-#include <filesystem>
 #include <iostream>
-#include <fstream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -64,7 +59,7 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
 	std::map<std::string, std::string> varName2MessageMap;
 	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions
-	std::map < std::string, CoSiMa::rpc::SensorViewSensorMountingPosition, std::less<>> sensorMountingPositionMap;
+	std::map<std::string, CoSiMa::rpc::SensorViewSensorMountingPosition, std::less<>> sensorMountingPositionMap;
 	// ids for non-carla sensorViews
 	std::map<std::string, uint64_t, std::less<>> sensorIds;
 #pragma endregion fields for the Carla OSI Interface
@@ -108,8 +103,6 @@ private:
 	void printOsiVector(osi3::Vector3d vector3d);
 	void printOsiOrientation3d(osi3::Orientation3d orientation3d);
 
-	// separate prefix, sourrounded by '#', from the given variable name
-	virtual std::string_view getPrefix(const std::string_view base_name);
 	// parse index from OSMP variable name, if present
 	virtual uint32_t getIndex(const std::string_view osmp_name);
 

@@ -6,7 +6,6 @@
 #define CARLAINTERFACE_H
 
 #include <charconv>
-#include <variant>
 #include <string>
 #include <mutex>
 #include <shared_mutex>
@@ -160,7 +159,7 @@ class CARLA2OSIInterface
 	//hero id
 	uint64_t heroId = 0;
 	//delta seconds in each time step
-	float deltaSeconds;
+	double deltaSeconds;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -261,7 +260,7 @@ public:
 	Returns the hero id.
 	\return hero id
 	*/
-	float getHeroId() { return heroId; }
+	uint64_t getHeroId() { return heroId; }
 
 	/**
 	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
@@ -280,7 +279,6 @@ private:
 	struct logData { std::string id = "NaN"; double x{ NAN }, y{ NAN }, yaw{ NAN }; };
 	std::vector<logData> actors = std::vector<logData>(5);//5 from SetLevel SUC2 MS2
 
-	std::string_view getPrefix(std::string_view name);
 	osi3::Timestamp* parseTimestamp();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
