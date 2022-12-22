@@ -294,13 +294,15 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto OSIStationaryObjects = staticMapTruth->mutable_stationary_object();
 	auto filteredStationaryMapObjects = filterEnvironmentObjects();
 	for (auto& mapObject : filteredStationaryMapObjects) {
-		OSIStationaryObjects->AddAllocated(CarlaUtility::toOSI(carla::MakeShared<const carla::rpc::EnvironmentObject>(mapObject), world->GetActor(mapObject.id)->GetTypeId(), runtimeParameter.verbose));
+		OSIStationaryObjects->AddAllocated(
+			CarlaUtility::toOSI(carla::MakeShared<const carla::rpc::EnvironmentObject>(mapObject),
+				world->GetActor((carla::ActorId)mapObject.id)->GetTypeId(), runtimeParameter.verbose));
 	}
 
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	auto signs = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
 	for (auto& sign : signs) {
-		auto trafficSign = world->GetActor(sign.id);
+		auto trafficSign = world->GetActor((carla::ActorId)sign.id);
 		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
 		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, sign.bounding_box);
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
@@ -310,7 +312,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		auto lanes = staticMapTruth->mutable_lane();
 		auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
 		auto topology = map->GetTopology();
-		lanes->Reserve(topology.size());
+		lanes->Reserve((int)topology.size());
 		std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
 
 		// use a vector as replacement for a python-zip-like view, as boost::combine() (boost version 1.72) cannot
@@ -343,7 +345,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 
 				auto waypoints = junction->GetWaypoints();
 				auto lanePairings = classification->mutable_lane_pairing();
-				lanePairings->Reserve(waypoints.size());
+				lanePairings->Reserve((int)waypoints.size());
 				for (const auto&[inbound, outbound] : waypoints) {
 					// OSI lane_pairing needs an antecessor/successor pair
 					auto pairs = carla_osi::lanes::GetOSILanePairings(roadMap,
@@ -386,7 +388,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 					}
 					//translate waypoints to OSI centerline
 					auto centerline = classification->mutable_centerline();
-					centerline->Reserve(waypoints.size());
+					centerline->Reserve((int)waypoints.size());
 					for (const auto& waypoint : waypoints) {
 						auto location = waypoint->GetTransform().location;
 						centerline->AddAllocated(carla_osi::geometry::toOSI(location).release());
@@ -810,71 +812,42 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 }
 
 void CARLA2OSIInterface::writeLog() {
+
+	std::string separator = ",";
+
 	if (!logFile.is_open()) {
 		logFile.open(runtimeParameter.logFileName);
 		if (runtimeParameter.verbose) {
 			std::cout << "Write to " << runtimeParameter.logFileName << std::endl;
 		}
-		std::string header = "Timestamp,Actor1_ID,Actor1_x,Actor1_y,Actor1_heading,Actor2_ID,Actor2_x,Actor2_y,Actor2_heading,Actor3_ID,Actor3_x,Actor3_y,Actor3_heading,Actor4_ID,Actor4_x,Actor4_y,Actor4_heading,Actor5_ID,Actor5_x,Actor5_y,Actor5_heading\n";
+		std::string header = "Timestamp" + separator + "Actor_ID" + separator + 
+			"Actor_x" + separator + "Actor_y" + separator + "Actor_heading\n";
 		logFile << header;
 		std::cout << header;
 	}
 
-	//parseWorldToGroundTruth();//to get the data from the osi representation???
-
-	if (!allXActorsSpawned) {
-		//ego
-		actors[0].id = std::to_string(latestGroundTruth->host_vehicle_id().value());
-
-		//other actors
-		for (const auto& movingObject : latestGroundTruth->moving_object()) {
-			for (auto& logData : actors) {
-				if (logData.id != "NaN") {
-					if (logData.id == std::to_string(movingObject.id().value())) {
-						//already inserted
-						break;
-					}
-				}
-				else {
-					//insert id
-					logData.id = std::to_string(movingObject.id().value());
-					break;
-				}
-			}
-		}
-		if (latestGroundTruth->moving_object_size() == actors.size()) {
-			allXActorsSpawned = true;
-		}
-	}
+	double seconds = world->GetSnapshot().GetTimestamp().elapsed_seconds;
 
 	//log all vehicles
+	logData logData;
 	for (const auto& movingObject : latestGroundTruth->moving_object()) {
-		for (auto& logData : actors) {
-			if (logData.id == std::to_string(movingObject.id().value())) {
-				logData.x = movingObject.base().position().x();
-				logData.y = movingObject.base().position().y();
-				logData.yaw = movingObject.base().orientation().yaw() * 180 / M_PI;
-			}
-		}
-	}
+		logData.id = std::to_string(movingObject.id().value());
+		logData.x = movingObject.base().position().x();
+		logData.y = movingObject.base().position().y();
+		logData.yaw = movingObject.base().orientation().yaw() * 180 / M_PI;
 
-	//write all data
-	char separator = ',';
-	double seconds = world->GetSnapshot().GetTimestamp().elapsed_seconds;
-	logFile << seconds;//time as floating point
-	std::cout << seconds;
-
-	for (const auto& logData : actors) {
-		logFile << separator<< logData.id << separator
+		logFile << seconds << separator
+			<< logData.id << separator
 			<< logData.x << separator
 			<< logData.y << separator
-			<< logData.yaw ;
-		std::cout << separator << logData.id << separator
+			<< logData.yaw << "\n";
+		std::cout << seconds << separator
+			<< logData.id << separator
 			<< logData.x << separator
 			<< logData.y << separator
-			<< logData.yaw;
+			<< logData.yaw << "\n";
 	}
 	//end line and flush data
-	logFile << std::endl;
-	std::cout << std::endl;
+	logFile << std::flush;
+	std::cout << std::flush;
 }

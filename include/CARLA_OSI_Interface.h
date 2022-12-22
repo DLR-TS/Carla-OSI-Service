@@ -129,8 +129,8 @@ struct RuntimeParameter {
 
 	std::string carlaHost = "localhost";
 	int carlaPort;
-	double transactionTimeout;
-	double deltaSeconds;
+	float transactionTimeout;
+	float deltaSeconds;
 };
 
 class CARLA2OSIInterface
@@ -159,7 +159,7 @@ class CARLA2OSIInterface
 	//hero id
 	uint64_t heroId = 0;
 	//delta seconds in each time step
-	double deltaSeconds;
+	float deltaSeconds;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -275,9 +275,7 @@ public:
 private:
 
 	std::ofstream logFile;
-	bool allXActorsSpawned = false;
-	struct logData { std::string id = "NaN"; double x{ NAN }, y{ NAN }, yaw{ NAN }; };
-	std::vector<logData> actors = std::vector<logData>(5);//5 from SetLevel SUC2 MS2
+	struct logData { std::string id; double x, y, yaw; };
 
 	osi3::Timestamp* parseTimestamp();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()

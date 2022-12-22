@@ -2,7 +2,7 @@
 
 #include "testhelpers.h"
 
-#include "CARLA2OSIInterface.h"
+#include "CARLA_OSI_Interface.h"
 #include "Utility.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
