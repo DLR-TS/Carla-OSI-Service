@@ -56,8 +56,6 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 
 #pragma region fields for the Carla OSI Interface
 	CARLA2OSIInterface carlaInterface;
-	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
-	std::map<std::string, std::string> varName2MessageMap;
 	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions
 	std::map<std::string, CoSiMa::rpc::SensorViewSensorMountingPosition, std::less<>> sensorMountingPositionMap;
 	// ids for non-carla sensorViews
@@ -100,8 +98,6 @@ public:
 	virtual grpc::Status SetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::NamedBytes* request, CoSiMa::rpc::Int32* response) override;
 
 private:
-	void printOsiVector(osi3::Vector3d vector3d);
-	void printOsiOrientation3d(osi3::Orientation3d orientation3d);
 
 	// parse index from OSMP variable name, if present
 	virtual uint32_t getIndex(const std::string_view osmp_name);
@@ -113,11 +109,10 @@ private:
 	virtual std::shared_ptr<osi3::SensorView> getSensorViewGroundTruth(const std::string& name);
 	static void copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to);
 
-	// Serialize given trafficCommand into varName2MessageMap
 	// Callback function passed to TrafficCommandReceiver
 	float saveTrafficCommand(const osi3::TrafficCommand& command);
 
-	static void watchdog(CARLA_OSI_client* b);
+	static void watchdog(CARLA_OSI_client* client);
 	bool watchdogDoStepCalled = true;
 };
 

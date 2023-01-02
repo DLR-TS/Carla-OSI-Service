@@ -67,7 +67,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter.sync = false;
 			std::cout << "Running in asynchronous mode.\n";
 		}
-		else if (parameter == "-l" || parameter == "-logfile") {
+		else if (parameter == "-l" || parameter == "--logfile") {
 			runtimeParameter.log = true;
 			runtimeParameter.logFileName = config->runtimeparameter(++i);
 			std::cout << "Log to std::cout and " << runtimeParameter.logFileName << "\n";
@@ -81,13 +81,29 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter.filterString = config->runtimeparameter(++i);
 			std::cout << "Filterbyname for static objects active. Use: " << runtimeParameter.filterString << "\n";
 		}
-		else if (parameter == "--resumeAfter" || parameter == "--maxresponseinterval") {
+		else if (parameter == "--resumeafter" || parameter == "--maxresponseinterval") {
 			runtimeParameter.resumeCarlaAsyncSeconds = std::stoi(config->runtimeparameter(++i));
 			std::cout << "Max response interval for carla (anti - freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
 		}
-		else if (parameter == "--carlaSensors") {
+		else if (parameter == "--camera") {
 			runtimeParameter.carlaSensors = true;
-			std::cout << "Use listeners on sensors spawned in Carla.\n";
+			runtimeParameter.carlasensortypes.emplace(CAMERA);
+			std::cout << "Use camera listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--lidar") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(LIDAR);
+			std::cout << "Use lidar listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--radar") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(RADAR);
+			std::cout << "Use radar listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--ultrasonic") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
+			std::cout << "Use ultrasonic listeners on sensors spawned in CARLA.\n";
 		}
 		else if (parameter == "--cityobjectlabel") {
 			cityObjectLabelFilterSet = true;
@@ -262,11 +278,6 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 
 		carlaInterface.receiveTrafficUpdate(trafficUpdate);
 	}
-	else {
-		//Cache unmapped messages so they can be retrieved as input
-		//TODO how to map base_name for retrieval as input?
-		varName2MessageMap[base_name] = message;
-	}
 	return 0;
 }
 
@@ -278,8 +289,8 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
 		message = getSensorViewGroundTruth(base_name);
 	}
-	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
-		// OSMPSensorViewIn
+	else if (std::string::npos != base_name.rfind("OSMPSensorData", 0)) {
+		// OSMPSensorData
 		message = carlaInterface.getSensorView(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
@@ -301,16 +312,8 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	if (message) {
 		return message->SerializeAsString();
 	}
-
-	// Try lookup in variable cache, else return empty string
-	auto iter = varName2MessageMap.find(base_name);
-	if (iter != varName2MessageMap.end()) {
-		return iter->second;
-	}
-	else {
-		std::cerr << __FUNCTION__ << ": Could not find a variable named " << base_name << " in Carla." << std::endl;
-		return "";
-	}
+	std::cerr << __FUNCTION__ << ": Could not find a message named " << base_name << std::endl;
+	return "";
 }
 
 std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(const std::string& varName) {
@@ -426,11 +429,4 @@ void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensor
 	for (int i = 0; i < from.ultrasonic_sensor_mounting_position_size(); i++) {
 		to->add_ultrasonic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(i));
 	}*/
-}
-
-void CARLA_OSI_client::printOsiVector(osi3::Vector3d vector3d) {
-	std::cout << "X:" << vector3d.x() << " Y:" << vector3d.y() << " Z:" << vector3d.z() << "\n";
-}
-void CARLA_OSI_client::printOsiOrientation3d(osi3::Orientation3d orientation3d) {
-	std::cout << "Roll:" << orientation3d.roll() << " Pitch:" << orientation3d.pitch() << " Yaw:" << orientation3d.yaw() << "\n";
 }

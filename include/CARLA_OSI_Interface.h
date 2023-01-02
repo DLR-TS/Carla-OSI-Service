@@ -112,6 +112,15 @@ struct CityObjectLabel {
 	bool Any = false;
 };
 
+enum SENSORTYPES
+{
+	GENERIC,
+	ULTRASONIC,
+	RADAR,
+	LIDAR,
+	CAMERA
+};
+
 struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
@@ -123,6 +132,7 @@ struct RuntimeParameter {
 	std::string logFileName = "";
 	int resumeCarlaAsyncSeconds = 0;
 	bool carlaSensors = false;
+	std::set<SENSORTYPES> carlasensortypes;
 	//parsing options
 	CityObjectLabel options;
 	bool mapNetworkInGroundTruth = false;
