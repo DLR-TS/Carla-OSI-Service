@@ -84,8 +84,11 @@ void CARLA2OSIInterface::fetchActorsFromCarla() {
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
 						if (runtimeParameter.carlaSensors && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
+							std::cout << "add sensor "  << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
-							sensor->Listen([this, sensor](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData); });
+							int index = (int)sensorCache.size();
+							sensorCache.emplace(index, nullptr);
+							sensor->Listen([this, sensor, index](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, index); });
 						}
 					}
 					break;
@@ -131,25 +134,25 @@ void CARLA2OSIInterface::resetWorldSettings() {
 	auto settings = world->GetSettings();
 	settings.synchronous_mode = false;
 	this->world->ApplySettings(settings, settingsDuration);
+	if (runtimeParameter.verbose) {
+		std::cout << "Reset CARLA World Settings." << std::endl;
+	}
 }
 
-std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(std::string role)
+std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(const std::string& sensor)
 {
-	// mutex scope
-	// using a shared lock - read only access
-	std::shared_lock lock(varName2MessageMap_mutex);
-	auto iter = varName2MessageMap.find(role);
-	if (varName2MessageMap.end() == iter) {
-		std::string functionName(__FUNCTION__);
-		return nullptr;
+	//string has format of: OSMPSensorViewX
+	std::string index_string(&sensor[14]);
+	int index = std::stoi(index_string);
+	{
+		// mutex scope: using a shared lock - read only access
+		std::shared_lock lock(sensorCache_mutex);
+		auto iter = sensorCache.find(index);
+		if (iter == sensorCache.end()) {
+			return nullptr;
+		}
+		return iter->second;
 	}
-	auto sensorViewPtr = std::get_if<std::shared_ptr<osi3::SensorView>>(&iter->second);
-	if (nullptr == sensorViewPtr || !*sensorViewPtr) {
-		std::string functionName(__FUNCTION__);
-		std::cerr << functionName + ": role '" + role + "' is not a SensorView" << std::endl;
-		return nullptr;
-	}
-	return *sensorViewPtr;
 }
 
 std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
@@ -450,7 +453,6 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 		}
 		std::cout << "Finished parsing of topology" << std::endl;
 	}
-
 }
 
 std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
@@ -597,15 +599,15 @@ void CARLA2OSIInterface::clearData()
 		throw new std::exception();
 	}
 	{//mutex scope
-		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
+		std::scoped_lock lock(actorRole2IDMap_mutex, sensorCache_mutex);
 		actorRole2IDMap.clear();
-		varName2MessageMap.clear();
+		sensorCache.clear();
 	}
 	staticMapTruth->Clear();
 	parseStationaryMapObjects();
 }
 
-void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData)
+void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index)
 {
 	if (!world) {
 		// Local world object has been destroyed and thus probably also the CARLA OSI interface, but client is still sending
@@ -621,7 +623,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 	std::unique_ptr<osi3::SensorView> sensorView = std::make_unique<osi3::SensorView>();
 
 	auto typeID = sensor->GetTypeId();
-	//substring of typeID
+	//substring of typeID: sensor.camera.rgb -> camera.rgb
 	std::string_view sensorType(&typeID[7]);
 
 	if (0 == sensorType.rfind("camera.rgb", 0))
@@ -654,91 +656,10 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 	else if (runtimeParameter.verbose) {
 		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
-
-	{//Mutex scope
-		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
-		auto iter = actorRole2IDMap.right.find(sensor->GetId());
-		if (iter != actorRole2IDMap.right.end()) {
-			std::string varName = iter->second;
-			varName2MessageMap[varName] = std::move(sensorView);
-		}
-		else if (runtimeParameter.verbose) {
-			std::cerr << __FUNCTION__ << ": received event for unknown sensor with id " << sensor->GetId() << std::endl;
-		}
+	sensorCache[index] = std::move(sensorView);
+	if (runtimeParameter.verbose) {
+		std::cout << "Update " << sensorType << " with index " << index << "." << std::endl;
 	}
-}
-
-void CARLA2OSIInterface::sendTrafficCommand(carla::ActorId ActorId) {
-	std::unique_ptr<osi3::TrafficCommand> trafficCommand = std::make_unique<osi3::TrafficCommand>();
-	trafficCommand->set_allocated_traffic_participant_id(carla_osi::id_mapping::toOSI(ActorId).release());
-	osi3::Timestamp* timestamp = parseTimestamp();
-	trafficCommand->set_allocated_timestamp(timestamp);
-	auto trafficAction = trafficCommand->add_action();
-
-	//do action accordingly
-	int TrafficActionType = 0;//TODO Placeholder at the moment
-	//hero has a routing action in OpenScenario
-	//Routing Action has an Oriented Point
-
-	switch (TrafficActionType) {
-	case 0:
-	{
-		//follow trajectory
-		auto trajectoryAction = trafficAction->mutable_follow_trajectory_action();
-		//trajectoryAction->set_allocated_action_header();
-		//trajectoryAction->add_trajectory_point(); //repeated
-		//trajectoryAction->set_constrain_orientation();
-		//trajectoryAction->set_following_mode();
-		break;
-	}
-	case 1:
-	{
-		//follow path
-		auto pathAction = trafficAction->mutable_follow_path_action();
-		//pathAction->set_allocated_action_header();
-		//pathAction->add_path_point(); //repeated
-		//pathAction->set_constrain_orientation();
-		//pathAction->set_following_mode();
-		break;
-	}
-	case 2:
-	{
-		//acquire global position action
-		auto acquireGlobalPositionAction = trafficAction->mutable_acquire_global_position_action();
-		//acquireGlobalPositionAction->set_allocated_action_header();
-		//acquireGlobalPositionAction->set_allocated_position();
-		//acquireGlobalPositionAction->set_allocated_orientation();
-		break;
-	}
-	case 3:
-	{
-		//lane change action
-		auto laneChangeAction = trafficAction->mutable_lane_change_action();
-		//laneChangeAction->set_allocated_action_header();
-		//laneChangeAction->set_relative_target_lane();
-		//laneChangeAction->set_dynamics_shape();
-		//laneChangeAction->set_duration();
-		//laneChangeAction->set_distance();
-		break;
-	}
-	case 4:
-	{
-		//speed action
-		auto speedAction = trafficAction->mutable_speed_action();
-		break;
-	}
-	default:
-		std::cerr << "CARLA2OSIInterface.sendTrafficCommand called with undefined traffic action type" << std::endl;
-	}
-
-	{// mutex scope
-		//using a scoped mutex - locking multiple mutexes could cause deadlock
-		std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
-		auto varName = actorRole2IDMap.right.at(ActorId);
-		varName2MessageMap[varName] = std::move(trafficCommand);
-	}
-
-	delete timestamp;
 }
 
 int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
@@ -817,6 +738,36 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 			vehicleActor->SetLightState(carla_light_state);
 		}
 	}
+	return 0;
+}
+
+int CARLA2OSIInterface::receiveSensorViewConfiguration(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
+		// todo
+	}
+	for (auto& lidarSensorConfiguration : sensorViewConfiguration.lidar_sensor_view_configuration()) {
+		// todo
+	}
+	for (auto& radarSensorConfiguration : sensorViewConfiguration.radar_sensor_view_configuration()) {
+		// todo
+	}
+	for (auto& ultrasonicSensorConfiguration : sensorViewConfiguration.ultrasonic_sensor_view_configuration()) {
+		// todo
+	}
+	for (auto& genericSensorConfiguration : sensorViewConfiguration.generic_sensor_view_configuration()) {
+		// todo
+	}
+	//sensorViewConfiguration.field_of_view_horizontal
+	//sensorViewConfiguration.field_of_view_vertical
+	//sensorViewConfiguration.update_cycle_offset
+	//sensorViewConfiguration.mounting_position
+	//sensorViewConfiguration.mounting_position_rmse
+	//sensorViewConfiguration.range
+	//sensorViewConfiguration.update_cycle_time
+	//sensorViewConfiguration.update_cycle_offset
+
+	//spawn sensor and attach to vehicle, vehicle should have name: runtimeparameter.ego
+	//add cache entry from fetchActorsFromCarla() and remove that function and its then useless subfunctions
 	return 0;
 }
 

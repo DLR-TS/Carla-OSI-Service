@@ -145,7 +145,6 @@ struct RuntimeParameter {
 
 class CARLA2OSIInterface
 {
-	typedef std::variant<std::shared_ptr<osi3::SensorView>, std::shared_ptr<osi3::FeatureData>, std::shared_ptr<osi3::TrafficCommand>> cachedOSIMessageType;
 
 	std::unique_ptr<carla::client::World> world;
 	std::unique_ptr<carla::client::Client> client;
@@ -154,8 +153,8 @@ class CARLA2OSIInterface
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
 	std::shared_mutex actorRole2IDMap_mutex;
 	// contains OSI messages (values) for variable names / actor roles (keys) that can not always be retrieved, such as the sensor messages, which originate from CARLA sensor events and don't have to occur on every tick. 
-	std::map<std::string, cachedOSIMessageType> varName2MessageMap;
-	std::shared_mutex varName2MessageMap_mutex;
+	std::map<int, std::shared_ptr<osi3::SensorView>> sensorCache;
+	std::shared_mutex sensorCache_mutex;
 	// contains all actor ids reported by Carla during the last tick
 	std::set<carla::ActorId> activeActors;
 	// ground truth basis created during initialise(), contains all ground truth fields that won't change during the simulation (roads and lanes, buildings, ...)
@@ -178,16 +177,7 @@ public:
 	RuntimeParameter runtimeParameter;
 
 	~CARLA2OSIInterface() {
-		if (world) {
-			// prevent destruction during grpc accesses
-			std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
-			//Unfreeze the server and Unreal Editor, useful for development
-			auto settings = world->GetSettings();
-			settings.synchronous_mode = false;
-			world->ApplySettings(settings, settingsDuration);
-			world->Tick(client->GetTimeout());
-			std::cout << "CARLA2OSIInterface: Disabled synchronous mode of Carla server" << std::endl;
-		}
+		if (world) resetWorldSettings();
 	};
 
 	/**
@@ -232,18 +222,23 @@ public:
 	std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
 	/**
-	Retrieve CARLA Sensor output from the sensor with the given role name. Messages are cached and updated during a sensor's tick.
-	\param sensor_role_name Role attribute of the carla::client::Sensor
+	Retrieve CARLA Sensor output from the sensor with the given index. Messages are cached and updated during a sensor's tick.
+	\param sensor OSMPSensorView + index
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
-	std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
+	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensor);
 
 	/**
 	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
-	\param actorId
 	\return success indicator
 	*/
 	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
+
+	/**
+	Receive configuration of SensorViewConfiguration message
+	\return success indicator
+	*/
+	int receiveSensorViewConfiguration(osi3::SensorViewConfiguration& sensorViewConfiguration);
 
 	//Helper function for our client
 	/**
@@ -300,11 +295,7 @@ private:
 	*/
 	virtual void clearData();
 
-	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
-
-	//output
-	void sendTrafficCommand(carla::ActorId actorId);
-
+	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index);
 };
 
 #endif //!CARLAINTERFACE_H

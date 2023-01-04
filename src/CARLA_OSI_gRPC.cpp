@@ -272,13 +272,21 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {
-			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			std::cerr << "Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
 			return -1;
 		}
-
 		carlaInterface.receiveTrafficUpdate(trafficUpdate);
+		return 0;
 	}
-	return 0;
+	else if (std::string::npos != base_name.find("SensorViewConfiguration")) {
+		osi3::SensorViewConfiguration sensorViewConfiguration;
+		if (!sensorViewConfiguration.ParseFromString(message)) {
+			std::cerr << "Variable name'" << base_name << "' indicates this is a SensorViewConfiguration, but parsing failed." << std::endl;
+			return -1;
+		}
+		//return value will be added to request of SensorView
+		return carlaInterface.receiveSensorViewConfiguration(sensorViewConfiguration);
+	}
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
@@ -289,7 +297,7 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
 		message = getSensorViewGroundTruth(base_name);
 	}
-	else if (std::string::npos != base_name.rfind("OSMPSensorData", 0)) {
+	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
 		// OSMPSensorData
 		message = carlaInterface.getSensorView(base_name);
 	}
