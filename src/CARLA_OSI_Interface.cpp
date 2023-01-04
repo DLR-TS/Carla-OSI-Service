@@ -139,6 +139,15 @@ void CARLA2OSIInterface::resetWorldSettings() {
 	}
 }
 
+std::shared_ptr<const osi3::SensorViewConfiguration> CARLA2OSIInterface::getSensorViewConfiguration(const std::string& sensor)
+{
+	//string has format of: OSMPSensorViewConfigurationX
+	std::string index_string(&sensor[27]);
+	int index = std::stoi(index_string);
+	//todo a
+	return nullptr;
+}
+
 std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(const std::string& sensor)
 {
 	//string has format of: OSMPSensorViewX
@@ -741,7 +750,8 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	return 0;
 }
 
-int CARLA2OSIInterface::receiveSensorViewConfiguration(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+	//todo a
 	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
 		// todo
 	}
@@ -768,6 +778,7 @@ int CARLA2OSIInterface::receiveSensorViewConfiguration(osi3::SensorViewConfigura
 
 	//spawn sensor and attach to vehicle, vehicle should have name: runtimeparameter.ego
 	//add cache entry from fetchActorsFromCarla() and remove that function and its then useless subfunctions
+	//save applied sensorviewconfiguration so that getSensorViewConfiguration() can retrieve the information
 	return 0;
 }
 

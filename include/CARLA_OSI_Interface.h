@@ -229,6 +229,13 @@ public:
 	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensor);
 
 	/**
+	Send applied SensorViewConfiguration for sensor.
+	\param sensor OSMPSensorViewConfiguration + index
+	\return The sensor's configuration as osi3::SensorViewConfiguration, or nullptr if no sensor with given name is found
+	*/
+	std::shared_ptr<const osi3::SensorViewConfiguration> getSensorViewConfiguration(const std::string& sensor);
+
+	/**
 	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
 	\return success indicator
 	*/
@@ -238,7 +245,7 @@ public:
 	Receive configuration of SensorViewConfiguration message
 	\return success indicator
 	*/
-	int receiveSensorViewConfiguration(osi3::SensorViewConfiguration& sensorViewConfiguration);
+	int receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration);
 
 	//Helper function for our client
 	/**
