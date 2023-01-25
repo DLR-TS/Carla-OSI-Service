@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 	}
 
 	//set options to any if no filter is set by user
-	if (cityObjectLabelFilterSet) {
+	if (!cityObjectLabelFilterSet) {
 		std::cout << "CityObjectLabel Filter: Any\n";
 		runtimeParameter.options.Any = true;
 	}
