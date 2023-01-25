@@ -65,6 +65,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		carlaInterface.loadWorld();
 		carlaInterface.parseStationaryMapObjects();
 	}
+
 	return grpc::Status::OK;
 }
 
