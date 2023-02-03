@@ -165,6 +165,7 @@ class CARLA2OSIInterface
 	bool validLatestGroundTruth = false;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	//pugi::xml_document xodr;
+
 	//hero id
 	uint64_t heroId = 0;
 	//delta seconds in each time step

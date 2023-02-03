@@ -142,9 +142,11 @@ void CARLA2OSIInterface::resetWorldSettings() {
 std::shared_ptr<const osi3::SensorViewConfiguration> CARLA2OSIInterface::getSensorViewConfiguration(const std::string& sensor)
 {
 	//string has format of: OSMPSensorViewConfigurationX
-	std::string index_string(&sensor[27]);
-	int index = std::stoi(index_string);
-	//todo a
+	// todo a use string_view.substring(27)
+	int index = std::stoi(sensor.substr(27));
+	//std::string index_string(&sensor[27]); 
+	//int index = std::stoi(index_string);
+	//todo a  liefert gecachete SensorViewConfig zurück
 	return nullptr;
 }
 
@@ -751,9 +753,11 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 }
 
 int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
-	//todo a
+	//todo a 
+	// check if hero is in activeActors
 	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
 		// todo
+		// 
 	}
 	for (auto& lidarSensorConfiguration : sensorViewConfiguration.lidar_sensor_view_configuration()) {
 		// todo
@@ -767,6 +771,8 @@ int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewCo
 	for (auto& genericSensorConfiguration : sensorViewConfiguration.generic_sensor_view_configuration()) {
 		// todo
 	}
+	// wenn nur generic config camera.rgb als default
+	auto heroActor = world->GetActor(heroId);
 	//sensorViewConfiguration.field_of_view_horizontal
 	//sensorViewConfiguration.field_of_view_vertical
 	//sensorViewConfiguration.update_cycle_offset
@@ -779,6 +785,7 @@ int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewCo
 	//spawn sensor and attach to vehicle, vehicle should have name: runtimeparameter.ego
 	//add cache entry from fetchActorsFromCarla() and remove that function and its then useless subfunctions
 	//save applied sensorviewconfiguration so that getSensorViewConfiguration() can retrieve the information
+	// Warnings fals Anpassungen durch Carla nötig sind
 	return 0;
 }
 
