@@ -142,11 +142,10 @@ void CARLA2OSIInterface::resetWorldSettings() {
 std::shared_ptr<const osi3::SensorViewConfiguration> CARLA2OSIInterface::getSensorViewConfiguration(const std::string& sensor)
 {
 	//string has format of: OSMPSensorViewConfigurationX
-	// todo a use string_view.substring(27)
 	int index = std::stoi(sensor.substr(27));
-	//std::string index_string(&sensor[27]); 
-	//int index = std::stoi(index_string);
 	//todo a  liefert gecachete SensorViewConfig zurück
+	// debug print
+	std::cout << "getSensorViewConfiguration: " << sensor << std::endl;
 	return nullptr;
 }
 
@@ -755,6 +754,9 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
 	//todo a 
 	// check if hero is in activeActors
+	// debug print
+	std::cout << "revieveSensorViewConfigurationRequest: " << sensorViewConfiguration.DebugString << std::endl;
+
 	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
 		// todo
 		// 
