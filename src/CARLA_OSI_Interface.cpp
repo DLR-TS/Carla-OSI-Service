@@ -755,7 +755,11 @@ int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewCo
 	//todo a 
 	// check if hero is in activeActors
 	// debug print
+<<<<<<< HEAD
 	std::cout << "revieveSensorViewConfigurationRequest: " << sensorViewConfiguration.DebugString() << std::endl;
+=======
+	std::cout << "revieveSensorViewConfigurationRequest: " << sensorViewConfiguration.DebugString << std::endl;
+>>>>>>> 2278ecb152dcc3bc0b2f17714fe015666fc0325d
 
 	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
 		// todo
