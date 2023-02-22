@@ -56,6 +56,8 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 
 #pragma region fields for the Carla OSI Interface
 	CARLA2OSIInterface carlaInterface;
+	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
+	std::map<std::string, std::string> varName2MessageMap; //important!
 	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions
 	std::map<std::string, CoSiMa::rpc::SensorViewSensorMountingPosition, std::less<>> sensorMountingPositionMap;
 	// ids for non-carla sensorViews

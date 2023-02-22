@@ -287,6 +287,10 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 		//return value will be added to request of SensorView
 		return carlaInterface.receiveSensorViewConfigurationRequest(sensorViewConfiguration);
 	}
+	else {
+		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
+		varName2MessageMap[base_name] = message;
+	}
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
@@ -323,8 +327,17 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	if (message) {
 		return message->SerializeAsString();
 	}
-	std::cerr << __FUNCTION__ << ": Could not find a message named " << base_name << std::endl;
-	return "";
+
+	// Try lookup in variable cache, else return empty string
+	// Variables from other fmus are saved and exchanged here!
+	auto iter = varName2MessageMap.find(base_name);
+	if (iter != varName2MessageMap.end()) {
+		return iter->second;
+	}
+	else {
+		std::cerr << __FUNCTION__ << ": Could not find a variable named " << base_name << " in Carla." << std::endl;
+		return "";
+	}
 }
 
 std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(const std::string& varName) {
