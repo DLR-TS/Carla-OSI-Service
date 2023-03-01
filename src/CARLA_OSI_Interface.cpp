@@ -17,6 +17,10 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	loadWorld();
 	applyWorldSettings();
 	parseStationaryMapObjects();
+	
+	if (runtimeParameter.replayTrafficUpdate) {
+		fillBoundingBoxLookupTable();
+	}
 
 	// perform a tick to fill actor and message lists
 	doStep();
@@ -44,6 +48,23 @@ double CARLA2OSIInterface::doStep() {
 
 	// only accurate if using fixed time step, as activated during initialise()
 	return world->GetSnapshot().GetTimestamp().delta_seconds;
+}
+
+void CARLA2OSIInterface::fillBoundingBoxLookupTable() {
+	auto vehicleLibrary = world.get()->GetBlueprintLibrary().get()->Filter("vehicle.*");
+	carla::geom::Location location(0, 0, 0);
+	carla::geom::Rotation rotation(0, 0, 0);
+	carla::geom::Transform transform(location, rotation);
+	for (auto vehicle : *vehicleLibrary.get()) {
+		auto temp_actor = world.get()->SpawnActor(vehicle, transform);
+		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
+		auto bbox = vehicleActor->GetBoundingBox();
+		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
+		temp_actor.get()->Destroy();
+	}
+	if (runtimeParameter.verbose) {
+		std::cout << "Number of possible vehicle bounding boxes: " << replayVehicleBoundingBoxes.size() << std::endl;
+	}
 }
 
 void CARLA2OSIInterface::fetchActorsFromCarla() {
@@ -675,79 +696,162 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	//OSI documentation:
 	//Only the id, base member (without dimension and base_polygon),
 	//and the vehicle_classification.light_state members are considered in
-	//updates, all other members can be left undefined, and wiudll be
+	//updates, all other members can be left undefined, and will be
 	//ignored by the receiver of this message.
 
 	if (trafficUpdate.update_size() == 0) {
-		std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate No update." << std::endl;
+		std::cerr << __FUNCTION__ << " No update." << std::endl;
 		return 3;
 	}
+
+	carla::ActorId actorId;
+
+	if (runtimeParameter.replayTrafficUpdate) {
+		replayTrafficUpdate(trafficUpdate, actorId);
+		return 0;
+	}
+
 	for (auto& update : trafficUpdate.update()) {
-		auto TrafficId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
-		auto actor = world->GetActor(TrafficId);
-		if (actor == nullptr) {
+		//original operation mode with update for exisiting cars
+
+		actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
+		auto actor = world->GetActor(actorId);
+		if (actor == nullptr && !runtimeParameter.replayTrafficUpdate) {
 			std::cout << "Actor not found! No position updates will be done!" << std::endl;
 			return 0;
 		}
-		if (TrafficId != actor->GetId()) {
-			std::cerr << "CARLA2OSIInterface.receiveTrafficUpdate: No actor with id" << TrafficId << std::endl;
-			return 2;
-		}
-
-
-		//BASE
-		if (update.base().has_position()
-			&& update.base().has_orientation()) {
-			auto position = carla_osi::geometry::toCarla(&update.base().position());
-			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
-			//do not set height, pitch an roll of vehicles in asynchronous mode
-			//these would break the visualization
-			//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
-			if (!runtimeParameter.sync) {
-				position.z = actor->GetLocation().z;
-				orientation.pitch = actor->GetTransform().rotation.pitch;
-				orientation.roll = actor->GetTransform().rotation.roll;
-			}
-			actor->SetTransform(carla::geom::Transform(position, orientation));
-		}
-
-		//Velocity
-		if (update.base().has_velocity()) {
-			actor->SetTargetVelocity(carla_osi::geometry::toCarla(&update.base().velocity()));
-		}
-
-		//Acceleration can not be set in CARLA
-		//GetAcceleration() calculates the acceleration with the actor's velocity
-		//if (update.mutable_base()->has_acceleration()) {
-			//auto acceleration = carla_osi::geometry::toCarla(&update.mutable_base()->acceleration());
-		//}
-
-		//Orientation
-		if (update.base().has_orientation_rate()) {
-			const auto orientationRate = carla_osi::geometry::toCarla(&update.base().orientation_rate());
-
-			//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
-			actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
-		}
-
-		//Acceleration can not be set in CARLA
-		//GetAcceleration() calculates the acceleration with the actor's velocity
-		//if (update.mutable_base()->has_orientation_acceleration()){
-			//const osi3::Orientation3d* accelerationRoll = update.mutable_base()->mutable_orientation_acceleration();
-		//}
-
-		//LIGHTSTATE
-		if (update.vehicle_classification().has_light_state()) {
-			auto classification = update.vehicle_classification();
-			auto light_state = classification.mutable_light_state();
-			auto carla_light_state  = CarlaUtility::toCarla(light_state);
-			//auto indicatorState = CarlaUtility::toCarla(update.vehicle_classification().light_state());
-			auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
-
-			vehicleActor->SetLightState(carla_light_state);
-		}
+		applyTrafficUpdate(update, actor);
 	}
 	return 0;
+}
+
+void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUpdate, carla::ActorId& actorID) {
+	//check if spawned from Carla-OSI-Service
+	
+	for (auto& update : trafficUpdate.update()) {
+		auto ActorID = spawnedVehicles.find(update.id().value());
+		if (ActorID == spawnedVehicles.end()) {
+			//not found
+
+			//find best matching representation
+			const osi3::Dimension3d dimension = update.base().dimension();
+
+			size_t minDiffVehicleIndex = 0;
+
+			double minTotalDiff = FLT_MAX;
+			double minTotalDiffLength = 0, minTotalDiffWidth = 0, minTotalDiffHeight = 0;
+
+			double weightLength = 1, weightHeight = 1, weightWidth = 1;
+
+			for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
+				auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
+				double diffLength = weightLength * (dimension.length() - boundingBox.x);
+				double diffWidth = weightWidth * (dimension.width() - boundingBox.y);
+				double diffHeight = weightHeight * (dimension.height() - boundingBox.z);
+				double sumDiff = weightLength * std::abs(diffLength)
+					+ weightWidth * std::abs(diffWidth) + weightHeight * std::abs(diffHeight);
+				if (sumDiff < minTotalDiff) {
+					minDiffVehicleIndex = i;
+					minTotalDiff = sumDiff;
+					minTotalDiffLength = diffLength;
+					minTotalDiffWidth = diffWidth;
+					minTotalDiffHeight = diffHeight;
+				}
+			}
+
+			std::cout << "Search for vehicle with: " << dimension.length() << " width:" << dimension.width()
+				<< "height: " << dimension.height() <<
+				"Spawn vehicle with length:" << minTotalDiffLength << " width:" << minTotalDiffWidth
+				<< " height:" << minTotalDiffHeight << std::endl;
+
+			//spawn actor
+			auto vehicle = world.get()->GetBlueprintLibrary().get()->Find(std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]));
+
+			auto position = carla_osi::geometry::toCarla(&update.base().position());
+			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
+			carla::geom::Transform transform(position, orientation);
+			auto actor = world.get()->SpawnActor(*vehicle, transform);
+
+			spawnedVehicle addedVehicle;
+			addedVehicle.idInCarla = actor.get()->GetId();
+			spawnedVehicles.emplace(update.id().value(), addedVehicle);
+			
+			applyTrafficUpdate(update, actor);
+		} else {
+			applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
+		}
+
+		//save the Update with current timestamp
+		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 10E9 + trafficUpdate.timestamp().nanos();
+	}
+
+	//deconstruct actors with no update
+	std::vector<uint64_t> deletedVehicles;
+	for (auto& vehicle : spawnedVehicles) {
+		if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 10E9 + trafficUpdate.timestamp().nanos()) {
+			std::cout << "No update for vehicle: " << vehicle.first << " Will stop the display of this vehicle." << std::endl;
+			auto vehicleActor = world.get()->GetActor(vehicle.second.idInCarla);
+			vehicleActor.get()->Destroy();
+			deletedVehicles.push_back(vehicle.first);
+		}
+	}
+	for (auto& deletedVehicleId : deletedVehicles) {
+		spawnedVehicles.erase(deletedVehicleId);
+	}
+}
+
+void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
+{
+	//BASE
+	if (update.base().has_position() && update.base().has_orientation()) {
+		auto position = carla_osi::geometry::toCarla(&update.base().position());
+		auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
+		//do not set height, pitch an roll of vehicles in asynchronous mode
+		//these would break the visualization
+		//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
+		if (!runtimeParameter.sync) {
+			position.z = actor->GetLocation().z;
+			orientation.pitch = actor->GetTransform().rotation.pitch;
+			orientation.roll = actor->GetTransform().rotation.roll;
+		}
+		actor->SetTransform(carla::geom::Transform(position, orientation));
+	}
+
+	//Velocity
+	if (update.base().has_velocity()) {
+		actor->SetTargetVelocity(carla_osi::geometry::toCarla(&update.base().velocity()));
+	}
+
+	//Acceleration can not be set in CARLA
+	//GetAcceleration() calculates the acceleration with the actor's velocity
+	//if (update.mutable_base()->has_acceleration()) {
+	//auto acceleration = carla_osi::geometry::toCarla(&update.mutable_base()->acceleration());
+	//}
+
+	//Orientation
+	if (update.base().has_orientation_rate()) {
+		const auto orientationRate = carla_osi::geometry::toCarla(&update.base().orientation_rate());
+
+		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
+		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
+	}
+
+	//Acceleration can not be set in CARLA
+	//GetAcceleration() calculates the acceleration with the actor's velocity
+	//if (update.mutable_base()->has_orientation_acceleration()){
+	//const osi3::Orientation3d* accelerationRoll = update.mutable_base()->mutable_orientation_acceleration();
+	//}
+
+	//LIGHTSTATE
+	if (update.vehicle_classification().has_light_state()) {
+		auto classification = update.vehicle_classification();
+		auto light_state = classification.mutable_light_state();
+		auto carla_light_state = CarlaUtility::toCarla(light_state);
+		//auto indicatorState = CarlaUtility::toCarla(update.vehicle_classification().light_state());
+		auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
+
+		vehicleActor->SetLightState(carla_light_state);
+	}
 }
 
 int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {

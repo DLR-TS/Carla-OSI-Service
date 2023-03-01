@@ -13,8 +13,6 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 	const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/)
 {
 
-	std::cout << "parsing a traffic sign" << std::endl;
-
 	std::unique_ptr<osi3::TrafficSign> sign = std::make_unique<osi3::TrafficSign>();
 	sign->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
 

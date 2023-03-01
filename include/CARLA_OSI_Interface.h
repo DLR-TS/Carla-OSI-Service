@@ -136,6 +136,7 @@ struct RuntimeParameter {
 	//parsing options
 	CityObjectLabel options;
 	bool mapNetworkInGroundTruth = false;
+	bool replayTrafficUpdate = false;//spawn and remove vehicles dynamically
 
 	std::string carlaHost = "localhost";
 	int carlaPort;
@@ -292,6 +293,26 @@ private:
 	osi3::Timestamp* parseTimestamp();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
+
+	/**
+	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages.
+	*/
+	void fillBoundingBoxLookupTable();
+
+	void replayTrafficUpdate(const osi3::TrafficUpdate& update, carla::ActorId& ActorID);
+
+	/**
+	Apply Traffic Update to existing vehicle in Carla
+	*/
+	void applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor);
+
+	struct spawnedVehicle {
+		uint32_t idInCarla;
+		uint64_t lastTimeUpdated;
+	};
+
+	std::map<uint64_t, spawnedVehicle> spawnedVehicles;
+	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
 	/**
 	Clear mapping data and preparsed messages and reparse environment objects.

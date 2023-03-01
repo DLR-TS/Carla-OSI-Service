@@ -76,6 +76,10 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter.ego = config->runtimeparameter(++i);
 			std::cout << "Ego: " << runtimeParameter.ego << std::endl;
 		}
+		else if (parameter == "-replay") {
+			runtimeParameter.replayTrafficUpdate = true;
+			std::cout << "Replay Mode active" << std::endl;
+		}
 		else if (parameter == "--filterbyname") {
 			runtimeParameter.filter = true;
 			runtimeParameter.filterString = config->runtimeparameter(++i);
