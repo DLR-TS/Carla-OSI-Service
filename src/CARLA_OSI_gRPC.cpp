@@ -49,7 +49,6 @@ void CARLA_OSI_client::StopServer()
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response)
 {
 	//parse configuration
-	RuntimeParameter runtimeParameter;
 	bool cityObjectLabelFilterSet = false;
 
 	for (int i = 0; i < config->runtimeparameter_size(); i++) {
@@ -298,6 +297,11 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Get " << base_name << std::endl;
+	}
+
 	std::shared_ptr<const grpc::protobuf::Message> message;
 
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
@@ -334,6 +338,10 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 
 	// Try lookup in variable cache, else return empty string
 	// Variables from other fmus are saved and exchanged here!
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Look up message in map." << std::endl;
+	}
 	auto iter = varName2MessageMap.find(base_name);
 	if (iter != varName2MessageMap.end()) {
 		return iter->second;

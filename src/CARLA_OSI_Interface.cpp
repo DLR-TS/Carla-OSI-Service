@@ -17,14 +17,13 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	loadWorld();
 	applyWorldSettings();
 	parseStationaryMapObjects();
-	
+
 	if (runtimeParameter.replayTrafficUpdate) {
 		fillBoundingBoxLookupTable();
 	}
 
 	// perform a tick to fill actor and message lists
 	doStep();
-
 	return 0;
 }
 
@@ -38,7 +37,6 @@ double CARLA2OSIInterface::doStep() {
 		std::cerr << "World has changed" << std::endl;
 		this->clearData();
 	}
-
 	//tick not needed if in asynchronous mode
 	if (runtimeParameter.sync) {
 		world->Tick(client->GetTimeout());
@@ -496,7 +494,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	auto worldActors = world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
-
+		std::cout << "Ground Truth Parsing: " << typeID << std::endl;
 		//based on blueprint vehicle.*
 		if (typeID.rfind("vehicle", 0) == 0) {
 			auto vehicle = groundTruth->add_moving_object();
@@ -738,19 +736,19 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 
 			size_t minDiffVehicleIndex = 0;
 
-			double minTotalDiff = FLT_MAX;
+			double minTotalDiff = DBL_MAX;
 			double minTotalDiffLength = 0, minTotalDiffWidth = 0, minTotalDiffHeight = 0;
 
 			double weightLength = 1, weightHeight = 1, weightWidth = 1;
 
 			for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
 				auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
-				double diffLength = weightLength * (dimension.length() - boundingBox.x);
-				double diffWidth = weightWidth * (dimension.width() - boundingBox.y);
-				double diffHeight = weightHeight * (dimension.height() - boundingBox.z);
+				double diffLength = dimension.length() - boundingBox.x;
+				double diffWidth = dimension.width() - boundingBox.y;
+				double diffHeight = dimension.height() - boundingBox.z;
 				double sumDiff = weightLength * std::abs(diffLength)
 					+ weightWidth * std::abs(diffWidth) + weightHeight * std::abs(diffHeight);
-				if (sumDiff < minTotalDiff) {
+ 				if (sumDiff < minTotalDiff) {
 					minDiffVehicleIndex = i;
 					minTotalDiff = sumDiff;
 					minTotalDiffLength = diffLength;
@@ -759,28 +757,40 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 				}
 			}
 
-			std::cout << "Search for vehicle with: " << dimension.length() << " width:" << dimension.width()
-				<< "height: " << dimension.height() <<
-				"Spawn vehicle with length:" << minTotalDiffLength << " width:" << minTotalDiffWidth
-				<< " height:" << minTotalDiffHeight << std::endl;
+			std::cout << "Search for vehicle with length: " << dimension.length() << ", width: " << dimension.width()
+				<< ", height: " << dimension.height() <<
+				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x << ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y
+				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z << std::endl;
 
-			//spawn actor
-			auto vehicle = world.get()->GetBlueprintLibrary().get()->Find(std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]));
 
 			auto position = carla_osi::geometry::toCarla(&update.base().position());
 			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
+			position.x = 0;
+			position.y = 0;
+			position.z = 0;
 			carla::geom::Transform transform(position, orientation);
-			auto actor = world.get()->SpawnActor(*vehicle, transform);
+
+			//spawn actor
+			auto blueprintlibrary = world.get()->GetBlueprintLibrary();
+			auto search = std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]);
+			std::cout << "Spawn vehicle: " << search << std::endl;
+			
+			//Hack: Could not get it to run with blueprintlibrary.get()->Find(search)
+			auto searchedvehicle = blueprintlibrary.get()->Filter(search);
+			carla::SharedPtr<carla::client::Actor> actor;
+			for (auto& v : *searchedvehicle.get()) {
+				actor = world.get()->SpawnActor(v, transform);
+				std::cout << actor << " " << actor.get()->GetId() << std::endl;
+				break;
+			}
 
 			spawnedVehicle addedVehicle;
 			addedVehicle.idInCarla = actor.get()->GetId();
 			spawnedVehicles.emplace(update.id().value(), addedVehicle);
-			
 			applyTrafficUpdate(update, actor);
 		} else {
 			applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
 		}
-
 		//save the Update with current timestamp
 		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 10E9 + trafficUpdate.timestamp().nanos();
 	}
