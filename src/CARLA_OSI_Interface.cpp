@@ -58,6 +58,7 @@ void CARLA2OSIInterface::fillBoundingBoxLookupTable() {
 		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
 		auto bbox = vehicleActor->GetBoundingBox();
 		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
+		world->Tick(client->GetTimeout());
 		temp_actor.get()->Destroy();
 	}
 	if (runtimeParameter.verbose) {
@@ -333,9 +334,9 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	auto signs = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
 	for (auto& sign : signs) {
-		auto trafficSign = world->GetActor((carla::ActorId)sign.id);
-		carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
-		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(carlaTrafficSign, sign.bounding_box);
+		//auto trafficSign = world->GetActor((carla::ActorId)sign.id);
+		//carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
+		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(sign);
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
@@ -765,15 +766,12 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 
 			auto position = carla_osi::geometry::toCarla(&update.base().position());
 			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
-			position.x = 0;
-			position.y = 0;
-			position.z = 0;
 			carla::geom::Transform transform(position, orientation);
 
 			//spawn actor
 			auto blueprintlibrary = world.get()->GetBlueprintLibrary();
 			auto search = std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]);
-			std::cout << "Spawn vehicle: " << search << std::endl;
+			std::cout << "Spawn vehicle: " << search << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
 			
 			//Hack: Could not get it to run with blueprintlibrary.get()->Find(search)
 			auto searchedvehicle = blueprintlibrary.get()->Filter(search);
