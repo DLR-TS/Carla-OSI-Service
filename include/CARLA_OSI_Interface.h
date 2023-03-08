@@ -121,6 +121,14 @@ enum SENSORTYPES
 	CAMERA
 };
 
+//spawn and remove vehicles dynamically
+struct ReplayParameter {
+	bool enabled = false;
+	double weightLength_X = 1;
+	double weightWidth_Y = 1;
+	double weightHeight_Z = 1;
+};
+
 struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
@@ -136,7 +144,8 @@ struct RuntimeParameter {
 	//parsing options
 	CityObjectLabel options;
 	bool mapNetworkInGroundTruth = false;
-	bool replayTrafficUpdate = false;//spawn and remove vehicles dynamically
+
+	ReplayParameter replay;
 
 	std::string carlaHost = "localhost";
 	int carlaPort;

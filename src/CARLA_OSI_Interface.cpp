@@ -18,7 +18,7 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	applyWorldSettings();
 	parseStationaryMapObjects();
 
-	if (runtimeParameter.replayTrafficUpdate) {
+	if (runtimeParameter.replay.enabled) {
 		fillBoundingBoxLookupTable();
 	}
 
@@ -705,7 +705,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 
 	carla::ActorId actorId;
 
-	if (runtimeParameter.replayTrafficUpdate) {
+	if (runtimeParameter.replay.enabled) {
 		replayTrafficUpdate(trafficUpdate, actorId);
 		return 0;
 	}
@@ -715,7 +715,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 
 		actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
 		auto actor = world->GetActor(actorId);
-		if (actor == nullptr && !runtimeParameter.replayTrafficUpdate) {
+		if (actor == nullptr && !runtimeParameter.replay.enabled) {
 			std::cout << "Actor not found! No position updates will be done!" << std::endl;
 			return 0;
 		}
@@ -740,18 +740,21 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 			double minTotalDiff = DBL_MAX;
 			double minTotalDiffLength = 0, minTotalDiffWidth = 0, minTotalDiffHeight = 0;
 
-			double weightLength = 1, weightHeight = 1, weightWidth = 1;
-
 			for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
 				auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
+
 				double diffLength = dimension.length() - boundingBox.x;
 				double diffWidth = dimension.width() - boundingBox.y;
 				double diffHeight = dimension.height() - boundingBox.z;
-				double sumDiff = weightLength * std::abs(diffLength)
-					+ weightWidth * std::abs(diffWidth) + weightHeight * std::abs(diffHeight);
+
+				double sumDiff = runtimeParameter.replay.weightLength_X * std::abs(diffLength);
+				sumDiff += runtimeParameter.replay.weightWidth_Y * std::abs(diffWidth);
+				sumDiff += runtimeParameter.replay.weightHeight_Z * std::abs(diffHeight);
+
  				if (sumDiff < minTotalDiff) {
 					minDiffVehicleIndex = i;
 					minTotalDiff = sumDiff;
+
 					minTotalDiffLength = diffLength;
 					minTotalDiffWidth = diffWidth;
 					minTotalDiffHeight = diffHeight;
@@ -790,7 +793,7 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 			applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
 		}
 		//save the Update with current timestamp
-		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 10E9 + trafficUpdate.timestamp().nanos();
+		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * (int64_t)1E9 + trafficUpdate.timestamp().nanos();
 	}
 
 	//deconstruct actors with no update

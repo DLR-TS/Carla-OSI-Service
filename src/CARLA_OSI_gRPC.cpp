@@ -76,8 +76,19 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			std::cout << "Ego: " << runtimeParameter.ego << std::endl;
 		}
 		else if (parameter == "-replay") {
-			runtimeParameter.replayTrafficUpdate = true;
-			std::cout << "Replay Mode active" << std::endl;
+			runtimeParameter.replay.enabled = true;
+			if (config->runtimeparameter_size() >= i + 4) { //3 additional entries
+				try
+				{
+					runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(i + 1));
+					runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(i + 2));
+					runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(i + 3));
+					i += 3;
+				}
+				catch (...){}
+			}
+			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
+				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
 		}
 		else if (parameter == "--filterbyname") {
 			runtimeParameter.filter = true;
