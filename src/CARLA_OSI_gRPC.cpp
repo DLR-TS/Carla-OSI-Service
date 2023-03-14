@@ -77,18 +77,25 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		}
 		else if (parameter == "-replay") {
 			runtimeParameter.replay.enabled = true;
-			if (config->runtimeparameter_size() >= i + 4) { //3 additional entries
-				try
-				{
-					runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(i + 1));
-					runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(i + 2));
-					runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(i + 3));
-					i += 3;
-				}
-				catch (...){}
-			}
+			std::cout << "Replay mode active. If not further defined by -replayWeights or -replayMapOffsets default values are used." << std::endl;
+		}
+		else if (parameter == "-replayWeights") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(i + 1));
+			runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(i + 2));
+			runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(i + 3));
+			i += 3;
 			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
 				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
+		}
+		else if (parameter == "-replayMapOffsets") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.mapXOffset = std::stod(config->runtimeparameter(i + 1));
+			runtimeParameter.replay.mapYOffset = std::stod(config->runtimeparameter(i + 2));
+			runtimeParameter.replay.mapZOffset = std::stod(config->runtimeparameter(i + 3));
+			i += 3;
+			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapXOffset << ", "
+				 << runtimeParameter.replay.mapYOffset << ", " << runtimeParameter.replay.mapZOffset << std::endl;
 		}
 		else if (parameter == "--filterbyname") {
 			runtimeParameter.filter = true;
@@ -211,7 +218,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		
 		//update changes in carla
 		carlaInterface.fetchActorsFromCarla();
-		response->set_value(carlaInterface.getDeltaSeconds());
+		response->set_value(carlaInterface.runtimeParameter.deltaSeconds);
 	}
 	else 
 	{
@@ -252,14 +259,14 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 	smphSignalCosimaToSR.acquire();
 
 	if (runtimeParameter.verbose) {
-		std::cout << "Send delta to scenario runner: " << carlaInterface.getDeltaSeconds() << std::endl;
+		std::cout << "Send delta to scenario runner: " << carlaInterface.runtimeParameter.deltaSeconds << std::endl;
 	}
 
 	//control is given back to the scenario runner.
 	//The state of the simulation can change.
 	//The cached ground truth is now invalid.
 	carlaInterface.invalidateLatestGroundTruth();
-	return carlaInterface.getDeltaSeconds();
+	return carlaInterface.runtimeParameter.deltaSeconds;
 }
 
 uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)

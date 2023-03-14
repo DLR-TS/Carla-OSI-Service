@@ -2,7 +2,6 @@
 
 int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	this->runtimeParameter = runtimeParams;
-	this->deltaSeconds = runtimeParams.deltaSeconds;
 
 	try {
 		//connect
@@ -28,6 +27,9 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 }
 
 double CARLA2OSIInterface::doStep() {
+	if (runtimeParameter.verbose) {
+		std::cout << "Do Step" << std::endl;
+	}
 	if (!world) {
 		std::cerr << "No world" << std::endl;
 		throw std::exception();
@@ -39,6 +41,7 @@ double CARLA2OSIInterface::doStep() {
 	}
 	//tick not needed if in asynchronous mode
 	if (runtimeParameter.sync) {
+		//Length of simulationed tick is set in applyWorldSettings()
 		world->Tick(client->GetTimeout());
 	}
 	//world->WaitForTick(this->transactionTimeout);
@@ -49,17 +52,17 @@ double CARLA2OSIInterface::doStep() {
 }
 
 void CARLA2OSIInterface::fillBoundingBoxLookupTable() {
-	auto vehicleLibrary = world.get()->GetBlueprintLibrary().get()->Filter("vehicle.*");
+	auto vehicleLibrary = world->GetBlueprintLibrary()->Filter("vehicle.*");
 	carla::geom::Location location(0, 0, 0);
 	carla::geom::Rotation rotation(0, 0, 0);
 	carla::geom::Transform transform(location, rotation);
-	for (auto vehicle : *vehicleLibrary.get()) {
-		auto temp_actor = world.get()->SpawnActor(vehicle, transform);
+	for (auto vehicle : *vehicleLibrary) {
+		auto temp_actor = world->SpawnActor(vehicle, transform);
 		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
 		auto bbox = vehicleActor->GetBoundingBox();
 		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
 		world->Tick(client->GetTimeout());
-		temp_actor.get()->Destroy();
+		temp_actor->Destroy();
 	}
 	if (runtimeParameter.verbose) {
 		std::cout << "Number of possible vehicle bounding boxes: " << replayVehicleBoundingBoxes.size() << std::endl;
@@ -138,14 +141,14 @@ void CARLA2OSIInterface::applyWorldSettings() {
 	settings.synchronous_mode = runtimeParameter.sync;
 
 	if (settings.fixed_delta_seconds.has_value() &&
-		settings.fixed_delta_seconds.value() == deltaSeconds &&
+		settings.fixed_delta_seconds.value() == runtimeParameter.deltaSeconds &&
 		settings.synchronous_mode) {
 		if (runtimeParameter.verbose) {
 			std::cout << "Settings of Carla Server are already correct and do not need to be changed" << std::endl;
 		}
 		return;
 	}
-	settings.fixed_delta_seconds = deltaSeconds;
+	settings.fixed_delta_seconds = runtimeParameter.deltaSeconds;
 	settings.synchronous_mode = true;
 	this->world->ApplySettings(settings, settingsDuration);
 }
@@ -495,7 +498,16 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	auto worldActors = world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
-		std::cout << "Ground Truth Parsing: " << typeID << std::endl;
+		//std::cout << "Ground Truth: " << typeID  << "  " << actor->GetId() << std::endl;
+		bool destroyed = false;
+		for(auto& v: deletedVehicles) {
+		  if (v.second.idInCarla == actor->GetId())
+		  {
+		    destroyed = true;
+		    break;
+		  }
+		}
+		if (destroyed){ continue; }
 		//based on blueprint vehicle.*
 		if (typeID.rfind("vehicle", 0) == 0) {
 			auto vehicle = groundTruth->add_moving_object();
@@ -731,7 +743,7 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 		auto ActorID = spawnedVehicles.find(update.id().value());
 		if (ActorID == spawnedVehicles.end()) {
 			//not found
-
+      std::cout << "actor not found" << std::endl;
 			//find best matching representation
 			const osi3::Dimension3d dimension = update.base().dimension();
 
@@ -766,48 +778,50 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x << ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y
 				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z << std::endl;
 
-
 			auto position = carla_osi::geometry::toCarla(&update.base().position());
+			position.x = position.x + runtimeParameter.replay.mapXOffset;
+			position.y = position.y + runtimeParameter.replay.mapYOffset;
+			position.z = runtimeParameter.replay.mapZOffset;
+
 			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
 			carla::geom::Transform transform(position, orientation);
 
 			//spawn actor
-			auto blueprintlibrary = world.get()->GetBlueprintLibrary();
+			auto blueprintlibrary = world->GetBlueprintLibrary();
 			auto search = std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]);
 			std::cout << "Spawn vehicle: " << search << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
-			
-			//Hack: Could not get it to run with blueprintlibrary.get()->Find(search)
-			auto searchedvehicle = blueprintlibrary.get()->Filter(search);
+
+			auto vehicleBlueprint = blueprintlibrary->Find(search);
 			carla::SharedPtr<carla::client::Actor> actor;
-			for (auto& v : *searchedvehicle.get()) {
-				actor = world.get()->SpawnActor(v, transform);
-				std::cout << actor << " " << actor.get()->GetId() << std::endl;
-				break;
+			actor = world->TrySpawnActor(*vehicleBlueprint, transform);
+			if (actor == nullptr) {
+				std::cerr << "Spawn vehicle: " << search << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
+				std::cerr << "Could not spawn actor!" << std::endl;
+				continue;
 			}
 
 			spawnedVehicle addedVehicle;
-			addedVehicle.idInCarla = actor.get()->GetId();
+			addedVehicle.idInCarla = actor->GetId();
 			spawnedVehicles.emplace(update.id().value(), addedVehicle);
 			applyTrafficUpdate(update, actor);
 		} else {
 			applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
 		}
 		//save the Update with current timestamp
-		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * (int64_t)1E9 + trafficUpdate.timestamp().nanos();
+		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos();
 	}
 
 	//deconstruct actors with no update
-	std::vector<uint64_t> deletedVehicles;
 	for (auto& vehicle : spawnedVehicles) {
-		if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 10E9 + trafficUpdate.timestamp().nanos()) {
+		if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos()) {
 			std::cout << "No update for vehicle: " << vehicle.first << " Will stop the display of this vehicle." << std::endl;
-			auto vehicleActor = world.get()->GetActor(vehicle.second.idInCarla);
-			vehicleActor.get()->Destroy();
-			deletedVehicles.push_back(vehicle.first);
+			auto vehicleActor = world->GetActor(vehicle.second.idInCarla);
+			deletedVehicles.emplace(vehicle);
+			vehicleActor->Destroy();
 		}
 	}
 	for (auto& deletedVehicleId : deletedVehicles) {
-		spawnedVehicles.erase(deletedVehicleId);
+		spawnedVehicles.erase(deletedVehicleId.first);
 	}
 }
 
@@ -817,11 +831,21 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 	if (update.base().has_position() && update.base().has_orientation()) {
 		auto position = carla_osi::geometry::toCarla(&update.base().position());
 		auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
-		//do not set height, pitch an roll of vehicles in asynchronous mode
+		if (runtimeParameter.replay.enabled){
+			position.x = position.x + runtimeParameter.replay.mapXOffset;
+			position.y = position.y + runtimeParameter.replay.mapYOffset;
+			position.z = position.z + runtimeParameter.replay.mapZOffset;
+		}
+
+		//heigth is controlled by terrain
+		if (actor->GetLocation().z != 0) {
+			position.z = actor->GetLocation().z;
+		}
+
+		//do not set pitch an roll of vehicles in asynchronous mode
 		//these would break the visualization
 		//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
 		if (!runtimeParameter.sync) {
-			position.z = actor->GetLocation().z;
 			orientation.pitch = actor->GetTransform().rotation.pitch;
 			orientation.roll = actor->GetTransform().rotation.roll;
 		}

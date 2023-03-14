@@ -127,6 +127,9 @@ struct ReplayParameter {
 	double weightLength_X = 1;
 	double weightWidth_Y = 1;
 	double weightHeight_Z = 1;
+	double mapZOffset = 0;
+	double mapXOffset = 0;
+	double mapYOffset = 0;
 };
 
 struct RuntimeParameter {
@@ -177,8 +180,6 @@ class CARLA2OSIInterface
 	//pugi::xml_document xodr;
 	//hero id
 	uint64_t heroId = 0;
-	//delta seconds in each time step
-	float deltaSeconds;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -273,12 +274,6 @@ public:
 	std::vector<carla::rpc::EnvironmentObject> filterEnvironmentObjects();
 
 	/**
-	Retruns the stepsize.
-	\return step size
-	*/
-	float getDeltaSeconds() { return deltaSeconds; }
-
-	/**
 	Returns the hero id.
 	\return hero id
 	*/
@@ -321,6 +316,8 @@ private:
 	};
 
 	std::map<uint64_t, spawnedVehicle> spawnedVehicles;
+	//Deleted vehicles, which shall not be parsed, because they have been destroyed, but still be present in the list of actors.
+	std::map<uint64_t, spawnedVehicle> deletedVehicles;
 	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
 	/**
