@@ -889,6 +889,16 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 	}
 }
 
+void CARLA2OSIInterface::deleteSpawnedVehicles() {
+	//deconstruct all spawned actors
+	for (auto& vehicle : spawnedVehicles) {
+		std::cout << "Remove: " << vehicle.first << std::endl;
+		auto vehicleActor = world->GetActor(vehicle.second.idInCarla);
+		deletedVehicles.emplace(vehicle);
+		vehicleActor->Destroy();
+	}
+}
+
 int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
 	//todo a
 	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {

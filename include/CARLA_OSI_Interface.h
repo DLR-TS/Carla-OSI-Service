@@ -280,6 +280,11 @@ public:
 	uint64_t getHeroId() { return heroId; }
 
 	/**
+	Delete spawned vehicles from replay.
+	*/
+	void deleteSpawnedVehicles();
+
+	/**
 	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
 	*/
 	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }

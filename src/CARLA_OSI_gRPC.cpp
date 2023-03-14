@@ -27,6 +27,7 @@ void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
 		if (!client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
+			client->carlaInterface.deleteSpawnedVehicles();
 			client->carlaInterface.resetWorldSettings();
 			break;
 		}
