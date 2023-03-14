@@ -121,6 +121,17 @@ enum SENSORTYPES
 	CAMERA
 };
 
+//spawn and remove vehicles dynamically
+struct ReplayParameter {
+	bool enabled = false;
+	double weightLength_X = 1;
+	double weightWidth_Y = 1;
+	double weightHeight_Z = 1;
+	double mapZOffset = 0;
+	double mapXOffset = 0;
+	double mapYOffset = 0;
+};
+
 struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
@@ -136,6 +147,8 @@ struct RuntimeParameter {
 	//parsing options
 	CityObjectLabel options;
 	bool mapNetworkInGroundTruth = false;
+
+	ReplayParameter replay;
 
 	std::string carlaHost = "localhost";
 	int carlaPort;
@@ -168,8 +181,6 @@ class CARLA2OSIInterface
 
 	//hero id
 	uint64_t heroId = 0;
-	//delta seconds in each time step
-	float deltaSeconds;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -264,16 +275,15 @@ public:
 	std::vector<carla::rpc::EnvironmentObject> filterEnvironmentObjects();
 
 	/**
-	Retruns the stepsize.
-	\return step size
-	*/
-	float getDeltaSeconds() { return deltaSeconds; }
-
-	/**
 	Returns the hero id.
 	\return hero id
 	*/
 	uint64_t getHeroId() { return heroId; }
+
+	/**
+	Delete spawned vehicles from replay.
+	*/
+	void deleteSpawnedVehicles();
 
 	/**
 	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
@@ -293,6 +303,28 @@ private:
 	osi3::Timestamp* parseTimestamp();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
+
+	/**
+	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages.
+	*/
+	void fillBoundingBoxLookupTable();
+
+	void replayTrafficUpdate(const osi3::TrafficUpdate& update, carla::ActorId& ActorID);
+
+	/**
+	Apply Traffic Update to existing vehicle in Carla
+	*/
+	void applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor);
+
+	struct spawnedVehicle {
+		uint32_t idInCarla;
+		uint64_t lastTimeUpdated;
+	};
+
+	std::map<uint64_t, spawnedVehicle> spawnedVehicles;
+	//Deleted vehicles, which shall not be parsed, because they have been destroyed, but still be present in the list of actors.
+	std::map<uint64_t, spawnedVehicle> deletedVehicles;
+	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
 	/**
 	Clear mapping data and preparsed messages and reparse environment objects.

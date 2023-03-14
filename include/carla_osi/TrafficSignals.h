@@ -18,7 +18,7 @@
 namespace carla_osi::traffic_signals {
 
 	/// Translate given carla traffic sign actor to a corresponding osi traffic sign.
-	std::unique_ptr<osi3::TrafficSign> getOSITrafficSign(const carla::SharedPtr<const carla::client::TrafficSign> actor,
+	std::unique_ptr<osi3::TrafficSign> getOSITrafficSign(carla::rpc::EnvironmentObject &sign/*const carla::SharedPtr<const carla::client::TrafficSign> actor,
 		//const carla::SharedPtr<const carla::client::Map> map,//map is used to determine affected lanes
 		const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/);
 	

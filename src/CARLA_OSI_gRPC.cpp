@@ -27,6 +27,7 @@ void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
 		if (!client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
+			client->carlaInterface.deleteSpawnedVehicles();
 			client->carlaInterface.resetWorldSettings();
 			break;
 		}
@@ -49,7 +50,6 @@ void CARLA_OSI_client::StopServer()
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response)
 {
 	//parse configuration
-	RuntimeParameter runtimeParameter;
 	bool cityObjectLabelFilterSet = false;
 
 	for (int i = 0; i < config->runtimeparameter_size(); i++) {
@@ -75,6 +75,28 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		else if (parameter == "-ego") {
 			runtimeParameter.ego = config->runtimeparameter(++i);
 			std::cout << "Ego: " << runtimeParameter.ego << std::endl;
+		}
+		else if (parameter == "-replay") {
+			runtimeParameter.replay.enabled = true;
+			std::cout << "Replay mode active. If not further defined by -replayWeights or -replayMapOffsets default values are used." << std::endl;
+		}
+		else if (parameter == "-replayWeights") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(i + 1));
+			runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(i + 2));
+			runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(i + 3));
+			i += 3;
+			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
+				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
+		}
+		else if (parameter == "-replayMapOffsets") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.mapXOffset = std::stod(config->runtimeparameter(i + 1));
+			runtimeParameter.replay.mapYOffset = std::stod(config->runtimeparameter(i + 2));
+			runtimeParameter.replay.mapZOffset = std::stod(config->runtimeparameter(i + 3));
+			i += 3;
+			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapXOffset << ", "
+				 << runtimeParameter.replay.mapYOffset << ", " << runtimeParameter.replay.mapZOffset << std::endl;
 		}
 		else if (parameter == "--filterbyname") {
 			runtimeParameter.filter = true;
@@ -197,7 +219,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		
 		//update changes in carla
 		carlaInterface.fetchActorsFromCarla();
-		response->set_value(carlaInterface.getDeltaSeconds());
+		response->set_value(carlaInterface.runtimeParameter.deltaSeconds);
 	}
 	else 
 	{
@@ -238,14 +260,14 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 	smphSignalCosimaToSR.acquire();
 
 	if (runtimeParameter.verbose) {
-		std::cout << "Send delta to scenario runner: " << carlaInterface.getDeltaSeconds() << std::endl;
+		std::cout << "Send delta to scenario runner: " << carlaInterface.runtimeParameter.deltaSeconds << std::endl;
 	}
 
 	//control is given back to the scenario runner.
 	//The state of the simulation can change.
 	//The cached ground truth is now invalid.
 	carlaInterface.invalidateLatestGroundTruth();
-	return carlaInterface.getDeltaSeconds();
+	return carlaInterface.runtimeParameter.deltaSeconds;
 }
 
 uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
@@ -294,6 +316,11 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Get " << base_name << std::endl;
+	}
+
 	std::shared_ptr<const grpc::protobuf::Message> message;
 
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
@@ -330,6 +357,10 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 
 	// Try lookup in variable cache, else return empty string
 	// Variables from other fmus are saved and exchanged here!
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Look up message in map." << std::endl;
+	}
 	auto iter = varName2MessageMap.find(base_name);
 	if (iter != varName2MessageMap.end()) {
 		return iter->second;
