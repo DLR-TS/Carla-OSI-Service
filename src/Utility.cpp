@@ -1,29 +1,29 @@
 #include "Utility.h"
 
-osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference, bool verbose) {
+osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject& environmentObject, bool verbose) {
 	osi3::StationaryObject* prop = new osi3::StationaryObject();
 	osi3::BaseStationary* base = prop->mutable_base();
 	osi3::StationaryObject_Classification* classification = prop->mutable_classification();
 
-	auto[dimension, position] = carla_osi::geometry::toOSI(environmentObject->bounding_box);
+	auto[dimension, position] = carla_osi::geometry::toOSI(environmentObject.bounding_box);
 	
 	if (!verbose && dimension->length() * dimension->width() * dimension->height() >= 1000) {
-		std::cout << "Large volume of stationary object detected. Name: " << environmentObject->name << std::endl;
+		std::cout << "Large volume of stationary object detected. Name: " << environmentObject.name << std::endl;
 	}
 
 	if (verbose) {
 		std::cout << "OSI-Dimensions: " << dimension->length() << " " << dimension->width() << " " << dimension->height()
-			<< " OSI-Position: " << environmentObject->transform.location.x << " " << environmentObject->transform.location.y << " " << environmentObject->transform.location.z
-			<< " OSI-Rotation: " << environmentObject->transform.rotation.roll << " " << environmentObject->transform.rotation.pitch << " " << environmentObject->transform.rotation.yaw
-			<< " Name: " << environmentObject->name
+			<< " OSI-Position: " << environmentObject.transform.location.x << " " << environmentObject.transform.location.y << " " << environmentObject.transform.location.z
+			<< " OSI-Rotation: " << environmentObject.transform.rotation.roll << " " << environmentObject.transform.rotation.pitch << " " << environmentObject.transform.rotation.yaw
+			<< " Name: " << environmentObject.name
 			<< std::endl;
 	}
 
 	base->set_allocated_dimension(dimension.release());
-	base->set_allocated_position(carla_osi::geometry::toOSI(environmentObject->transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(environmentObject->transform.rotation).release());
+	base->set_allocated_position(carla_osi::geometry::toOSI(environmentObject.transform.location).release());
+	base->set_allocated_orientation(carla_osi::geometry::toOSI(environmentObject.transform.rotation).release());
 
-	switch (environmentObject->type)
+	switch (environmentObject.type)
 	{
 	default:
 		//will be set to other if no other tag is available
@@ -72,9 +72,9 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::SharedPtr<const carla::
 		break;
 	}
 
-	prop->set_allocated_id(carla_osi::id_mapping::toOSI(environmentObject->id).release());
+	prop->set_allocated_id(carla_osi::id_mapping::toOSI(environmentObject.id).release());
 	
-	prop->set_model_reference(model_reference);
+	prop->set_model_reference(environmentObject.name);
 	return prop;
 }
 

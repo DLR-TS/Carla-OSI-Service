@@ -29,9 +29,9 @@ TEST_CASE("CARLA2OSIInterface", "[CARLAInterface][.][RequiresCarlaServer]") {
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 25;
+	float transactionTimeout = 25;
 	// delta seconds (1/framerate)
-	double deltaSeconds = (1.0 / 60);
+	float deltaSeconds = (1.0f / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
 	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
@@ -72,9 +72,9 @@ TEST_CASE("CARLA2OSIInterface w/o server", "[CARLAInterface][Exception]") {
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 200000u;
-	double transactionTimeout = 0.0;
+	float transactionTimeout = 0.0f;
 	// delta seconds (1/framerate)
-	double deltaSeconds = (1.0 / 60);
+	float deltaSeconds = (1.0f / 60);
 
 	SECTION("Init") {
 		RuntimeParameter runtimeParameter;
@@ -91,9 +91,9 @@ TEST_CASE("Parsing of added vehicle attributes for osi3::MovingObject", "[CARLAI
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 25;
+	float transactionTimeout = 25;
 	// delta seconds (1/framerate)
-	double deltaSeconds = (1.0 / 60);
+	float deltaSeconds = (1.0f / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
 	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
@@ -232,9 +232,9 @@ TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][Requir
 	// carla server
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 25;
+	float transactionTimeout = 25;
 	// delta seconds (1/framerate)
-	double deltaSeconds = (1.0 / 60);
+	float deltaSeconds = (1.0f / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
 	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);
@@ -298,9 +298,9 @@ TEST_CASE("Parse CARLA Walker into OSI MovinObject", "[CARLAInterface][.][Requir
 TEST_CASE("Parse some camera sensor frames", "[CARLAInterface][.][RequiresCarlaServer][CameraSensor]") {
 	std::string host = "localhost";
 	uint16_t port = 2000u;
-	double transactionTimeout = 25;
+	float transactionTimeout = 25;
 	// delta seconds (1/framerate)
-	double deltaSeconds = (1.0 / 60);
+	float deltaSeconds = (1.0f / 60);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
 	auto[client, world] = getCarlaDefaultWorld(host, port, transactionTimeout);

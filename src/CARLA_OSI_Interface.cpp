@@ -11,14 +11,14 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 		loadWorld();
 		applyWorldSettings();
 		parseStationaryMapObjects();
+
+		if (runtimeParameter.replay.enabled) {
+			fillBoundingBoxLookupTable();
+		}
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
 		return -1;
-	}
-
-	if (runtimeParameter.replay.enabled) {
-		fillBoundingBoxLookupTable();
 	}
 
 	// perform a tick to fill actor and message lists
@@ -216,13 +216,13 @@ osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
 std::vector<carla::rpc::EnvironmentObject> CARLA2OSIInterface::filterEnvironmentObjects() {
 
 	std::vector<carla::rpc::EnvironmentObject> props{};
+	std::vector<carla::rpc::EnvironmentObject> filteredprops{};
 
 	if (runtimeParameter.options.None) {
 		return props;
 	}
 	if (runtimeParameter.options.Any) {
 		props = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
-		return props;
 	}
 	else {
 		//specialized types
@@ -316,24 +316,25 @@ std::vector<carla::rpc::EnvironmentObject> CARLA2OSIInterface::filterEnvironment
 				continue;
 			}
 		}
+		filteredprops.push_back(prop);
 	}
-	return props;
+	return filteredprops;
 }
 
 void CARLA2OSIInterface::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
-
 	staticMapTruth->set_map_reference(map->GetName());
-
 	auto OSIStationaryObjects = staticMapTruth->mutable_stationary_object();
 	auto filteredStationaryMapObjects = filterEnvironmentObjects();
 	for (auto& mapObject : filteredStationaryMapObjects) {
 		OSIStationaryObjects->AddAllocated(
-			CarlaUtility::toOSI(carla::MakeShared<const carla::rpc::EnvironmentObject>(mapObject),
-				world->GetActor((carla::ActorId)mapObject.id)->GetTypeId(), runtimeParameter.verbose));
+			CarlaUtility::toOSI(mapObject, runtimeParameter.verbose));
 	}
 
+	for (auto& mapObject : filteredStationaryMapObjects) {
+		OSIStationaryObjects->AddAllocated(CarlaUtility::toOSI(mapObject, runtimeParameter.verbose));
+	}
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	auto signs = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
 	for (auto& sign : signs) {

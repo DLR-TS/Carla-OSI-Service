@@ -3,7 +3,7 @@ MAINTAINER frank.baumgarten@dlr.de
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y cmake build-essential pip git libtbb2 libboost-filesystem-dev && rm -rf /var/lib/apt/lists/*
-RUN pip install conan
+RUN pip install conan==1.59.0
 
 RUN mkdir carlaosiservice && mkdir carlaosiservice/build
 WORKDIR /carlaosiservice/build
