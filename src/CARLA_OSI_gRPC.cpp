@@ -82,21 +82,23 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		}
 		else if (parameter == "-replayWeights") {
 			runtimeParameter.replay.enabled = true;
-			runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(i + 1));
-			runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(i + 2));
-			runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(i + 3));
-			i += 3;
+			runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(++i));
+			runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(++i));
+			runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(++i));
 			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
 				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
 		}
 		else if (parameter == "-replayMapOffsets") {
 			runtimeParameter.replay.enabled = true;
-			runtimeParameter.replay.mapXOffset = std::stod(config->runtimeparameter(i + 1));
-			runtimeParameter.replay.mapYOffset = std::stod(config->runtimeparameter(i + 2));
-			runtimeParameter.replay.mapZOffset = std::stod(config->runtimeparameter(i + 3));
-			i += 3;
-			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapXOffset << ", "
-				 << runtimeParameter.replay.mapYOffset << ", " << runtimeParameter.replay.mapZOffset << std::endl;
+			runtimeParameter.replay.mapOffset.X = std::stod(config->runtimeparameter(++i));
+			runtimeParameter.replay.mapOffset.Y = std::stod(config->runtimeparameter(++i));
+			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapOffset.X << ", "
+				 << runtimeParameter.replay.mapOffset.Y << std::endl;
+		}
+		else if (parameter == "-replaySpawnHeight") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.spawnHeight_Z = std::stof(config->runtimeparameter(++i));
+			std::cout << "Replay mode active. Spawn height is: " << runtimeParameter.replay.spawnHeight_Z << std::endl;
 		}
 		else if (parameter == "--filterbyname") {
 			runtimeParameter.filter = true;

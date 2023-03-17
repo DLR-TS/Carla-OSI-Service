@@ -19,7 +19,10 @@
 namespace carla_osi {
 	namespace geometry {
 
-		carla::geom::Vector3D mul(const carla::geom::Vector3D& vector, const float f);
+		struct MapOffset {
+			double X = 0;
+			double Y = 0;
+		};
 
 		// Geometric translations
 		// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
@@ -27,16 +30,12 @@ namespace carla_osi {
 
 		std::unique_ptr<osi3::Orientation3d> toOSI(const carla::geom::Rotation& rotation);
 		std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> toOSI(const carla::geom::BoundingBox& boundingBox);
-		std::unique_ptr<osi3::Vector3d> toOSI(const carla::geom::Vector3D& location);
-		//carla::geom::Vector3D is a generalization of carla::geom::Location
-		//osi3::Vector3d toOSI(const carla::geom::Location& location);
-		std::unique_ptr<osi3::Vector2d> toOSI(const carla::geom::Vector2D& vector);
+		std::unique_ptr<osi3::Vector3d> toOSI(const carla::geom::Location& location, const MapOffset& offset = MapOffset());
 		std::unique_ptr<osi3::MountingPosition> toOSI(const carla::geom::Transform& transform);
 
-		carla::geom::Rotation toCarla(const osi3::Orientation3d* orientation);
-		carla::geom::BoundingBox toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position);
-		carla::geom::Location toCarla(const osi3::Vector3d* position);
-		carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
+		carla::geom::Rotation toCarla(const osi3::Orientation3d& orientation);
+		carla::geom::BoundingBox toCarla(const osi3::Dimension3d& dimension, const osi3::Vector3d& position);
+		carla::geom::Location toCarla(const osi3::Vector3d& position, const MapOffset& offset = MapOffset());
 	}
 }
 

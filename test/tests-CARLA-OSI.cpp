@@ -268,7 +268,7 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	REQUIRE(position->z() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().z());
 }
 
-TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][TrafficCommandReceiver]") {
+TEST_CASE("CARLA_OSI_CLIENT TrafficCommand proxy", "[CARLA_OSI_CLIENT][TrafficCommandReceiver]") {
 	std::string gRPCHost = "localhost:51425";
 	grpc::ChannelArguments channelArgs;
 	auto channel = grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs);
@@ -289,16 +289,14 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][Traffi
 
 	// Unmatched actor id resolves to empty role name
 	CoSiMa::rpc::String rpcBaseName;
-	rpcBaseName.set_value("TrafficCommand{}");
+	rpcBaseName.set_value("TrafficCommand");
 	CoSiMa::rpc::Bytes serializedResponse;
 	osi3::TrafficCommand response;
 
 	context = CreateDeadlinedClientContext(5.0);
 	baseStub.GetStringValue(context.get(), rpcBaseName, &serializedResponse);
-	REQUIRE(0 < serializedResponse.value().length());
-	REQUIRE(0 < serializedResponse.ByteSizeLong());
-	REQUIRE(response.ParseFromString(serializedResponse.value()));
-	REQUIRE(0 == response.traffic_participant_id().value());
+	REQUIRE(0 == serializedResponse.value().length());
+	REQUIRE(0 == serializedResponse.ByteSizeLong());
 }
 
 TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][TrafficCommandReceiver][.][RequiresCarlaServer][gRPC]") {
@@ -354,7 +352,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 
 	// Unmatched actor id resolves to empty role name
 	CoSiMa::rpc::String rpcBaseName;
-	rpcBaseName.set_value("TrafficCommand{}");
+	rpcBaseName.set_value("TrafficCommand");
 	CoSiMa::rpc::Bytes serializedResponse;
 	osi3::TrafficCommand response;
 

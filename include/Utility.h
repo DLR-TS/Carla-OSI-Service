@@ -76,7 +76,7 @@
 namespace CarlaUtility {
 
 	// Only specialized actors have a bounding box, therefore it has to be passed as additional argument
-	osi3::StationaryObject* toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference, bool verbose);
+	osi3::StationaryObject* toOSI(const carla::SharedPtr<const carla::rpc::EnvironmentObject> environmentObject, const std::string& model_reference, bool verbose = false);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Walker> walker);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> vehicle);

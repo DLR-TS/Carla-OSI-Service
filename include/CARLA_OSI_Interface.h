@@ -124,12 +124,13 @@ enum SENSORTYPES
 //spawn and remove vehicles dynamically
 struct ReplayParameter {
 	bool enabled = false;
+
+	carla_osi::geometry::MapOffset mapOffset;
+	float spawnHeight_Z = 0;
+
 	double weightLength_X = 1;
 	double weightWidth_Y = 1;
 	double weightHeight_Z = 1;
-	double mapZOffset = 0;
-	double mapXOffset = 0;
-	double mapYOffset = 0;
 };
 
 struct RuntimeParameter {

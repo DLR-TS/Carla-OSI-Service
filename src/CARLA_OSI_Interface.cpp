@@ -7,15 +7,15 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 		//connect
 		this->client = std::make_unique<carla::client::Client>(runtimeParams.carlaHost, runtimeParameter.carlaPort);
 		this->client->SetTimeout(std::chrono::duration<double>(runtimeParams.transactionTimeout));
+
+		loadWorld();
+		applyWorldSettings();
+		parseStationaryMapObjects();
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
 		return -1;
 	}
-
-	loadWorld();
-	applyWorldSettings();
-	parseStationaryMapObjects();
 
 	if (runtimeParameter.replay.enabled) {
 		fillBoundingBoxLookupTable();
@@ -742,9 +742,7 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 	for (auto& update : trafficUpdate.update()) {
 		auto ActorID = spawnedVehicles.find(update.id().value());
 		if (ActorID == spawnedVehicles.end()) {
-			//not found
-      std::cout << "actor not found" << std::endl;
-			//find best matching representation
+			//not found --> find best matching representation
 			const osi3::Dimension3d dimension = update.base().dimension();
 
 			size_t minDiffVehicleIndex = 0;
@@ -778,12 +776,10 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x << ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y
 				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z << std::endl;
 
-			auto position = carla_osi::geometry::toCarla(&update.base().position());
-			position.x = position.x + runtimeParameter.replay.mapXOffset;
-			position.y = position.y + runtimeParameter.replay.mapYOffset;
-			position.z = runtimeParameter.replay.mapZOffset;
+			auto position = carla_osi::geometry::toCarla(update.base().position(), runtimeParameter.replay.mapOffset);
+			position.z = runtimeParameter.replay.spawnHeight_Z;
 
-			auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
+			auto orientation = carla_osi::geometry::toCarla(update.base().orientation());
 			carla::geom::Transform transform(position, orientation);
 
 			//spawn actor
@@ -829,17 +825,18 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 {
 	//BASE
 	if (update.base().has_position() && update.base().has_orientation()) {
-		auto position = carla_osi::geometry::toCarla(&update.base().position());
-		auto orientation = carla_osi::geometry::toCarla(&update.base().orientation());
+		auto position = carla_osi::geometry::toCarla(update.base().position(), runtimeParameter.replay.mapOffset);
+		auto orientation = carla_osi::geometry::toCarla(update.base().orientation());
 		if (runtimeParameter.replay.enabled){
-			position.x = position.x + runtimeParameter.replay.mapXOffset;
-			position.y = position.y + runtimeParameter.replay.mapYOffset;
-			position.z = position.z + runtimeParameter.replay.mapZOffset;
+			position.z = runtimeParameter.replay.spawnHeight_Z;
 		}
 
 		//heigth is controlled by terrain
 		if (actor->GetLocation().z != 0) {
 			position.z = actor->GetLocation().z;
+		}
+		else {
+			//new height is spawnHeight
 		}
 
 		//do not set pitch an roll of vehicles in asynchronous mode
@@ -854,7 +851,7 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 
 	//Velocity
 	if (update.base().has_velocity()) {
-		actor->SetTargetVelocity(carla_osi::geometry::toCarla(&update.base().velocity()));
+		actor->SetTargetVelocity(carla_osi::geometry::toCarla(update.base().velocity()));
 	}
 
 	//Acceleration can not be set in CARLA
@@ -865,7 +862,7 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 
 	//Orientation
 	if (update.base().has_orientation_rate()) {
-		const auto orientationRate = carla_osi::geometry::toCarla(&update.base().orientation_rate());
+		const auto orientationRate = carla_osi::geometry::toCarla(update.base().orientation_rate());
 
 		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
 		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
