@@ -427,7 +427,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 					centerline->Reserve((int)waypoints.size());
 					for (const auto& waypoint : waypoints) {
 						auto location = waypoint->GetTransform().location;
-						centerline->AddAllocated(carla_osi::geometry::toOSI(location).release());
+						centerline->AddAllocated(Geometry::getInstance()->toOSI(location).release());
 					}
 
 					//add left neighbouring lane
@@ -777,10 +777,10 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x << ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y
 				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z << std::endl;
 
-			auto position = carla_osi::geometry::toCarla(update.base().position(), runtimeParameter.replay.mapOffset);
+			auto position = Geometry::getInstance()->toCarla(update.base().position());
 			position.z = runtimeParameter.replay.spawnHeight_Z;
 
-			auto orientation = carla_osi::geometry::toCarla(update.base().orientation());
+			auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
 			carla::geom::Transform transform(position, orientation);
 
 			//spawn actor
@@ -826,8 +826,8 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 {
 	//BASE
 	if (update.base().has_position() && update.base().has_orientation()) {
-		auto position = carla_osi::geometry::toCarla(update.base().position(), runtimeParameter.replay.mapOffset);
-		auto orientation = carla_osi::geometry::toCarla(update.base().orientation());
+		auto position = Geometry::getInstance()->toCarla(update.base().position());
+		auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
 		if (runtimeParameter.replay.enabled){
 			position.z = runtimeParameter.replay.spawnHeight_Z;
 		}
@@ -852,7 +852,7 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 
 	//Velocity
 	if (update.base().has_velocity()) {
-		actor->SetTargetVelocity(carla_osi::geometry::toCarla(update.base().velocity()));
+		actor->SetTargetVelocity(Geometry::getInstance()->toCarla(update.base().velocity()));
 	}
 
 	//Acceleration can not be set in CARLA
@@ -863,7 +863,7 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 
 	//Orientation
 	if (update.base().has_orientation_rate()) {
-		const auto orientationRate = carla_osi::geometry::toCarla(update.base().orientation_rate());
+		const auto orientationRate = Geometry::getInstance()->toCarla(update.base().orientation_rate());
 
 		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
 		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });

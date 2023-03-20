@@ -15,7 +15,7 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 
 	std::unique_ptr<osi3::TrafficSign> osi_sign = std::make_unique<osi3::TrafficSign>();
 	//osi_sign->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
-  osi_sign->mutable_id()->set_value(sign.id);
+	osi_sign->mutable_id()->set_value(sign.id);
 
 	//TODO use OpenDRIVE for better traffic sign description. Also use it to differentiate between traffic signs as road marking and 'normal' traffic signs
 
@@ -23,7 +23,7 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 	auto base = main->mutable_base();
 	// bounding boxes of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
 	// --> use world::GetActorBoundingBox and pass as argument
-	auto[dimension, position] = carla_osi::geometry::toOSI(sign.bounding_box);
+	auto[dimension, position] = Geometry::getInstance()->toOSI(sign.bounding_box);
 
 	base->set_allocated_dimension(dimension.release());
 
@@ -32,7 +32,7 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
 	//TODO assure rotation is applied local
 	auto rotation = carla::geom::Rotation(sign.transform.rotation.pitch, 90 + sign.transform.rotation.yaw, sign.transform.rotation.roll);
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(rotation).release());
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	auto classification = main->mutable_classification();
@@ -152,11 +152,11 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 		trafficLightBulb->set_allocated_id(carla_osi::id_mapping::getOSITrafficLightId(actor, info.first).release());
 
 		auto base = trafficLightBulb->mutable_base();
-		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation).release());
+		base->set_allocated_position(Geometry::getInstance()->toOSI(bulbLocation).release());
 		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
 		//TODO assure rotation is applied local
 		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
-		base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation).release());
+		base->set_allocated_orientation(Geometry::getInstance()->toOSI(rotation).release());
 		osi3::Dimension3d* dimension = new osi3::Dimension3d();
 		//bulbs have circa 30 centimeter diameter
 		dimension->set_height(0.30f);

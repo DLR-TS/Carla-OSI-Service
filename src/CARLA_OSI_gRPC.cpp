@@ -92,6 +92,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter.replay.enabled = true;
 			runtimeParameter.replay.mapOffset.X = std::stod(config->runtimeparameter(++i));
 			runtimeParameter.replay.mapOffset.Y = std::stod(config->runtimeparameter(++i));
+			Geometry::getInstance()->setOffset(runtimeParameter.replay.mapOffset);
 			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapOffset.X << ", "
 				 << runtimeParameter.replay.mapOffset.Y << std::endl;
 		}

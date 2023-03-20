@@ -125,7 +125,7 @@ enum SENSORTYPES
 struct ReplayParameter {
 	bool enabled = false;
 
-	carla_osi::geometry::MapOffset mapOffset;
+	MapOffset mapOffset;
 	float spawnHeight_Z = 0;
 
 	double weightLength_X = 1;
