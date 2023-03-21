@@ -847,12 +847,15 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 			orientation.pitch = actor->GetTransform().rotation.pitch;
 			orientation.roll = actor->GetTransform().rotation.roll;
 		}
+		if (runtimeParameter.verbose) {
+			std::cout << "Apply position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
+		}
 		actor->SetTransform(carla::geom::Transform(position, orientation));
 	}
 
 	//Velocity
 	if (update.base().has_velocity()) {
-		actor->SetTargetVelocity(Geometry::getInstance()->toCarla(update.base().velocity()));
+		actor->SetTargetVelocity(Geometry::getInstance()->toCarlaVelocity(update.base().velocity()));
 	}
 
 	//Acceleration can not be set in CARLA

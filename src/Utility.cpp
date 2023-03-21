@@ -138,8 +138,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 
 	// velocity and acceleration as part of ground truth are given in global coordinate system
 	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
-	base->set_allocated_velocity(Geometry::getInstance()->toOSI(actor->GetVelocity()).release());
-	base->set_allocated_acceleration(Geometry::getInstance()->toOSI(actor->GetAcceleration()).release());
+	base->set_allocated_velocity(Geometry::getInstance()->toOSIVelocity(actor->GetVelocity()).release());
+	base->set_allocated_acceleration(Geometry::getInstance()->toOSIVelocity(actor->GetAcceleration()).release());
 	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
 	base->set_allocated_orientation_rate(Geometry::getInstance()->toOSI(
 		carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)).release());

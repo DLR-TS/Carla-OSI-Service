@@ -51,12 +51,14 @@ public:
 
 	std::unique_ptr<osi3::Orientation3d> toOSI(const carla::geom::Rotation& rotation);
 	std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> toOSI(const carla::geom::BoundingBox& boundingBox);
-	std::unique_ptr<osi3::Vector3d> toOSI(const carla::geom::Location& location, const MapOffset& offset = MapOffset());
+	std::unique_ptr<osi3::Vector3d> toOSI(const carla::geom::Location& location);
+ 	std::unique_ptr<osi3::Vector3d> toOSIVelocity(const carla::geom::Vector3D& vector);
 	std::unique_ptr<osi3::MountingPosition> toOSI(const carla::geom::Transform& transform);
 
 	carla::geom::Rotation toCarla(const osi3::Orientation3d& orientation);
 	carla::geom::BoundingBox toCarla(const osi3::Dimension3d& dimension, const osi3::Vector3d& position);
 	carla::geom::Location toCarla(const osi3::Vector3d& position);
+ 	carla::geom::Location toCarlaVelocity(const osi3::Vector3d& position);
 
 	void setOffset(const MapOffset& offset);
 };

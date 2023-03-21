@@ -24,12 +24,21 @@ std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> G
 	return std::pair(std::move(dim), std::move(vec));
 }
 
-std::unique_ptr<osi3::Vector3d> Geometry::toOSI(const carla::geom::Location& location, const MapOffset& offset) {
+std::unique_ptr<osi3::Vector3d> Geometry::toOSI(const carla::geom::Location& location) {
 	//flip y
 	std::unique_ptr<osi3::Vector3d> vec = std::make_unique<osi3::Vector3d>();
-	vec->set_x(location.x - offset.X);
-	vec->set_y(-location.y - offset.Y);
+	vec->set_x(location.x + offset.X);
+	vec->set_y((-location.y) + offset.Y);
 	vec->set_z(location.z);
+	return vec;
+}
+
+std::unique_ptr<osi3::Vector3d> Geometry::toOSIVelocity(const carla::geom::Vector3D& vector) {
+	//flip y
+	std::unique_ptr<osi3::Vector3d> vec = std::make_unique<osi3::Vector3d>();
+	vec->set_x(vector.x);
+	vec->set_y(-vector.y);
+	vec->set_z(vector.z);
 	return vec;
 }
 
@@ -58,7 +67,12 @@ carla::geom::BoundingBox Geometry::toCarla(const osi3::Dimension3d& dimension, c
 
 carla::geom::Location Geometry::toCarla(const osi3::Vector3d& position) {
 	//flip y
-	return carla::geom::Location((float)(position.x() + offset.X), (float)(-position.y() + offset.Y), (float)position.z());
+	return carla::geom::Location((float)(position.x() - offset.X), (float)(-(position.y() - offset.Y)), (float)position.z());
+}
+
+carla::geom::Location Geometry::toCarlaVelocity(const osi3::Vector3d& position) {
+	//flip y
+	return carla::geom::Location((float)position.x(), (float)-position.y(), (float)position.z());
 }
 
 void Geometry::setOffset(const MapOffset& offset) {
