@@ -166,8 +166,9 @@ add_library(CARLA_OSI_ScenarioRunner_Lib "${CMAKE_CURRENT_SOURCE_DIR}/src/Scenar
 target_link_libraries(CARLA_OSI_ScenarioRunner_Lib PUBLIC CARLA_OSI_ScenarioRunner_gRPC_Lib)
 target_include_directories(CARLA_OSI_ScenarioRunner_Lib BEFORE PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
-# gRPC service logic library, separated from CARLA_OSI_Service to be testalble with catch2
-add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
+# gRPC service logic library, separated from CARLA_OSI_Service to be testable with catch2
+add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp"
+                                      "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
 target_link_libraries(CARLA_OSI_gRPC_ServiceLib PUBLIC CARLA_OSI_gRPC_Lib CARLA_OSI_Lib CARLA_OSI_ScenarioRunner_Lib)
 target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 

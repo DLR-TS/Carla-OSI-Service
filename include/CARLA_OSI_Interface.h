@@ -6,7 +6,6 @@
 #define CARLAINTERFACE_H
 
 #include <charconv>
-#include <variant>
 #include <string>
 #include <mutex>
 #include <shared_mutex>
@@ -113,12 +112,31 @@ struct CityObjectLabel {
 	bool Any = false;
 };
 
+enum SENSORTYPES
+{
+	GENERIC,
+	ULTRASONIC,
+	RADAR,
+	LIDAR,
+	CAMERA
+};
+
+//spawn and remove vehicles dynamically
+struct ReplayParameter {
+	bool enabled = false;
+
+	MapOffset mapOffset;
+	float spawnHeight_Z = 0;
+
+	double weightLength_X = 1;
+	double weightWidth_Y = 1;
+	double weightHeight_Z = 1;
+};
+
 struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
 	bool scenarioRunnerDoesTick = false;
-	bool staticObjectsInGroundTruthMessage = true;
-	bool dynamicTimestamps = false;
 	bool filter = false;
 	std::string filterString = "";
 	bool log = false;
@@ -126,16 +144,21 @@ struct RuntimeParameter {
 	std::string logFileName = "";
 	int resumeCarlaAsyncSeconds = 0;
 	bool carlaSensors = false;
-	//Server address deliberately chosen to accept any connection
-	std::string serverAddress = "0.0.0.0:51425";
+	std::set<SENSORTYPES> carlasensortypes;
 	//parsing options
 	CityObjectLabel options;
-	bool noMapNetworkInGroundTruth = false;
+	bool mapNetworkInGroundTruth = false;
+
+	ReplayParameter replay;
+
+	std::string carlaHost = "localhost";
+	int carlaPort;
+	float transactionTimeout;
+	float deltaSeconds;
 };
 
 class CARLA2OSIInterface
 {
-	typedef std::variant<std::shared_ptr<osi3::SensorView>, std::shared_ptr<osi3::FeatureData>, std::shared_ptr<osi3::TrafficCommand>> cachedOSIMessageType;
 
 	std::unique_ptr<carla::client::World> world;
 	std::unique_ptr<carla::client::Client> client;
@@ -144,8 +167,8 @@ class CARLA2OSIInterface
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
 	std::shared_mutex actorRole2IDMap_mutex;
 	// contains OSI messages (values) for variable names / actor roles (keys) that can not always be retrieved, such as the sensor messages, which originate from CARLA sensor events and don't have to occur on every tick. 
-	std::map<std::string, cachedOSIMessageType> varName2MessageMap;
-	std::shared_mutex varName2MessageMap_mutex;
+	std::map<int, std::shared_ptr<osi3::SensorView>> sensorCache;
+	std::shared_mutex sensorCache_mutex;
 	// contains all actor ids reported by Carla during the last tick
 	std::set<carla::ActorId> activeActors;
 	// ground truth basis created during initialise(), contains all ground truth fields that won't change during the simulation (roads and lanes, buildings, ...)
@@ -158,10 +181,6 @@ class CARLA2OSIInterface
 	//pugi::xml_document xodr;
 	//hero id
 	uint64_t heroId = 0;
-	//delta seconds in each time step
-	float deltaSeconds;
-	//Timestamps for dynamic step size sync mode
-	std::chrono::system_clock::time_point last_timestamp = std::chrono::system_clock::now();
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -170,33 +189,16 @@ public:
 	RuntimeParameter runtimeParameter;
 
 	~CARLA2OSIInterface() {
-		if (world) {
-			// prevent destruction during grpc accesses
-			std::scoped_lock lock(actorRole2IDMap_mutex, varName2MessageMap_mutex);
-			//Unfreeze the server and Unreal Editor, useful for development
-			auto settings = world->GetSettings();
-			settings.synchronous_mode = false;
-			world->ApplySettings(settings, settingsDuration);
-			world->Tick(client->GetTimeout());
-			std::cout << "CARLA2OSIInterface: Disabled synchronous mode of Carla server" << std::endl;
-		}
+		if (world) resetWorldSettings();
 	};
 
 	/**
 	* initialise the interface with the given parameters and connect to the carla server
-	* \var host
-	* host name or ip of the carla server
-	* \var port
-	* port of the carla server
-	* \var transactionTimeout
-	* transaction timeout in seconds
-	* \var deltaSeconds
-	* simulation time delta per tick
 	* \var runtimeParameter
 	* parameters set by start of program
 	* \return Success status.
 	*/
-	int initialise(std::string host, uint16_t port, double transactionTimeout, double deltaSeconds, RuntimeParameter& runtimeParameter);
+	int initialise(RuntimeParameter& runtimeParameter);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
@@ -232,18 +234,30 @@ public:
 	std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
 	/**
-	Retrieve CARLA Sensor output from the sensor with the given role name. Messages are cached and updated during a sensor's tick.
-	\param sensor_role_name Role attribute of the carla::client::Sensor
+	Retrieve CARLA Sensor output from the sensor with the given index. Messages are cached and updated during a sensor's tick.
+	\param sensor OSMPSensorView + index
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
-	std::shared_ptr<const osi3::SensorView> getSensorView(std::string sensor_role_name);
+	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensor);
+
+	/**
+	Send applied SensorViewConfiguration for sensor.
+	\param sensor OSMPSensorViewConfiguration + index
+	\return The sensor's configuration as osi3::SensorViewConfiguration, or nullptr if no sensor with given name is found
+	*/
+	std::shared_ptr<const osi3::SensorViewConfiguration> getSensorViewConfiguration(const std::string& sensor);
 
 	/**
 	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
-	\param actorId
 	\return success indicator
 	*/
 	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
+
+	/**
+	Receive configuration of SensorViewConfiguration message
+	\return success indicator
+	*/
+	int receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration);
 
 	//Helper function for our client
 	/**
@@ -261,16 +275,15 @@ public:
 	std::vector<carla::rpc::EnvironmentObject> filterEnvironmentObjects();
 
 	/**
-	Retruns the stepsize.
-	\return step size
-	*/
-	float getDeltaSeconds() { return deltaSeconds; }
-
-	/**
 	Returns the hero id.
 	\return hero id
 	*/
-	float getHeroId() { return heroId; }
+	uint64_t getHeroId() { return heroId; }
+
+	/**
+	Delete spawned vehicles from replay.
+	*/
+	void deleteSpawnedVehicles();
 
 	/**
 	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
@@ -285,14 +298,33 @@ public:
 private:
 
 	std::ofstream logFile;
-	bool allXActorsSpawned = false;
-	struct logData { std::string id = "NaN"; double x{ NAN }, y{ NAN }, yaw{ NAN }; };
-	std::vector<logData> actors = std::vector<logData>(5);//5 from SetLevel SUC2 MS2
+	struct logData { std::string id; double x, y, yaw; };
 
-	std::string_view getPrefix(std::string_view name);
 	osi3::Timestamp* parseTimestamp();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
+
+	/**
+	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages.
+	*/
+	void fillBoundingBoxLookupTable();
+
+	void replayTrafficUpdate(const osi3::TrafficUpdate& update, carla::ActorId& ActorID);
+
+	/**
+	Apply Traffic Update to existing vehicle in Carla
+	*/
+	void applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor);
+
+	struct spawnedVehicle {
+		uint32_t idInCarla;
+		uint64_t lastTimeUpdated;
+	};
+
+	std::map<uint64_t, spawnedVehicle> spawnedVehicles;
+	//Deleted vehicles, which shall not be parsed, because they have been destroyed, but still be present in the list of actors.
+	std::map<uint64_t, spawnedVehicle> deletedVehicles;
+	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
 	/**
 	Clear mapping data and preparsed messages and reparse environment objects.
@@ -303,11 +335,7 @@ private:
 	*/
 	virtual void clearData();
 
-	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData);
-
-	//output
-	void sendTrafficCommand(carla::ActorId actorId);
-
+	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index);
 };
 
 #endif //!CARLAINTERFACE_H

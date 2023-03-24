@@ -6,14 +6,14 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 		server->Shutdown(std::chrono::system_clock::now() + transaction_timeout);
 	grpc::ServerBuilder builder;
 	grpc::reflection::InitProtoReflectionServerBuilderPlugin();
-	builder.AddListeningPort(runtimeParameter.serverAddress, grpc::InsecureServerCredentials());
+	builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());
 	builder.RegisterService(static_cast<CoSiMa::rpc::BaseInterface::Service*>(this));
 	builder.RegisterService(static_cast<CoSiMa::rpc::CARLAInterface::Service*>(this));
 	builder.RegisterService(&trafficCommandReceiver);
 	// try to use unlimited message size
 	builder.SetMaxMessageSize(INT_MAX);
 	server = builder.BuildAndStart();
-	std::cout << "Server listening on " << runtimeParameter.serverAddress << std::endl;
+	std::cout << "Server listening on " << serverAddress << std::endl;
 	if (!nonBlocking) {
 		server->Wait();
 	}
@@ -27,6 +27,7 @@ void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
 		if (!client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
+			client->carlaInterface.deleteSpawnedVehicles();
 			client->carlaInterface.resetWorldSettings();
 			break;
 		}
@@ -48,6 +49,144 @@ void CARLA_OSI_client::StopServer()
 
 grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoSiMa::rpc::CarlaConfig* config, CoSiMa::rpc::Int32* response)
 {
+	//parse configuration
+	bool cityObjectLabelFilterSet = false;
+
+	for (int i = 0; i < config->runtimeparameter_size(); i++) {
+		std::string parameter = config->runtimeparameter(i);
+
+		if (parameter == "-v" || parameter == "--verbose") {
+			runtimeParameter.verbose = true;
+			std::cout << "Running with verbose prints.\n";
+		}
+		else if (parameter == "-sr" || parameter == "--scenariorunner") {
+			runtimeParameter.scenarioRunnerDoesTick = true;
+			std::cout << "Wait for scenario runner connection.\n";
+		}
+		else if (parameter == "-a" || parameter == "--async") {
+			runtimeParameter.sync = false;
+			std::cout << "Running in asynchronous mode.\n";
+		}
+		else if (parameter == "-l" || parameter == "--logfile") {
+			runtimeParameter.log = true;
+			runtimeParameter.logFileName = config->runtimeparameter(++i);
+			std::cout << "Log to std::cout and " << runtimeParameter.logFileName << "\n";
+		}
+		else if (parameter == "-ego") {
+			runtimeParameter.ego = config->runtimeparameter(++i);
+			std::cout << "Ego: " << runtimeParameter.ego << std::endl;
+		}
+		else if (parameter == "-replay") {
+			runtimeParameter.replay.enabled = true;
+			std::cout << "Replay mode active. If not further defined by -replayWeights or -replayMapOffsets default values are used." << std::endl;
+		}
+		else if (parameter == "-replayWeights") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.weightLength_X = std::stod(config->runtimeparameter(++i));
+			runtimeParameter.replay.weightWidth_Y = std::stod(config->runtimeparameter(++i));
+			runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(++i));
+			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
+				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
+		}
+		else if (parameter == "-replayMapOffsets") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.mapOffset.X = std::stod(config->runtimeparameter(++i));
+			runtimeParameter.replay.mapOffset.Y = std::stod(config->runtimeparameter(++i));
+			Geometry::getInstance()->setOffset(runtimeParameter.replay.mapOffset);
+			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapOffset.X << ", "
+				 << runtimeParameter.replay.mapOffset.Y << std::endl;
+		}
+		else if (parameter == "-replaySpawnHeight") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.spawnHeight_Z = std::stof(config->runtimeparameter(++i));
+			std::cout << "Replay mode active. Spawn height is: " << runtimeParameter.replay.spawnHeight_Z << std::endl;
+		}
+		else if (parameter == "--filterbyname") {
+			runtimeParameter.filter = true;
+			runtimeParameter.filterString = config->runtimeparameter(++i);
+			std::cout << "Filterbyname for static objects active. Use: " << runtimeParameter.filterString << "\n";
+		}
+		else if (parameter == "--resumeafter" || parameter == "--maxresponseinterval") {
+			runtimeParameter.resumeCarlaAsyncSeconds = std::stoi(config->runtimeparameter(++i));
+			std::cout << "Max response interval for carla (anti - freeze) after seconds: " << runtimeParameter.resumeCarlaAsyncSeconds << "\n";
+		}
+		else if (parameter == "--camera") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(CAMERA);
+			std::cout << "Use camera listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--lidar") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(LIDAR);
+			std::cout << "Use lidar listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--radar") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(RADAR);
+			std::cout << "Use radar listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--ultrasonic") {
+			runtimeParameter.carlaSensors = true;
+			runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
+			std::cout << "Use ultrasonic listeners on sensors spawned in CARLA.\n";
+		}
+		else if (parameter == "--cityobjectlabel") {
+			cityObjectLabelFilterSet = true;
+			std::string cityObjectLabelFilter = config->runtimeparameter(++i);
+			if (cityObjectLabelFilter.find("None") != std::string::npos) runtimeParameter.options.None = true;
+			if (cityObjectLabelFilter.find("Buildings") != std::string::npos) runtimeParameter.options.Buildings = true;
+			if (cityObjectLabelFilter.find("Fences") != std::string::npos) runtimeParameter.options.Fences = true;
+			if (cityObjectLabelFilter.find("Other") != std::string::npos) runtimeParameter.options.Other = true;
+			if (cityObjectLabelFilter.find("Poles") != std::string::npos) runtimeParameter.options.Poles = true;
+			if (cityObjectLabelFilter.find("RoadLines") != std::string::npos) runtimeParameter.options.RoadLines = true;
+			if (cityObjectLabelFilter.find("Roads") != std::string::npos) runtimeParameter.options.Roads = true;
+			if (cityObjectLabelFilter.find("Sidewalks") != std::string::npos) runtimeParameter.options.Sidewalks = true;
+			if (cityObjectLabelFilter.find("TrafficSigns") != std::string::npos) runtimeParameter.options.TrafficSigns = true;
+			if (cityObjectLabelFilter.find("Vegetation") != std::string::npos) runtimeParameter.options.Vegetation = true;
+			if (cityObjectLabelFilter.find("Walls") != std::string::npos) runtimeParameter.options.Walls = true;
+			if (cityObjectLabelFilter.find("Ground") != std::string::npos) runtimeParameter.options.Ground = true;
+			if (cityObjectLabelFilter.find("Bridge") != std::string::npos) runtimeParameter.options.Bridge = true;
+			if (cityObjectLabelFilter.find("RailTrack") != std::string::npos) runtimeParameter.options.RailTrack = true;
+			if (cityObjectLabelFilter.find("GuardRail") != std::string::npos) runtimeParameter.options.GuardRail = true;
+			if (cityObjectLabelFilter.find("TrafficLight") != std::string::npos) runtimeParameter.options.TrafficLight = true;
+			if (cityObjectLabelFilter.find("Static") != std::string::npos) runtimeParameter.options.Static = true;
+			if (cityObjectLabelFilter.find("Water") != std::string::npos) runtimeParameter.options.Water = true;
+			if (cityObjectLabelFilter.find("Terrain") != std::string::npos) runtimeParameter.options.Terrain = true;
+			if (cityObjectLabelFilter.find("Any") != std::string::npos) runtimeParameter.options.Any = true;
+		}
+		else if (parameter == "--mapnetwork") {
+			runtimeParameter.mapNetworkInGroundTruth = true;
+			std::cout << "Run with map network in ground truth messages.\n";
+		}
+		else if (parameter == "--carlahost") {
+			runtimeParameter.carlaHost = config->runtimeparameter(++i);
+			std::cout << "Carla host: " << runtimeParameter.carlaHost  << "\n";
+		}
+		else if (parameter == "--carlaport") {
+			runtimeParameter.carlaPort = std::stoi(config->runtimeparameter(++i));
+			std::cout << "Carla port: " << runtimeParameter.carlaHost << "\n";
+		}
+		else if (parameter == "--transactiontimeout") {
+			runtimeParameter.transactionTimeout = std::stof(config->runtimeparameter(++i));
+			std::cout << "Transaction timeout: " << runtimeParameter.carlaHost << "\n";
+		}
+		else if (parameter == "--deltaseconds") {
+			runtimeParameter.deltaSeconds = std::stof(config->runtimeparameter(++i));
+			std::cout << "Delta seconds: " << runtimeParameter.carlaHost << "\n";
+		}
+		else {
+			std::cout << "Unkown parameter: " << parameter << "\n";
+		}
+	}
+
+	//set options to any if no filter is set by user
+	if (cityObjectLabelFilterSet) {
+		std::cout << "CityObjectLabel Filter: Any\n";
+		runtimeParameter.options.Any = true;
+	}
+	std::cout << std::endl;
+
+	//set configuration
 	if (runtimeParameter.resumeCarlaAsyncSeconds != 0) {//option is active
 		watchdog_thread = std::make_unique<std::thread>(&CARLA_OSI_client::watchdog, this);
 	}
@@ -56,8 +195,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
 		sensorMountingPositionMap.insert({ sensorViewExtra.prefixed_fmu_variable_name(), mountingPosition });
 	}
-	response->set_value(
-		carlaInterface.initialise(config->carla_host(), config->carla_port(), config->transaction_timeout(), config->delta_seconds(), runtimeParameter));
+	response->set_value(carlaInterface.initialise(runtimeParameter));
 	if (runtimeParameter.scenarioRunnerDoesTick) {
 		std::cout << "Waiting for connetion of scenario runner." << std::endl;
 		smphSignalSRToCosima.acquire();
@@ -85,7 +223,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		
 		//update changes in carla
 		carlaInterface.fetchActorsFromCarla();
-		response->set_value(carlaInterface.getDeltaSeconds());
+		response->set_value(carlaInterface.runtimeParameter.deltaSeconds);
 	}
 	else 
 	{
@@ -126,24 +264,14 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 	smphSignalCosimaToSR.acquire();
 
 	if (runtimeParameter.verbose) {
-		std::cout << "Send delta to scenario runner: " << carlaInterface.getDeltaSeconds() << std::endl;
+		std::cout << "Send delta to scenario runner: " << carlaInterface.runtimeParameter.deltaSeconds << std::endl;
 	}
 
 	//control is given back to the scenario runner.
 	//The state of the simulation can change.
 	//The cached ground truth is now invalid.
 	carlaInterface.invalidateLatestGroundTruth();
-	return carlaInterface.getDeltaSeconds();
-}
-
-std::string_view CARLA_OSI_client::getPrefix(std::string_view name)
-{
-	// a prefix is surrounded by '#'
-	if (2 < name.size() && '#' == name.front()) {
-		std::string_view prefix = name.substr(1, name.find('#', 1) - 1);
-		return prefix;
-	}
-	return std::string_view();
+	return carlaInterface.runtimeParameter.deltaSeconds;
 }
 
 uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
@@ -165,64 +293,57 @@ uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
 }
 
 int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
-	auto prefix = getPrefix(base_name);
-	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
-		// variable has only a prefix and no name
-		std::cerr << __FUNCTION__ << ": Tried to set a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
-		//TODO do we desire variables that have only a prefix and no name?
-		return -2;
-	}
 
-	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-
-	if (std::string::npos != varName.find("TrafficUpdate")) {
+	if (std::string::npos != base_name.find("TrafficUpdate")) {
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {
-			std::cerr << "CARLA2OSIInterface::setStringValue: Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
-			return -322;
+			std::cerr << "Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			return -1;
 		}
-
 		carlaInterface.receiveTrafficUpdate(trafficUpdate);
+		return 0;
+	}
+	else if (std::string::npos != base_name.find("OSMPSensorViewConfigurationRequest")) {
+		osi3::SensorViewConfiguration sensorViewConfiguration;
+		if (!sensorViewConfiguration.ParseFromString(message)) {
+			std::cerr << "Variable name'" << base_name << "' indicates this is a SensorViewConfiguration, but parsing failed." << std::endl;
+			return -1;
+		}
+		//return value will be added to request of SensorView
+		return carlaInterface.receiveSensorViewConfigurationRequest(sensorViewConfiguration);
 	}
 	else {
-		//Cache unmapped messages so they can be retrieved as input
-		//TODO how to map base_name for retrieval as input?
+		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
 		varName2MessageMap[base_name] = message;
 	}
-
-
-	//TODO implement
-	return 0;
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
-	auto prefix = getPrefix(base_name);
-	auto varName = std::string_view(&base_name.at(prefix.length() + 2));
-	std::shared_ptr<const grpc::protobuf::Message> message;
-
-	if (0 < prefix.length() && 2 + prefix.length() == base_name.length()) {
-		// variable has only a prefix and no name
-		std::cerr << __FUNCTION__ << ": Tried to get a variable that has a prefix, but no name (name='" << base_name << "')." << std::endl;
-		//TODO do we desire variables that have only a prefix and no name?
-		//TODO return value or throw?
-		return "-2";
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Get " << base_name << std::endl;
 	}
 
+	std::shared_ptr<const grpc::protobuf::Message> message;
+
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
-	if (std::string::npos != varName.rfind("OSMPSensorViewGroundTruth", 0)) {
+	if (std::string::npos != base_name.rfind("OSMPSensorViewGroundTruth", 0)) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
 		message = getSensorViewGroundTruth(base_name);
 	}
-	else if (std::string::npos != varName.rfind("OSMPSensorView", 0)) {
-		// OSMPSensorViewIn
+	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
+		message = carlaInterface.getSensorViewConfiguration(base_name);
+	}
+	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
+		// OSMPSensorData
 		message = carlaInterface.getSensorView(base_name);
 	}
-	else if (std::string::npos != varName.rfind("OSMPGroundTruth", 0)) {
+	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
 		// OSMPGroundTruthInit
 		message = carlaInterface.getLatestGroundTruth();
 	}
-	else if (std::string::npos != varName.rfind("OSMPTrafficCommand", 0)) {
+	else if (std::string::npos != base_name.rfind("OSMPTrafficCommand", 0)) {
 		// OSMPTrafficCommand
 		//set hero ID in traffic command message
 		if (trafficCommandForEgoVehicle == nullptr) {
@@ -239,6 +360,11 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	}
 
 	// Try lookup in variable cache, else return empty string
+	// Variables from other fmus are saved and exchanged here!
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Look up message in map." << std::endl;
+	}
 	auto iter = varName2MessageMap.find(base_name);
 	if (iter != varName2MessageMap.end()) {
 		return iter->second;
@@ -295,7 +421,7 @@ std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(con
 		carla_osi::id_mapping::IDUnion sensorId;
 		//TODO make sure the type is not defined in CarlaUtility::CarlaUniqueID_e
 		sensorId.type = 100;
-		sensorId.id = sensorIds.size() + 1;
+		sensorId.id = (uint32_t)sensorIds.size() + 1;
 		sensorIds[varName] = sensorId.value;
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}
@@ -362,11 +488,4 @@ void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensor
 	for (int i = 0; i < from.ultrasonic_sensor_mounting_position_size(); i++) {
 		to->add_ultrasonic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(i));
 	}*/
-}
-
-void CARLA_OSI_client::printOsiVector(osi3::Vector3d vector3d) {
-	std::cout << "X:" << vector3d.x() << " Y:" << vector3d.y() << " Z:" << vector3d.z() << "\n";
-}
-void CARLA_OSI_client::printOsiOrientation3d(osi3::Orientation3d orientation3d) {
-	std::cout << "Roll:" << orientation3d.roll() << " Pitch:" << orientation3d.pitch() << " Yaw:" << orientation3d.yaw() << "\n";
 }

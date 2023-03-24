@@ -6,7 +6,7 @@ fakeit/2.0.7
 # used to parse OpenDRIVE description of Carla's map (Carla also contains version 1.9 as third party library)
 pugixml/1.10
 # requirement of Carla (wants 1.72.0)
-boost/1.72.0
+boost/1.80.0
 # requirement of  Carla (wants 1.2.11)
 zlib/1.2.11
 # wanted by Carla (wants 1.2.37, but conan only has newer versions)

@@ -9,99 +9,98 @@
 
 
 std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign(
-	const carla::SharedPtr<const carla::client::TrafficSign> actor,
-	const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/)
+	/*const carla::SharedPtr<const carla::client::TrafficSign> actor,
+	const carla::geom::BoundingBox& bbox*//*, const pugi::xml_document& xodr*/carla::rpc::EnvironmentObject &sign)
 {
 
-	std::cout << "parsing a traffic sign" << std::endl;
-
-	std::unique_ptr<osi3::TrafficSign> sign = std::make_unique<osi3::TrafficSign>();
-	sign->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
+	std::unique_ptr<osi3::TrafficSign> osi_sign = std::make_unique<osi3::TrafficSign>();
+	//osi_sign->set_allocated_id(carla_osi::id_mapping::getOSIActorId(actor).release());
+	osi_sign->mutable_id()->set_value(sign.id);
 
 	//TODO use OpenDRIVE for better traffic sign description. Also use it to differentiate between traffic signs as road marking and 'normal' traffic signs
 
-	auto main = sign->mutable_main_sign();
+	auto main = osi_sign->mutable_main_sign();
 	auto base = main->mutable_base();
 	// bounding boxes of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
 	// --> use world::GetActorBoundingBox and pass as argument
-	auto[dimension, position] = carla_osi::geometry::toOSI(bbox);
+	auto[dimension, position] = Geometry::getInstance()->toOSI(sign.bounding_box);
+
 	base->set_allocated_dimension(dimension.release());
-	auto transform = actor->GetTransform();
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
+
+
+	base->set_allocated_position(position.release());
 	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
 	//TODO assure rotation is applied local
-	auto rotation = carla::geom::Rotation(transform.rotation.pitch, 90 + transform.rotation.yaw, transform.rotation.roll);
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation).release());
+	auto rotation = carla::geom::Rotation(sign.transform.rotation.pitch, 90 + sign.transform.rotation.yaw, sign.transform.rotation.roll);
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(rotation).release());
 	//TODO How to get base_polygon from actor? (https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1BaseStationary.html#aa1db348acaac2d5a2ba0883903d962cd)
 
 	auto classification = main->mutable_classification();
 	//TODO find LaneID for traffic sign
 	//classification->add_assigned_lane_id
-
 	classification->set_direction_scope(osi3::TrafficSign::MainSign::Classification::DirectionScope::TrafficSign_MainSign_Classification_DirectionScope_DIRECTION_SCOPE_NO_DIRECTION);
 	// Carla doesn't differentiate the variability of traffic signs
 	classification->set_variability(osi3::TrafficSign_Variability::TrafficSign_Variability_VARIABILITY_FIXED);
 
 	// Traffic sign IDs as defined in <carla 0.9.9>/Unreal/CarlaUE4/Plugins/Carla/Source/Carla/Game/CarlaEpisode.cpp
-	if (actor->GetTypeId() == "traffic.traffic_light") {
+	if (sign.name == "traffic.traffic_light") {
 		std::cerr << "Traffic lights should not be parsed as traffic signs" << std::endl;
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.30") {
+	else if (sign.name == "traffic.speed_limit.30") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(30);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.40") {
+	else if (sign.name == "traffic.speed_limit.40") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(40);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.50") {
+	else if (sign.name == "traffic.speed_limit.50") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(50);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.60") {
+	else if (sign.name == "traffic.speed_limit.60") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(60);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.90") {
+	else if (sign.name == "traffic.speed_limit.90") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(90);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.100") {
+	else if (sign.name == "traffic.speed_limit.100") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(100);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.120") {
+	else if (sign.name == "traffic.speed_limit.120") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(120);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.speed_limit.130") {
+	else if (sign.name == "traffic.speed_limit.130") {
 		//TODO also set unit
 		classification->mutable_value()->set_value(130);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
-	else if (actor->GetTypeId() == "traffic.stop") {
+	else if (sign.name == "traffic.stop") {
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_STOP);
 	}
-	else if (actor->GetTypeId() == "traffic.yield") {
+	else if (sign.name == "traffic.yield") {
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_GIVE_WAY);
 	}
-	else if (actor->GetTypeId() == "traffic.unknown") {
+	else if (sign.name == "traffic.unknown") {
 		//Unknown as part of OSI ground truth is forbidden
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_OTHER);
 	}
 	else {
-		std::cerr << __FUNCTION__ << ": Encountered traffic sign with unknown mapping (" << actor->GetTypeId() << ")" << std::endl;
+		std::cerr << __FUNCTION__ << ": Encountered traffic sign with unknown mapping (" << sign.name << ")" << std::endl;
 	}
 
-
-	return sign;
+	return osi_sign;
 }
 
 std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::getOSITrafficLight(
@@ -153,11 +152,11 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 		trafficLightBulb->set_allocated_id(carla_osi::id_mapping::getOSITrafficLightId(actor, info.first).release());
 
 		auto base = trafficLightBulb->mutable_base();
-		base->set_allocated_position(carla_osi::geometry::toOSI(bulbLocation).release());
+		base->set_allocated_position(Geometry::getInstance()->toOSI(bulbLocation).release());
 		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
 		//TODO assure rotation is applied local
 		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
-		base->set_allocated_orientation(carla_osi::geometry::toOSI(rotation).release());
+		base->set_allocated_orientation(Geometry::getInstance()->toOSI(rotation).release());
 		osi3::Dimension3d* dimension = new osi3::Dimension3d();
 		//bulbs have circa 30 centimeter diameter
 		dimension->set_height(0.30f);

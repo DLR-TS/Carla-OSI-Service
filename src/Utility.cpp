@@ -5,7 +5,7 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	osi3::BaseStationary* base = prop->mutable_base();
 	osi3::StationaryObject_Classification* classification = prop->mutable_classification();
 
-	auto[dimension, position] = carla_osi::geometry::toOSI(environmentObject.bounding_box);
+	auto[dimension, position] = Geometry::getInstance()->toOSI(environmentObject.bounding_box);
 	
 	if (!verbose && dimension->length() * dimension->width() * dimension->height() >= 1000) {
 		std::cout << "Large volume of stationary object detected. Name: " << environmentObject.name << std::endl;
@@ -20,8 +20,8 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	}
 
 	base->set_allocated_dimension(dimension.release());
-	base->set_allocated_position(carla_osi::geometry::toOSI(environmentObject.transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(environmentObject.transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(environmentObject.transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(environmentObject.transform.rotation).release());
 
 	switch (environmentObject.type)
 	{
@@ -85,8 +85,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	auto transform = actor->GetTransform();
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	// but bounding boxes only exist for Vehicle and Walker specializations
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(transform.rotation).release());
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -99,12 +99,12 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	//TODO verify relation of bouding box origin and actor.GetLocation() for Walkers
 	auto bbox = actor->GetBoundingBox();
 	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
-	auto[dimension, location] = carla_osi::geometry::toOSI(actor->GetBoundingBox());
+	auto[dimension, location] = Geometry::getInstance()->toOSI(actor->GetBoundingBox());
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations - assume bbox is not rotated
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(transform.rotation).release());
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -116,13 +116,13 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	auto bbox = actor->GetBoundingBox();
 	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
-	auto[dimension, location] = carla_osi::geometry::toOSI(bbox);
+	auto[dimension, location] = Geometry::getInstance()->toOSI(bbox);
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations, but
 	// vehicle bounding boxes shouldn't be rotated
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(transform.rotation).release());
 
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
@@ -138,10 +138,10 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 
 	// velocity and acceleration as part of ground truth are given in global coordinate system
 	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
-	base->set_allocated_velocity(carla_osi::geometry::toOSI(actor->GetVelocity()).release());
-	base->set_allocated_acceleration(carla_osi::geometry::toOSI(actor->GetAcceleration()).release());
+	base->set_allocated_velocity(Geometry::getInstance()->toOSIVelocity(actor->GetVelocity()).release());
+	base->set_allocated_acceleration(Geometry::getInstance()->toOSIVelocity(actor->GetAcceleration()).release());
 	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
-	base->set_allocated_orientation_rate(carla_osi::geometry::toOSI(
+	base->set_allocated_orientation_rate(Geometry::getInstance()->toOSI(
 		carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)).release());
 
 	//TODO Carla has no rotational acceleration
@@ -283,7 +283,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	//TODO calculate sensor position in vehicle coordinates
-	config->set_allocated_mounting_position(carla_osi::geometry::toOSI(sensor->GetTransform()).release());
+	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
 	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
 

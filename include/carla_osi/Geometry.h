@@ -16,28 +16,51 @@
 
 #include "osi_common.pb.h"
 
-namespace carla_osi {
-	namespace geometry {
+struct MapOffset {
+	double X = 0;
+	double Y = 0;
+};
 
-		carla::geom::Vector3D mul(const carla::geom::Vector3D& vector, const float f);
+class Geometry {
+private:
+	MapOffset offset;
 
-		// Geometric translations
-		// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
-		// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
+	static Geometry* instancePtr;
 
-		std::unique_ptr<osi3::Orientation3d> toOSI(const carla::geom::Rotation& rotation);
-		std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> toOSI(const carla::geom::BoundingBox& boundingBox);
-		std::unique_ptr<osi3::Vector3d> toOSI(const carla::geom::Vector3D& location);
-		//carla::geom::Vector3D is a generalization of carla::geom::Location
-		//osi3::Vector3d toOSI(const carla::geom::Location& location);
-		std::unique_ptr<osi3::Vector2d> toOSI(const carla::geom::Vector2D& vector);
-		std::unique_ptr<osi3::MountingPosition> toOSI(const carla::geom::Transform& transform);
+	Geometry() {};
 
-		carla::geom::Rotation toCarla(const osi3::Orientation3d* orientation);
-		carla::geom::BoundingBox toCarla(const osi3::Dimension3d* dimension, const osi3::Vector3d* position);
-		carla::geom::Location toCarla(const osi3::Vector3d* position);
-		carla::geom::Vector2D toCarla(const osi3::Vector2d* vector);
+public:
+	Geometry(const Geometry& obj) = delete;
+
+	static Geometry* getInstance()
+	{
+		if (instancePtr == NULL)
+		{
+			instancePtr = new Geometry();
+			return instancePtr;
+		}
+		else
+		{
+			return instancePtr;
+		}
 	}
-}
+
+	// Geometric translations
+	// Coordinate system in Carla/UE4:	left-handed,	X->forward, rot-, Y->right, rot-,	Z->up, rot+
+	// OSI/DIN ISO 8855:				right-handed,	X->forward, rot+, Y->left, rot+,	Z->up, rot+		(see also https://support.oxts.com/hc/en-us/articles/115002859149-OxTS-Reference-Frames-and-ISO8855-Reference-Frames#R6)
+
+	std::unique_ptr<osi3::Orientation3d> toOSI(const carla::geom::Rotation& rotation);
+	std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> toOSI(const carla::geom::BoundingBox& boundingBox);
+	std::unique_ptr<osi3::Vector3d> toOSI(const carla::geom::Location& location);
+ 	std::unique_ptr<osi3::Vector3d> toOSIVelocity(const carla::geom::Vector3D& vector);
+	std::unique_ptr<osi3::MountingPosition> toOSI(const carla::geom::Transform& transform);
+
+	carla::geom::Rotation toCarla(const osi3::Orientation3d& orientation);
+	carla::geom::BoundingBox toCarla(const osi3::Dimension3d& dimension, const osi3::Vector3d& position);
+	carla::geom::Location toCarla(const osi3::Vector3d& position);
+ 	carla::geom::Location toCarlaVelocity(const osi3::Vector3d& position);
+
+	void setOffset(const MapOffset& offset);
+};
 
 #endif //!GEOMETRY_H

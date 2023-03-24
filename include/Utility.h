@@ -57,21 +57,26 @@
 #include "osi_groundtruth.pb.h"
 //#include "osi_hostvehicledata.pb.h"
 #include "osi_lane.pb.h"
+//#include "osi_logicaldetectiondata.pb.h"
+//#include "osi_logicallane.pb.h"
 //#include "osi_object.pb.h"
 //#include "osi_occupant.pb.h"
+//#include "osi_referenceline.pb.h"
 #include "osi_roadmarking.pb.h"
 #include "osi_sensordata.pb.h"
 //#include "osi_sensorspecific.pb.h"
 #include "osi_sensorview.pb.h"
 #include "osi_sensorviewconfiguration.pb.h"
+//#include "osi_trafficcommand.pb.h"
 #include "osi_trafficlight.pb.h"
 #include "osi_trafficsign.pb.h"
+//#include "osi_trafficupdate.pb.h"
 //#include "osi_version.pb.h"
 
 namespace CarlaUtility {
 
-	// Only specialized actors have a bounding box, therefore it has to be passed as additional argument
 	osi3::StationaryObject* toOSI(const carla::rpc::EnvironmentObject& environmentObject, bool verbose);
+
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Walker> walker);
 	std::unique_ptr<osi3::BaseMoving> toOSIBaseMoving(const carla::SharedPtr<const carla::client::Vehicle> vehicle);
