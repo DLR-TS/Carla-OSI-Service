@@ -1,6 +1,6 @@
 #include "CARLA_OSI_Interface.h"
 
-int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
+int CARLAOSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	this->runtimeParameter = runtimeParams;
 
 	try {
@@ -26,7 +26,7 @@ int CARLA2OSIInterface::initialise(RuntimeParameter& runtimeParams) {
 	return 0;
 }
 
-double CARLA2OSIInterface::doStep() {
+double CARLAOSIInterface::doStep() {
 	if (runtimeParameter.verbose) {
 		std::cout << "Do Step" << std::endl;
 	}
@@ -51,7 +51,7 @@ double CARLA2OSIInterface::doStep() {
 	return world->GetSnapshot().GetTimestamp().delta_seconds;
 }
 
-void CARLA2OSIInterface::fillBoundingBoxLookupTable() {
+void CARLAOSIInterface::fillBoundingBoxLookupTable() {
 	auto vehicleLibrary = world->GetBlueprintLibrary()->Filter("vehicle.*");
 	carla::geom::Location location(0, 0, 0);
 	carla::geom::Rotation rotation(0, 0, 0);
@@ -69,7 +69,7 @@ void CARLA2OSIInterface::fillBoundingBoxLookupTable() {
 	}
 }
 
-void CARLA2OSIInterface::fetchActorsFromCarla() {
+void CARLAOSIInterface::fetchActorsFromCarla() {
 
 	// track actors added/removed inside Carla
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
@@ -121,7 +121,7 @@ void CARLA2OSIInterface::fetchActorsFromCarla() {
 	}
 }
 
-std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTruth()
+std::shared_ptr<const osi3::GroundTruth> CARLAOSIInterface::getLatestGroundTruth()
 {
 	if (!validLatestGroundTruth) {
 		latestGroundTruth = parseWorldToGroundTruth();
@@ -130,12 +130,12 @@ std::shared_ptr<const osi3::GroundTruth> CARLA2OSIInterface::getLatestGroundTrut
 	return latestGroundTruth;
 }
 
-void CARLA2OSIInterface::loadWorld() {
+void CARLAOSIInterface::loadWorld() {
 	this->world = std::make_unique<carla::client::World>(std::move(this->client->GetWorld()));
 	this->map = world->GetMap();
 }
 
-void CARLA2OSIInterface::applyWorldSettings() {
+void CARLAOSIInterface::applyWorldSettings() {
 	auto settings = world->GetSettings();
 	//set sync or async operational mode
 	settings.synchronous_mode = runtimeParameter.sync;
@@ -153,7 +153,7 @@ void CARLA2OSIInterface::applyWorldSettings() {
 	this->world->ApplySettings(settings, settingsDuration);
 }
 
-void CARLA2OSIInterface::resetWorldSettings() {
+void CARLAOSIInterface::resetWorldSettings() {
 	auto settings = world->GetSettings();
 	settings.synchronous_mode = false;
 	this->world->ApplySettings(settings, settingsDuration);
@@ -162,7 +162,7 @@ void CARLA2OSIInterface::resetWorldSettings() {
 	}
 }
 
-std::shared_ptr<const osi3::SensorViewConfiguration> CARLA2OSIInterface::getSensorViewConfiguration(const std::string& sensor)
+std::shared_ptr<const osi3::SensorViewConfiguration> CARLAOSIInterface::getSensorViewConfiguration(const std::string& sensor)
 {
 	//string has format of: OSMPSensorViewConfigurationX
 	std::string index_string(&sensor[27]);
@@ -171,7 +171,7 @@ std::shared_ptr<const osi3::SensorViewConfiguration> CARLA2OSIInterface::getSens
 	return nullptr;
 }
 
-std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(const std::string& sensor)
+std::shared_ptr<const osi3::SensorView> CARLAOSIInterface::getSensorView(const std::string& sensor)
 {
 	//string has format of: OSMPSensorViewX
 	std::string index_string(&sensor[14]);
@@ -187,7 +187,7 @@ std::shared_ptr<const osi3::SensorView> CARLA2OSIInterface::getSensorView(const 
 	}
 }
 
-std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
+std::string CARLAOSIInterface::actorIdToRoleName(const osi3::Identifier& id)
 {
 	carla::ActorId actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&id));
 	std::string role;
@@ -202,18 +202,7 @@ std::string CARLA2OSIInterface::actorIdToRoleName(const osi3::Identifier& id)
 	return role;
 }
 
-osi3::Timestamp* CARLA2OSIInterface::parseTimestamp()
-{
-	osi3::Timestamp* osiTime = new osi3::Timestamp();
-	carla::client::Timestamp carlaTime = world->GetSnapshot().GetTimestamp();
-	double intPart;
-	double fractional = std::modf(carlaTime.elapsed_seconds, &intPart);
-	osiTime->set_seconds(google::protobuf::int64(intPart));
-	osiTime->set_nanos(google::protobuf::uint32(fractional *1e9));
-	return osiTime;
-}
-
-std::vector<carla::rpc::EnvironmentObject> CARLA2OSIInterface::filterEnvironmentObjects() {
+std::vector<carla::rpc::EnvironmentObject> CARLAOSIInterface::filterEnvironmentObjects() {
 
 	std::vector<carla::rpc::EnvironmentObject> props{};
 	std::vector<carla::rpc::EnvironmentObject> filteredprops{};
@@ -321,7 +310,7 @@ std::vector<carla::rpc::EnvironmentObject> CARLA2OSIInterface::filterEnvironment
 	return filteredprops;
 }
 
-void CARLA2OSIInterface::parseStationaryMapObjects()
+void CARLAOSIInterface::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
 	staticMapTruth->set_map_reference(map->GetName());
@@ -488,7 +477,7 @@ void CARLA2OSIInterface::parseStationaryMapObjects()
 	}
 }
 
-std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
+std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 {
 
 	// lanes and lane boundaries are part of the map, which shouldn't change during simulation and can be preparsed during init
@@ -502,11 +491,11 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 		//std::cout << "Ground Truth: " << typeID  << "  " << actor->GetId() << std::endl;
 		bool destroyed = false;
 		for(auto& v: deletedVehicles) {
-		  if (v.second.idInCarla == actor->GetId())
-		  {
-		    destroyed = true;
-		    break;
-		  }
+			if (v.second.idInCarla == actor->GetId())
+			{
+				destroyed = true;
+				break;
+			}
 		}
 		if (destroyed){ continue; }
 		//based on blueprint vehicle.*
@@ -515,7 +504,19 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 			auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 
 			vehicle->set_model_reference(vehicleActor->GetTypeId());
-			vehicle->set_allocated_id(carla_osi::id_mapping::getOSIActorId(vehicleActor).release());
+			OSIVehicleID spawnedVehicleID = vehicleIsSpawned(vehicleActor);
+			if (spawnedVehicleID) {
+				vehicle->mutable_id()->set_value(spawnedVehicleID);
+				if (runtimeParameter.ego == std::to_string(spawnedVehicleID)) {
+					groundTruth->mutable_host_vehicle_id()->set_value(spawnedVehicleID);
+					//saved for trafficCommand message from scenario runner
+					heroId = spawnedVehicleID;
+				}
+			}
+			else {
+				//not a spawned vehicle, use carla id mapping system
+				vehicle->set_allocated_id(carla_osi::id_mapping::getOSIActorId(vehicleActor).release());
+			}
 			vehicle->set_type(osi3::MovingObject_Type_TYPE_VEHICLE);
 
 			vehicle->set_allocated_base(CarlaUtility::toOSIBaseMoving(vehicleActor).release());
@@ -568,8 +569,7 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 					rearAxle->set_z(attribute.As<float>());
 				}
 				else if ("role_name" == attribute.GetId()) {
-					std::string role_name = attribute.GetValue();
-					if (role_name == runtimeParameter.ego) {
+					if (runtimeParameter.ego == attribute.GetValue()) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
 						//saved for trafficCommand message from scenario runner
 						heroId = vehicle->id().value();
@@ -628,13 +628,12 @@ std::shared_ptr<osi3::GroundTruth> CARLA2OSIInterface::parseWorldToGroundTruth()
 	}
 
 	//Timestamp
-	osi3::Timestamp* timestamp = parseTimestamp();
-	groundTruth->set_allocated_timestamp(timestamp);
+	groundTruth->set_allocated_timestamp(CarlaUtility::parseTimestamp(world->GetSnapshot().GetTimestamp()).release());
 
 	return groundTruth;
 }
 
-void CARLA2OSIInterface::clearData()
+void CARLAOSIInterface::clearData()
 {
 	if (!world) {
 		std::cerr << "No world" << std::endl;
@@ -649,7 +648,7 @@ void CARLA2OSIInterface::clearData()
 	parseStationaryMapObjects();
 }
 
-void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index)
+void CARLAOSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index)
 {
 	if (!world) {
 		// Local world object has been destroyed and thus probably also the CARLA OSI interface, but client is still sending
@@ -696,7 +695,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
 	else if (runtimeParameter.verbose) {
-		std::cerr << "CARLA2OSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
+		std::cerr << "CARLAOSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
 	}
 	sensorCache[index] = std::move(sensorView);
 	if (runtimeParameter.verbose) {
@@ -704,7 +703,7 @@ void CARLA2OSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Senso
 	}
 }
 
-int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
+int CARLAOSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 	//OSI documentation:
 	//Only the id, base member (without dimension and base_polygon),
 	//and the vehicle_classification.light_state members are considered in
@@ -737,7 +736,7 @@ int CARLA2OSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate)
 	return 0;
 }
 
-void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUpdate, carla::ActorId& actorID) {
+void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUpdate, carla::ActorId& actorID) {
 	//check if spawned from Carla-OSI-Service
 	
 	for (auto& update : trafficUpdate.update()) {
@@ -822,7 +821,7 @@ void CARLA2OSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficU
 	}
 }
 
-void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
+void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
 {
 	//BASE
 	if (update.base().has_position() && update.base().has_orientation()) {
@@ -890,7 +889,7 @@ void CARLA2OSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, ca
 	}
 }
 
-void CARLA2OSIInterface::deleteSpawnedVehicles() {
+void CARLAOSIInterface::deleteSpawnedVehicles() {
 	//deconstruct all spawned actors
 	for (auto& vehicle : spawnedVehicles) {
 		std::cout << "Remove: " << vehicle.first << std::endl;
@@ -900,7 +899,7 @@ void CARLA2OSIInterface::deleteSpawnedVehicles() {
 	}
 }
 
-int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+int CARLAOSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
 	//todo a
 	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
 		// todo
@@ -932,7 +931,16 @@ int CARLA2OSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewCo
 	return 0;
 }
 
-void CARLA2OSIInterface::writeLog() {
+OSIVehicleID CARLAOSIInterface::vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
+	for (auto& spawnedVehicle: spawnedVehicles) {
+		if (spawnedVehicle.second.idInCarla == vehicle->GetId()) {
+			return spawnedVehicle.first;
+		}
+	}
+	return 0;
+}
+
+void CARLAOSIInterface::writeLog() {
 
 	std::string separator = ",";
 
