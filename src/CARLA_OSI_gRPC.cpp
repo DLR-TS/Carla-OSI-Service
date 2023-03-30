@@ -293,7 +293,6 @@ uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
 }
 
 int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
-
 	if (std::string::npos != base_name.find("TrafficUpdate")) {
 		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
@@ -316,6 +315,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 	else {
 		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
 		varName2MessageMap[base_name] = message;
+		return 0;
 	}
 }
 

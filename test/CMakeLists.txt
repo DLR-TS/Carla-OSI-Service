@@ -1,8 +1,8 @@
-set (TESTFILES 
+set (TESTFILES
 ${CMAKE_CURRENT_LIST_DIR}/tests-main.cpp
 
 ${CMAKE_CURRENT_LIST_DIR}/testhelpers.h
-${CMAKE_CURRENT_LIST_DIR}/tests-CARLAOSIInterface.cpp
+${CMAKE_CURRENT_LIST_DIR}/tests-CARLA-OSI.cpp
 ${CMAKE_CURRENT_LIST_DIR}/tests-CARLAUtility.cpp
 ${CMAKE_CURRENT_LIST_DIR}/tests-CARLA-OSI.cpp
 
