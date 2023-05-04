@@ -182,7 +182,7 @@ class CARLAOSIInterface
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	//pugi::xml_document xodr;
 	//hero id
-	uint64_t heroId = 0;
+	uint64_t trafficCommandMessageHeroId = 0;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -280,7 +280,7 @@ public:
 	Returns the hero id.
 	\return hero id
 	*/
-	uint64_t getHeroId() { return heroId; }
+	uint64_t getHeroId() { return trafficCommandMessageHeroId; }
 
 	/**
 	Delete spawned vehicles from replay.

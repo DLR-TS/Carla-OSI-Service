@@ -510,7 +510,7 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 				if (runtimeParameter.ego == std::to_string(spawnedVehicleID)) {
 					groundTruth->mutable_host_vehicle_id()->set_value(spawnedVehicleID);
 					//saved for trafficCommand message from scenario runner
-					heroId = spawnedVehicleID;
+					trafficCommandMessageHeroId = spawnedVehicleID;
 				}
 			}
 			else {
@@ -572,7 +572,7 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 					if (runtimeParameter.ego == attribute.GetValue()) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
 						//saved for trafficCommand message from scenario runner
-						heroId = vehicle->id().value();
+						trafficCommandMessageHeroId = vehicle->id().value();
 					}
 				}
 			}
