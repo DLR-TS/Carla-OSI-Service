@@ -127,6 +127,7 @@ typedef uint64_t OSIVehicleID;
 struct ReplayParameter {
 	bool enabled = false;
 
+	bool UTMOutput = false;
 	MapOffset mapOffset;
 	float spawnHeight_Z = 0;
 

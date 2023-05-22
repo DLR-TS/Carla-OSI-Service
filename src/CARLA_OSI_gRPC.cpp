@@ -96,6 +96,12 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter.replay.mapOffset.X << ", "
 				 << runtimeParameter.replay.mapOffset.Y << std::endl;
 		}
+		else if (parameter == "-replayOutputUTM") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.UTMOutput = true;
+			Geometry::getInstance()->setOSI_UTM(runtimeParameter.replay.UTMOutput);
+			std::cout << "Replay mode active. UTM Output set to true." << std::endl;
+		}
 		else if (parameter == "-replaySpawnHeight") {
 			runtimeParameter.replay.enabled = true;
 			runtimeParameter.replay.spawnHeight_Z = std::stof(config->runtimeparameter(++i));

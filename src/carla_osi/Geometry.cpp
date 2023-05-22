@@ -27,8 +27,14 @@ std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> G
 std::unique_ptr<osi3::Vector3d> Geometry::toOSI(const carla::geom::Location& location) {
 	//flip y
 	std::unique_ptr<osi3::Vector3d> vec = std::make_unique<osi3::Vector3d>();
-	vec->set_x(location.x + offset.X);
-	vec->set_y((-location.y) + offset.Y);
+	if (toOSI_UTM) {
+		//add UTM offset to local map location
+		vec->set_x(location.x + offset.X);
+		vec->set_y(-location.y + offset.Y);
+	} else {
+		vec->set_x(location.x);
+		vec->set_y(-location.y);
+	}
 	vec->set_z(location.z);
 	return vec;
 }
@@ -77,4 +83,8 @@ carla::geom::Location Geometry::toCarlaVelocity(const osi3::Vector3d& position) 
 
 void Geometry::setOffset(const MapOffset& offset) {
 	this->offset = offset;
+}
+
+void Geometry::setOSI_UTM(const bool outputOSI_UTM) {
+	this->toOSI_UTM = outputOSI_UTM;
 }

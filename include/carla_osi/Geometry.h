@@ -23,6 +23,7 @@ struct MapOffset {
 
 class Geometry {
 private:
+	bool toOSI_UTM = false;
 	MapOffset offset;
 
 	static Geometry* instancePtr;
@@ -61,6 +62,7 @@ public:
  	carla::geom::Location toCarlaVelocity(const osi3::Vector3d& position);
 
 	void setOffset(const MapOffset& offset);
+	void setOSI_UTM(const bool toOSI_UTM);
 };
 
 #endif //!GEOMETRY_H
