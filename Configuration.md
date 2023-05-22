@@ -63,6 +63,15 @@ The map offsets are substracted from the location values given in the TrafficUpd
 X = UTM East, Y = UTM North
 
 ```
+additional_parameter: "-replayOutputUTM"
+```
+
+In replay mode the GroundTruth message will take the original UTM offset into account.
+The map offsets are given by "-replayMapOffsets X Y".
+If you use this option the values can be quite large.
+Make sure your further toolchain can handle this.
+
+```
 additional_parameter: "-replaySpawnHeight Z"
 ```
 

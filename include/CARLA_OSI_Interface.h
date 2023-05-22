@@ -125,6 +125,7 @@ enum SENSORTYPES
 struct ReplayParameter {
 	bool enabled = false;
 
+	bool UTMOutput = false;
 	MapOffset mapOffset;
 	float spawnHeight_Z = 0;
 
