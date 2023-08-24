@@ -78,7 +78,6 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	return prop;
 }
 
-
 std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
 {
 	auto base = std::make_unique<osi3::BaseMoving>();
@@ -631,3 +630,12 @@ osi3::MovingObject_VehicleClassification_Type CarlaUtility::ParseVehicleType(con
 	return osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN;
 }
 
+std::unique_ptr<osi3::Timestamp> CarlaUtility::parseTimestamp(const carla::client::Timestamp& carlaTime)
+{
+	std::unique_ptr<osi3::Timestamp> osiTime = std::make_unique<osi3::Timestamp>();
+	double intPart;
+	double fractional = std::modf(carlaTime.elapsed_seconds, &intPart);
+	osiTime->set_seconds(google::protobuf::int64(intPart));
+	osiTime->set_nanos(google::protobuf::uint32(fractional *1e9));
+	return osiTime;
+}
