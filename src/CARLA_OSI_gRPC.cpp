@@ -170,15 +170,15 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		}
 		else if (parameter == "--carlaport") {
 			runtimeParameter.carlaPort = std::stoi(config->runtimeparameter(++i));
-			std::cout << "Carla port: " << runtimeParameter.carlaHost << "\n";
+			std::cout << "Carla port: " << runtimeParameter.carlaPort << "\n";
 		}
 		else if (parameter == "--transactiontimeout") {
 			runtimeParameter.transactionTimeout = std::stof(config->runtimeparameter(++i));
-			std::cout << "Transaction timeout: " << runtimeParameter.carlaHost << "\n";
+			std::cout << "Transaction timeout: " << runtimeParameter.transactionTimeout << "\n";
 		}
 		else if (parameter == "--deltaseconds") {
 			runtimeParameter.deltaSeconds = std::stof(config->runtimeparameter(++i));
-			std::cout << "Delta seconds: " << runtimeParameter.carlaHost << "\n";
+			std::cout << "Delta seconds: " << runtimeParameter.deltaSeconds << "\n";
 		}
 		else {
 			std::cout << "Unkown parameter: " << parameter << "\n";
