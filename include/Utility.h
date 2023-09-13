@@ -94,6 +94,7 @@ namespace CarlaUtility {
 	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 
 	carla::SharedPtr<carla::client::Vehicle> getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor);
+	std::unique_ptr<osi3::Timestamp> parseTimestamp(const carla::client::Timestamp& carlaTime);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first

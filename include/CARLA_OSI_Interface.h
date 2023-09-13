@@ -121,6 +121,8 @@ enum SENSORTYPES
 	CAMERA
 };
 
+typedef uint64_t OSIVehicleID;
+
 //spawn and remove vehicles dynamically
 struct ReplayParameter {
 	bool enabled = false;
@@ -158,7 +160,7 @@ struct RuntimeParameter {
 	float deltaSeconds;
 };
 
-class CARLA2OSIInterface
+class CARLAOSIInterface
 {
 
 	std::unique_ptr<carla::client::World> world;
@@ -181,7 +183,7 @@ class CARLA2OSIInterface
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	//pugi::xml_document xodr;
 	//hero id
-	uint64_t heroId = 0;
+	uint64_t trafficCommandMessageHeroId = 0;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -189,7 +191,7 @@ public:
 	// Parameters set by runtime
 	RuntimeParameter runtimeParameter;
 
-	~CARLA2OSIInterface() {
+	~CARLAOSIInterface() {
 		if (world) resetWorldSettings();
 	};
 
@@ -279,7 +281,7 @@ public:
 	Returns the hero id.
 	\return hero id
 	*/
-	uint64_t getHeroId() { return heroId; }
+	uint64_t getHeroId() { return trafficCommandMessageHeroId; }
 
 	/**
 	Delete spawned vehicles from replay.
@@ -301,7 +303,6 @@ private:
 	std::ofstream logFile;
 	struct logData { std::string id; double x, y, yaw; };
 
-	osi3::Timestamp* parseTimestamp();
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 
@@ -309,6 +310,12 @@ private:
 	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages.
 	*/
 	void fillBoundingBoxLookupTable();
+
+	/*
+	Checks if vehicle is spawned by Carla_OSI_Service
+	return 0 if not
+	*/
+	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle);
 
 	void replayTrafficUpdate(const osi3::TrafficUpdate& update, carla::ActorId& ActorID);
 
@@ -322,9 +329,9 @@ private:
 		uint64_t lastTimeUpdated;
 	};
 
-	std::map<uint64_t, spawnedVehicle> spawnedVehicles;
+	std::map<OSIVehicleID, spawnedVehicle> spawnedVehicles;
 	//Deleted vehicles, which shall not be parsed, because they have been destroyed, but still be present in the list of actors.
-	std::map<uint64_t, spawnedVehicle> deletedVehicles;
+	std::map<OSIVehicleID, spawnedVehicle> deletedVehicles;
 	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
 	/**

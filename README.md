@@ -42,4 +42,4 @@ CMake_FetchContent_Overrides.cmake is ignored and thus will not be added to the 
 
 bjoern.bahn@dlr.de danny.behnecke@dlr.de
 
-This software was originally developed as part of SetLevel.
+This software was originally developed as part of [SetLevel](https://setlevel.de/).
