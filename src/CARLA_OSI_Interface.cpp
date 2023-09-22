@@ -61,6 +61,9 @@ void CARLAOSIInterface::fillBoundingBoxLookupTable() {
 		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
 		auto bbox = vehicleActor->GetBoundingBox();
 		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
+		if (runtimeParameter.verbose) {
+			std::cout << "bbox: " << vehicle.GetId() << " Length:" << bbox.extent.x*2 << " Width:" << bbox.extent.y*2 << " Height:" << bbox.extent.z*2 << std::endl;
+		}
 		world->Tick(client->GetTimeout());
 		temp_actor->Destroy();
 	}
@@ -738,7 +741,7 @@ int CARLAOSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) 
 
 void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUpdate, carla::ActorId& actorID) {
 	//check if spawned from Carla-OSI-Service
-	
+
 	for (auto& update : trafficUpdate.update()) {
 		auto ActorID = spawnedVehicles.find(update.id().value());
 		if (ActorID == spawnedVehicles.end()) {
@@ -753,9 +756,9 @@ void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUp
 			for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
 				auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
 
-				double diffLength = dimension.length() - boundingBox.x;
-				double diffWidth = dimension.width() - boundingBox.y;
-				double diffHeight = dimension.height() - boundingBox.z;
+				double diffLength = dimension.length() - (2 * boundingBox.x);
+				double diffWidth = dimension.width() - (2 * boundingBox.y);
+				double diffHeight = dimension.height() - (2 * boundingBox.z);
 
 				double sumDiff = runtimeParameter.replay.weightLength_X * std::abs(diffLength);
 				sumDiff += runtimeParameter.replay.weightWidth_Y * std::abs(diffWidth);
