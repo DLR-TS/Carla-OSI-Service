@@ -776,8 +776,9 @@ void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUp
 
 			std::cout << "Search for vehicle with length: " << dimension.length() << ", width: " << dimension.width()
 				<< ", height: " << dimension.height() <<
-				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x << ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y
-				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z << std::endl;
+				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x * 2
+				<< ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y * 2
+				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z * 2 << std::endl;
 
 			auto position = Geometry::getInstance()->toCarla(update.base().position());
 			position.z = runtimeParameter.replay.spawnHeight_Z;
@@ -834,7 +835,7 @@ void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, car
 			position.z = runtimeParameter.replay.spawnHeight_Z;
 		}
 
-		//heigth is controlled by terrain
+		//height is controlled by terrain
 		if (actor->GetLocation().z != 0) {
 			position.z = actor->GetLocation().z;
 		}
@@ -857,7 +858,7 @@ void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, car
 
 	//Velocity
 	if (update.base().has_velocity()) {
-		actor->SetTargetVelocity(Geometry::getInstance()->toCarlaVelocity(update.base().velocity()));
+		//actor->SetTargetVelocity(Geometry::getInstance()->toCarlaVelocity(update.base().velocity()));
 	}
 
 	//Acceleration can not be set in CARLA
@@ -871,7 +872,7 @@ void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, car
 		const auto orientationRate = Geometry::getInstance()->toCarla(update.base().orientation_rate());
 
 		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
-		actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
+		//actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
 	}
 
 	//Acceleration can not be set in CARLA
