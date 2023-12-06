@@ -6,7 +6,7 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	osi3::StationaryObject_Classification* classification = prop->mutable_classification();
 
 	auto[dimension, position] = Geometry::getInstance()->toOSI(environmentObject.bounding_box);
-	
+
 	if (!verbose && dimension->length() * dimension->width() * dimension->height() >= 1000) {
 		std::cout << "Large volume of stationary object detected. Name: " << environmentObject.name << std::endl;
 	}
@@ -73,7 +73,7 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	}
 
 	prop->set_allocated_id(carla_osi::id_mapping::toOSI(environmentObject.id).release());
-	
+
 	prop->set_model_reference(environmentObject.name);
 	return prop;
 }
@@ -638,4 +638,43 @@ std::unique_ptr<osi3::Timestamp> CarlaUtility::parseTimestamp(const carla::clien
 	osiTime->set_seconds(google::protobuf::int64(intPart));
 	osiTime->set_nanos(google::protobuf::uint32(fractional *1e9));
 	return osiTime;
+}
+
+std::string CarlaUtility::findBestMatchingCarToSpawn(const osi3::Dimension3d& dimension,
+	const std::vector<std::tuple<std::string, carla::geom::Vector3D>>& replayVehicleBoundingBoxes,
+	double& weightLength_X, double& weightWidth_Y, double& weightHeight_Z){
+
+	size_t minDiffVehicleIndex = 0;
+
+	double minTotalDiff = DBL_MAX;
+	double minTotalDiffLength = 0, minTotalDiffWidth = 0, minTotalDiffHeight = 0;
+
+	for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
+		auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
+
+		double diffLength = dimension.length() - (2 * boundingBox.x);
+		double diffWidth = dimension.width() - (2 * boundingBox.y);
+		double diffHeight = dimension.height() - (2 * boundingBox.z);
+
+		double sumDiff = weightLength_X * std::abs(diffLength);
+		sumDiff += weightWidth_Y * std::abs(diffWidth);
+		sumDiff += weightHeight_Z * std::abs(diffHeight);
+
+		if (sumDiff < minTotalDiff) {
+			minDiffVehicleIndex = i;
+			minTotalDiff = sumDiff;
+
+			minTotalDiffLength = diffLength;
+			minTotalDiffWidth = diffWidth;
+			minTotalDiffHeight = diffHeight;
+		}
+	}
+
+	std::cout << "Search for vehicle with length: " << dimension.length() << ", width: " << dimension.width()
+		<< ", height: " << dimension.height()
+		<< " Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x * 2
+		<< ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y * 2
+		<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z * 2 << std::endl;
+
+	return std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]);
 }

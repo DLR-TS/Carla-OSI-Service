@@ -11,6 +11,7 @@
 #include <math.h>
 #include <optional>
 #include <variant>
+#include <string>
 
 #include <carla/client/Actor.h>
 #include <carla/client/Junction.h>
@@ -95,6 +96,9 @@ namespace CarlaUtility {
 
 	carla::SharedPtr<carla::client::Vehicle> getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor);
 	std::unique_ptr<osi3::Timestamp> parseTimestamp(const carla::client::Timestamp& carlaTime);
+
+	std::string findBestMatchingCarToSpawn(const osi3::Dimension3d& dimension, const std::vector<std::tuple<std::string, carla::geom::Vector3D>>& replayVehicleBoundingBoxes,
+		double& weightLength_X, double& weightWidth_Y, double& weightHeight_Z);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first

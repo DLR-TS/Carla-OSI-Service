@@ -57,7 +57,15 @@ void CARLAOSIInterface::fillBoundingBoxLookupTable() {
 	carla::geom::Rotation rotation(0, 0, 0);
 	carla::geom::Transform transform(location, rotation);
 	for (auto vehicle : *vehicleLibrary) {
-		auto temp_actor = world->SpawnActor(vehicle, transform);
+		auto temp_actor = world->TrySpawnActor(vehicle, transform);
+		if (temp_actor == nullptr) {//map has object near 0 0 z
+			carla::geom::Location location_alternative(0, 0, 10000);
+			transform = carla::geom::Transform(location_alternative, rotation);
+			temp_actor = world->TrySpawnActor(vehicle, transform);
+			if (temp_actor == nullptr) {
+				std::cerr << "Can not spawn vehicle. Tried two locations with x,y,z: 0,0,0 and 0,0,10000" << std::endl;
+			}
+		}
 		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
 		auto bbox = vehicleActor->GetBoundingBox();
 		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
@@ -344,7 +352,7 @@ void CARLAOSIInterface::parseStationaryMapObjects()
 		std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
 
 		// use a vector as replacement for a python-zip-like view, as boost::combine() (boost version 1.72) cannot
-		// be used with execution policies and ranges-v3 (with similar ranges::views::zip) requires at least 
+		// be used with execution policies and ranges-v3 (with similar ranges::views::zip) requires at least
 		// Visual Studio 2019 on Windows
 		using zip_type = std::vector<std::tuple<carla::client::Map::TopologyList::value_type*, std::unique_ptr<osi3::Lane>, google::protobuf::RepeatedPtrField<osi3::LaneBoundary>>>;
 		zip_type combined(topology.size());
@@ -478,6 +486,7 @@ void CARLAOSIInterface::parseStationaryMapObjects()
 		}
 		std::cout << "Finished parsing of topology" << std::endl;
 	}
+	std::cout << "Finished parsing of stationary map objects." << std::endl;
 }
 
 std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
@@ -601,7 +610,7 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 			pedestrian->set_allocated_base(CarlaUtility::toOSIBaseMoving(walkerActor).release());
 
 			//TODO How to determine a lane for pedestrians? Carla walkers don't care about lanes and walk on meshes with specific names (see https://carla.readthedocs.io/en/0.9.9/tuto_D_generate_pedestrian_navigation/):
-			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking 
+			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking
 
 			//The following will only work if there is a matching waypoint:
 			auto closestWaypoint = map->GetWaypoint(walkerActor->GetLocation(), true, (uint32_t)carla::road::Lane::LaneType::Any);
@@ -745,57 +754,28 @@ void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUp
 	for (auto& update : trafficUpdate.update()) {
 		auto ActorID = spawnedVehicles.find(update.id().value());
 		if (ActorID == spawnedVehicles.end()) {
-			//not found --> find best matching representation
-			const osi3::Dimension3d dimension = update.base().dimension();
-
-			size_t minDiffVehicleIndex = 0;
-
-			double minTotalDiff = DBL_MAX;
-			double minTotalDiffLength = 0, minTotalDiffWidth = 0, minTotalDiffHeight = 0;
-
-			for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
-				auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
-
-				double diffLength = dimension.length() - (2 * boundingBox.x);
-				double diffWidth = dimension.width() - (2 * boundingBox.y);
-				double diffHeight = dimension.height() - (2 * boundingBox.z);
-
-				double sumDiff = runtimeParameter.replay.weightLength_X * std::abs(diffLength);
-				sumDiff += runtimeParameter.replay.weightWidth_Y * std::abs(diffWidth);
-				sumDiff += runtimeParameter.replay.weightHeight_Z * std::abs(diffHeight);
-
- 				if (sumDiff < minTotalDiff) {
-					minDiffVehicleIndex = i;
-					minTotalDiff = sumDiff;
-
-					minTotalDiffLength = diffLength;
-					minTotalDiffWidth = diffWidth;
-					minTotalDiffHeight = diffHeight;
-				}
+			//not found --> spawn car
+			std::string vehicleName;
+			if (update.model_reference().length() == 0) {
+				vehicleName = CarlaUtility::findBestMatchingCarToSpawn(update.base().dimension(), replayVehicleBoundingBoxes,
+				runtimeParameter.replay.weightLength_X, runtimeParameter.replay.weightWidth_Y, runtimeParameter.replay.weightHeight_Z);
+			} else {
+				vehicleName = std::string(update.model_reference().c_str());
 			}
-
-			std::cout << "Search for vehicle with length: " << dimension.length() << ", width: " << dimension.width()
-				<< ", height: " << dimension.height() <<
-				" Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x * 2
-				<< ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y * 2
-				<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z * 2 << std::endl;
-
+			//spawn actor
 			auto position = Geometry::getInstance()->toCarla(update.base().position());
 			position.z = runtimeParameter.replay.spawnHeight_Z;
 
 			auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
 			carla::geom::Transform transform(position, orientation);
 
-			//spawn actor
-			auto blueprintlibrary = world->GetBlueprintLibrary();
-			auto search = std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]);
-			std::cout << "Spawn vehicle: " << search << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
+			std::cout << "Spawn vehicle: " << vehicleName << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
 
-			auto vehicleBlueprint = blueprintlibrary->Find(search);
+			auto blueprintlibrary = world->GetBlueprintLibrary();
+			auto vehicleBlueprint = blueprintlibrary->Find(vehicleName);
 			carla::SharedPtr<carla::client::Actor> actor;
 			actor = world->TrySpawnActor(*vehicleBlueprint, transform);
 			if (actor == nullptr) {
-				std::cerr << "Spawn vehicle: " << search << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
 				std::cerr << "Could not spawn actor!" << std::endl;
 				continue;
 			}
@@ -804,22 +784,22 @@ void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUp
 			addedVehicle.idInCarla = actor->GetId();
 			spawnedVehicles.emplace(update.id().value(), addedVehicle);
 			applyTrafficUpdate(update, actor);
-		} else {
-			applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
+			} else {
+				applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
+			}
+			//save the Update with current timestamp
+			spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos();
 		}
-		//save the Update with current timestamp
-		spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos();
-	}
 
-	//deconstruct actors with no update
-	for (auto& vehicle : spawnedVehicles) {
-		if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos()) {
-			std::cout << "No update for vehicle: " << vehicle.first << " Will stop the display of this vehicle." << std::endl;
-			auto vehicleActor = world->GetActor(vehicle.second.idInCarla);
-			deletedVehicles.emplace(vehicle);
-			vehicleActor->Destroy();
+		//deconstruct actors with no update
+		for (auto& vehicle : spawnedVehicles) {
+			if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos()) {
+				std::cout << "No update for vehicle: " << vehicle.first << " Will stop the display of this vehicle." << std::endl;
+				auto vehicleActor = world->GetActor(vehicle.second.idInCarla);
+				deletedVehicles.emplace(vehicle);
+				vehicleActor->Destroy();
+			}
 		}
-	}
 	for (auto& deletedVehicleId : deletedVehicles) {
 		spawnedVehicles.erase(deletedVehicleId.first);
 	}
@@ -837,7 +817,7 @@ void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, car
 
 		//height is controlled by terrain
 		if (actor->GetLocation().z != 0) {
-			position.z = actor->GetLocation().z;
+			//position.z = actor->GetLocation().z;
 		}
 		else {
 			//new height is spawnHeight
@@ -851,20 +831,20 @@ void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, car
 			orientation.roll = actor->GetTransform().rotation.roll;
 		}
 		if (runtimeParameter.verbose) {
-			std::cout << "Apply position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
+			std::cout << "Apply position: " << position.x << ", " << position.y  << ", " << position.z << ", Yaw: " << orientation.yaw << std::endl;
 		}
 		actor->SetTransform(carla::geom::Transform(position, orientation));
 	}
 
 	//Velocity
 	if (update.base().has_velocity()) {
-		//actor->SetTargetVelocity(Geometry::getInstance()->toCarlaVelocity(update.base().velocity()));
+		actor->SetTargetVelocity(Geometry::getInstance()->toCarlaVelocity(update.base().velocity()));
 	}
 
 	//Acceleration can not be set in CARLA
 	//GetAcceleration() calculates the acceleration with the actor's velocity
-	//if (update.mutable_base()->has_acceleration()) {
-	//auto acceleration = carla_osi::geometry::toCarla(&update.mutable_base()->acceleration());
+	//if (update.base().has_acceleration()) {
+		//auto acceleration = carla_osi::geometry::toCarla(&update.mutable_base()->acceleration());
 	//}
 
 	//Orientation
@@ -953,7 +933,7 @@ void CARLAOSIInterface::writeLog() {
 		if (runtimeParameter.verbose) {
 			std::cout << "Write to " << runtimeParameter.logFileName << std::endl;
 		}
-		std::string header = "Timestamp" + separator + "Actor_ID" + separator + 
+		std::string header = "Timestamp" + separator + "Actor_ID" + separator +
 			"Actor_x" + separator + "Actor_y" + separator + "Actor_heading\n";
 		logFile << header;
 		std::cout << header;
