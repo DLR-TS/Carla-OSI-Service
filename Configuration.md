@@ -42,15 +42,21 @@ Identify the ego vehicle in CARLA by name, like hero.
 additional_parameter: "-replay"
 ```
 
-In replay mode TrafficUpdate messages will spawn cars in Carla.
+In replay mode TrafficUpdate messages will spawn vehicles in Carla.
 Default values are used.
 If other replay options (weights, offsets or spawn height) are defined the replay mode will be set implicit.
+```
+additional_parameter: "-replaySpawnCarByName X"
+```
+
+In replay mode TrafficUpdate messages will spawn vehicles in Carla.
+The given name will be used to spawn vehicles in Carla. Examples: _vehicle.tesla.model3_ or _vehicle.audi.etron_
 
 ```
 additional_parameter: "-replayWeights X Y Z"
 ```
 
-In replay mode TrafficUpdate messages will spawn cars in Carla.
+In replay mode TrafficUpdate messages will spawn vehicles in Carla.
 The weight values are used to determine the best matching vehicle in CARLA to represent the bounding box given in the TrafficUpdate message.
 X = height, Y = width, Z = height
 
@@ -58,7 +64,7 @@ X = height, Y = width, Z = height
 additional_parameter: "-replayMapOffsets X Y"
 ```
 
-In replay mode TrafficUpdate messages will spawn cars in Carla.
+In replay mode TrafficUpdate messages will spawn vehicles in Carla.
 The map offsets are substracted from the location values given in the TrafficUpdate message.
 X = UTM East, Y = UTM North
 

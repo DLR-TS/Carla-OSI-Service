@@ -756,13 +756,18 @@ void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUp
 		if (ActorID == spawnedVehicles.end()) {
 			//not found --> spawn car
 			std::string vehicleName;
-			if (update.model_reference().length() == 0) {
+			if (!runtimeParameter.replay.spawnCarByName.empty()){
+				//name set by commandline parameter
+				vehicleName = runtimeParameter.replay.spawnCarByName;
+			} else if (!update.model_reference().empty()) {
+				//name set by TrafficUpdate message
+				vehicleName = std::string(update.model_reference().c_str());
+			} else {
+				//name set by best matching size of vehicle
 				vehicleName = CarlaUtility::findBestMatchingCarToSpawn(update.base().dimension(), replayVehicleBoundingBoxes,
 				runtimeParameter.replay.weightLength_X, runtimeParameter.replay.weightWidth_Y, runtimeParameter.replay.weightHeight_Z);
-			} else {
-				vehicleName = std::string(update.model_reference().c_str());
 			}
-			//spawn actor
+			//calculate transform of vehicle
 			auto position = Geometry::getInstance()->toCarla(update.base().position());
 			position.z = runtimeParameter.replay.spawnHeight_Z;
 

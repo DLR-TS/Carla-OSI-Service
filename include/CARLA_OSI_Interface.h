@@ -1,5 +1,5 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, Bjï¿½rn Bahn, Danny Behnecke
 */
 
 #ifndef CARLAINTERFACE_H
@@ -134,6 +134,8 @@ struct ReplayParameter {
 	double weightLength_X = 1;
 	double weightWidth_Y = 1;
 	double weightHeight_Z = 1;
+
+	std::string spawnCarByName;
 };
 
 struct RuntimeParameter {

@@ -88,6 +88,11 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
 				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
 		}
+		else if (parameter == "-replaySpawnCarByName") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.spawnCarByName = config->runtimeparameter(++i);
+			std::cout << "Replay mode active. Spawn all cars with model name: " << runtimeParameter.replay.spawnCarByName << std::endl;
+		}
 		else if (parameter == "-replayMapOffsets") {
 			runtimeParameter.replay.enabled = true;
 			runtimeParameter.replay.mapOffset.X = std::stod(config->runtimeparameter(++i));
@@ -245,8 +250,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 
 grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::Bytes* response)
 {
-	std::string message = getAndSerialize(request->value());
-	response->set_value(message);
+	response->set_value(getAndSerialize(request->value()));
 	return grpc::Status::OK;
 }
 
