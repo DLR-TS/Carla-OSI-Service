@@ -27,8 +27,9 @@ void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
 		if (!client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
-			client->carlaInterface.deleteSpawnedVehicles();
-			client->carlaInterface.resetWorldSettings();
+			//TODO December
+			//trafficUpdater.deleteSpawnedVehicles();
+			//client->carlaInterface.resetWorldSettings();
 			break;
 		}
 		else {
@@ -206,12 +207,16 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
 		sensorMountingPositionMap.insert({ sensorViewExtra.prefixed_fmu_variable_name(), mountingPosition });
 	}
-	response->set_value(carlaInterface.initialise(runtimeParameter));
+	std::shared_ptr<CARLAInterface> cInterface = std::make_shared<CARLAInterface>();
+	response->set_value(cInterface->initialise(runtimeParameter));
+	trafficUpdater.initialise(runtimeParameter, cInterface);
+	carlaInterface.initialise(runtimeParameter, cInterface);
+
 	if (runtimeParameter.scenarioRunnerDoesTick) {
 		std::cout << "Waiting for connetion of scenario runner." << std::endl;
 		smphSignalSRToCosima.acquire();
 		//data could be changed by a new map loaded by the scenario runner
-		carlaInterface.loadWorld();
+		cInterface->loadWorld();
 		carlaInterface.parseStationaryMapObjects();
 	}
 
@@ -234,7 +239,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		
 		//update changes in carla
 		carlaInterface.fetchActorsFromCarla();
-		response->set_value(carlaInterface.runtimeParameter.deltaSeconds);
+		response->set_value(runtimeParameter.deltaSeconds);
 	}
 	else 
 	{
@@ -274,14 +279,14 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 	smphSignalCosimaToSR.acquire();
 
 	if (runtimeParameter.verbose) {
-		std::cout << "Send delta to scenario runner: " << carlaInterface.runtimeParameter.deltaSeconds << std::endl;
+		std::cout << "Send delta to scenario runner: " << runtimeParameter.deltaSeconds << std::endl;
 	}
 
 	//control is given back to the scenario runner.
 	//The state of the simulation can change.
 	//The cached ground truth is now invalid.
 	carlaInterface.invalidateLatestGroundTruth();
-	return carlaInterface.runtimeParameter.deltaSeconds;
+	return runtimeParameter.deltaSeconds;
 }
 
 uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
@@ -310,7 +315,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 			std::cerr << "Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
 			return -1;
 		}
-		carlaInterface.receiveTrafficUpdate(trafficUpdate);
+		trafficUpdater.receiveTrafficUpdate(trafficUpdate);
 		return 0;
 	}
 	else if (std::string::npos != base_name.find("OSMPSensorViewConfigurationRequest")) {

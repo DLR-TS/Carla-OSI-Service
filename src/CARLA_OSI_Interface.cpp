@@ -1,28 +1,8 @@
 #include "CARLA_OSI_Interface.h"
 
-int CARLAOSIInterface::initialise(RuntimeParameter& runtimeParams) {
+int CARLAOSIInterface::initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla){
 	this->runtimeParameter = runtimeParams;
-
-	try {
-		//connect
-		this->client = std::make_unique<carla::client::Client>(runtimeParams.carlaHost, runtimeParameter.carlaPort);
-		this->client->SetTimeout(std::chrono::duration<double>(runtimeParams.transactionTimeout));
-
-		loadWorld();
-		applyWorldSettings();
-		parseStationaryMapObjects();
-
-		if (runtimeParameter.replay.enabled) {
-			fillBoundingBoxLookupTable();
-		}
-	}
-	catch (std::exception e) {
-		std::cout << e.what() << std::endl;
-		return -1;
-	}
-
-	// perform a tick to fill actor and message lists
-	doStep();
+	this->carla = carla;
 	return 0;
 }
 
@@ -30,61 +10,27 @@ double CARLAOSIInterface::doStep() {
 	if (runtimeParameter.verbose) {
 		std::cout << "Do Step" << std::endl;
 	}
-	if (!world) {
+	if (!carla->world) {
 		std::cerr << "No world" << std::endl;
 		throw std::exception();
-	}
-	else if (this->world->GetId() != this->client->GetWorld().GetId()) {
-		// change of world id indicates map reload or map change
-		std::cerr << "World has changed" << std::endl;
-		this->clearData();
 	}
 	//tick not needed if in asynchronous mode
 	if (runtimeParameter.sync) {
 		//Length of simulationed tick is set in applyWorldSettings()
-		world->Tick(client->GetTimeout());
+		carla->world->Tick(carla->client->GetTimeout());
 	}
-	//world->WaitForTick(this->transactionTimeout);
+	//carla->world->WaitForTick(this->transactionTimeout);
 	validLatestGroundTruth = false;
 
 	// only accurate if using fixed time step, as activated during initialise()
-	return world->GetSnapshot().GetTimestamp().delta_seconds;
-}
-
-void CARLAOSIInterface::fillBoundingBoxLookupTable() {
-	auto vehicleLibrary = world->GetBlueprintLibrary()->Filter("vehicle.*");
-	carla::geom::Location location(0, 0, 0);
-	carla::geom::Rotation rotation(0, 0, 0);
-	carla::geom::Transform transform(location, rotation);
-	for (auto vehicle : *vehicleLibrary) {
-		auto temp_actor = world->TrySpawnActor(vehicle, transform);
-		if (temp_actor == nullptr) {//map has object near 0 0 z
-			carla::geom::Location location_alternative(0, 0, 10000);
-			transform = carla::geom::Transform(location_alternative, rotation);
-			temp_actor = world->TrySpawnActor(vehicle, transform);
-			if (temp_actor == nullptr) {
-				std::cerr << "Can not spawn vehicle. Tried two locations with x,y,z: 0,0,0 and 0,0,10000" << std::endl;
-			}
-		}
-		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
-		auto bbox = vehicleActor->GetBoundingBox();
-		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
-		if (runtimeParameter.verbose) {
-			std::cout << "bbox: " << vehicle.GetId() << " Length:" << bbox.extent.x*2 << " Width:" << bbox.extent.y*2 << " Height:" << bbox.extent.z*2 << std::endl;
-		}
-		world->Tick(client->GetTimeout());
-		temp_actor->Destroy();
-	}
-	if (runtimeParameter.verbose) {
-		std::cout << "Number of possible vehicle bounding boxes: " << replayVehicleBoundingBoxes.size() << std::endl;
-	}
+	return carla->world->GetSnapshot().GetTimestamp().delta_seconds;
 }
 
 void CARLAOSIInterface::fetchActorsFromCarla() {
 
 	// track actors added/removed inside Carla
 	std::set<carla::ActorId> worldActorIDs, addedActors, removedActors;
-	auto worldActors = world->GetActors();
+	auto worldActors = carla->world->GetActors();
 	// compare actor ids, not actors
 	for (auto actor : *worldActors)
 	{
@@ -108,7 +54,7 @@ void CARLAOSIInterface::fetchActorsFromCarla() {
 		}
 		for (auto addedActor : addedActors) {
 			activeActors.insert(addedActor);
-			auto actor = world->GetActor(addedActor);
+			auto actor = carla->world->GetActor(addedActor);
 			auto attributes = actor->GetAttributes();
 			for (auto attribute : attributes) {
 				if ("role_name" == attribute.GetId()) {
@@ -139,38 +85,6 @@ std::shared_ptr<const osi3::GroundTruth> CARLAOSIInterface::getLatestGroundTruth
 		validLatestGroundTruth = true;
 	}
 	return latestGroundTruth;
-}
-
-void CARLAOSIInterface::loadWorld() {
-	this->world = std::make_unique<carla::client::World>(std::move(this->client->GetWorld()));
-	this->map = world->GetMap();
-}
-
-void CARLAOSIInterface::applyWorldSettings() {
-	auto settings = world->GetSettings();
-	//set sync or async operational mode
-	settings.synchronous_mode = runtimeParameter.sync;
-
-	if (settings.fixed_delta_seconds.has_value() &&
-		settings.fixed_delta_seconds.value() == runtimeParameter.deltaSeconds &&
-		settings.synchronous_mode) {
-		if (runtimeParameter.verbose) {
-			std::cout << "Settings of Carla Server are already correct and do not need to be changed" << std::endl;
-		}
-		return;
-	}
-	settings.fixed_delta_seconds = runtimeParameter.deltaSeconds;
-	settings.synchronous_mode = true;
-	this->world->ApplySettings(settings, settingsDuration);
-}
-
-void CARLAOSIInterface::resetWorldSettings() {
-	auto settings = world->GetSettings();
-	settings.synchronous_mode = false;
-	this->world->ApplySettings(settings, settingsDuration);
-	if (runtimeParameter.verbose) {
-		std::cout << "Reset CARLA World Settings." << std::endl;
-	}
 }
 
 std::shared_ptr<const osi3::SensorViewConfiguration> CARLAOSIInterface::getSensorViewConfiguration(const std::string& sensor)
@@ -222,7 +136,7 @@ std::vector<carla::rpc::EnvironmentObject> CARLAOSIInterface::filterEnvironmentO
 		return props;
 	}
 	if (runtimeParameter.options.Any) {
-		props = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
+		props = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
 	}
 	else {
 		//specialized types
@@ -235,67 +149,67 @@ std::vector<carla::rpc::EnvironmentObject> CARLAOSIInterface::filterEnvironmentO
 
 		if (runtimeParameter.options.Buildings)
 		{
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Buildings);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Buildings);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Fences) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Fences);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Fences);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Other) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Other);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Other);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Poles) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Poles);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Poles);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.RoadLines) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RoadLines);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RoadLines);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Roads) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Roads);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Roads);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Sidewalks) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Sidewalks);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Sidewalks);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Vegetation) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Vegetation);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Vegetation);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Walls) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Walls);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Walls);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Ground) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Ground);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Ground);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Bridge) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Bridge);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Bridge);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.RailTrack) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RailTrack);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RailTrack);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.GuardRail) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::GuardRail);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::GuardRail);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Static) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Static);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Static);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Water) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 		if (runtimeParameter.options.Terrain) {
-			auto buildings = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
+			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
 	}//endif options.Any
@@ -324,7 +238,7 @@ std::vector<carla::rpc::EnvironmentObject> CARLAOSIInterface::filterEnvironmentO
 void CARLAOSIInterface::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
-	staticMapTruth->set_map_reference(map->GetName());
+	staticMapTruth->set_map_reference(carla->map->GetName());
 	auto OSIStationaryObjects = staticMapTruth->mutable_stationary_object();
 	auto filteredStationaryMapObjects = filterEnvironmentObjects();
 	for (auto& mapObject : filteredStationaryMapObjects) {
@@ -336,9 +250,9 @@ void CARLAOSIInterface::parseStationaryMapObjects()
 		OSIStationaryObjects->AddAllocated(CarlaUtility::toOSI(mapObject, runtimeParameter.verbose));
 	}
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
-	auto signs = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
+	auto signs = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
 	for (auto& sign : signs) {
-		//auto trafficSign = world->GetActor((carla::ActorId)sign.id);
+		//auto trafficSign = carla->world->GetActor((carla::ActorId)sign.id);
 		//carla::SharedPtr<carla::client::TrafficSign> carlaTrafficSign = boost::dynamic_pointer_cast<carla::client::TrafficSign>(trafficSign);
 		auto OSITrafficSign = carla_osi::traffic_signals::getOSITrafficSign(sign);
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
@@ -347,7 +261,7 @@ void CARLAOSIInterface::parseStationaryMapObjects()
 	if (runtimeParameter.mapNetworkInGroundTruth) {
 		auto lanes = staticMapTruth->mutable_lane();
 		auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
-		auto topology = map->GetTopology();
+		auto topology = carla->map->GetTopology();
 		lanes->Reserve((int)topology.size());
 		std::cout << "Map topology consists of " << topology.size() << " endpoint pairs" << std::endl;
 
@@ -361,7 +275,7 @@ void CARLAOSIInterface::parseStationaryMapObjects()
 			std::get<1>(combined[i]) = std::make_unique<osi3::Lane>();
 		}
 
-		const carla::road::Map& roadMap = map->GetMap();
+		const carla::road::Map& roadMap = carla->map->GetMap();
 
 		// execute in parallel to increase performance for large maps
 		std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
@@ -497,12 +411,12 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
 	groundTruth->MergeFrom(*staticMapTruth);
 
-	auto worldActors = world->GetActors();
+	auto worldActors = carla->world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
 		//std::cout << "Ground Truth: " << typeID  << "  " << actor->GetId() << std::endl;
 		bool destroyed = false;
-		for(auto& v: deletedVehicles) {
+		for(auto& v: carla->deletedVehicles) {
 			if (v.second.idInCarla == actor->GetId())
 			{
 				destroyed = true;
@@ -537,7 +451,7 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 			classification->set_has_trailer(false);
 
 			// Get closest waypoint to determine current lane
-			auto waypoint = map->GetWaypoint(vehicleActor->GetLocation());
+			auto waypoint = carla->map->GetWaypoint(vehicleActor->GetLocation());
 			//TODO vehicle might be on more than one lane
 			auto laneIDs = vehicle->mutable_assigned_lane_id();
 			laneIDs->AddAllocated(carla_osi::id_mapping::getOSIWaypointId(waypoint).release());
@@ -613,7 +527,7 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 			// Road_Sidewalk, Road_Crosswalk, Road_Grass, Road_Road, Road_Curb, Road_Gutter or Road_Marking
 
 			//The following will only work if there is a matching waypoint:
-			auto closestWaypoint = map->GetWaypoint(walkerActor->GetLocation(), true, (uint32_t)carla::road::Lane::LaneType::Any);
+			auto closestWaypoint = carla->map->GetWaypoint(walkerActor->GetLocation(), true, (uint32_t)carla::road::Lane::LaneType::Any);
 			if (closestWaypoint) {
 				pedestrian->mutable_assigned_lane_id()->AddAllocated(
 					carla_osi::id_mapping::getOSIWaypointId(closestWaypoint).release());
@@ -625,7 +539,7 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 			//a osi3::TrafficLight describes a single bulb of a traffic light
 
 			//TODO retrieve traffic light heads and parse them to osi traffic lights instead of using a static guess.
-			auto heads = world->GetTrafficLightHeads(trafficLight);
+			auto heads = carla->world->GetTrafficLightHeads(trafficLight);
 			auto bulbs = carla_osi::traffic_signals::getOSITrafficLight(trafficLight, heads);
 			//add converted bulbs to ground truth
 			auto trafficLights = groundTruth->mutable_traffic_light();
@@ -640,14 +554,14 @@ std::shared_ptr<osi3::GroundTruth> CARLAOSIInterface::parseWorldToGroundTruth()
 	}
 
 	//Timestamp
-	groundTruth->set_allocated_timestamp(CarlaUtility::parseTimestamp(world->GetSnapshot().GetTimestamp()).release());
+	groundTruth->set_allocated_timestamp(CarlaUtility::parseTimestamp(carla->world->GetSnapshot().GetTimestamp()).release());
 
 	return groundTruth;
 }
 
 void CARLAOSIInterface::clearData()
 {
-	if (!world) {
+	if (!carla->world) {
 		std::cerr << "No world" << std::endl;
 		throw new std::exception();
 	}
@@ -662,13 +576,13 @@ void CARLAOSIInterface::clearData()
 
 void CARLAOSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index)
 {
-	if (!world) {
+	if (!carla->world) {
 		// Local world object has been destroyed and thus probably also the CARLA OSI interface, but client is still sending
 		// Stop listening to this sensor
 		sensor->Stop();
 		return;
 	}
-	if (world->GetId() != sensor->GetWorld().GetId()) {
+	if (carla->world->GetId() != sensor->GetWorld().GetId()) {
 		std::cerr << __FUNCTION__ << ": received event for wrong world" << std::endl;
 		return;
 	}
@@ -715,178 +629,7 @@ void CARLAOSIInterface::sensorEventAction(carla::SharedPtr<carla::client::Sensor
 	}
 }
 
-int CARLAOSIInterface::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
-	//OSI documentation:
-	//Only the id, base member (without dimension and base_polygon),
-	//and the vehicle_classification.light_state members are considered in
-	//updates, all other members can be left undefined, and will be
-	//ignored by the receiver of this message.
 
-	if (trafficUpdate.update_size() == 0) {
-		std::cerr << __FUNCTION__ << " No update." << std::endl;
-		return 3;
-	}
-
-	carla::ActorId actorId;
-
-	if (runtimeParameter.replay.enabled) {
-		replayTrafficUpdate(trafficUpdate, actorId);
-		return 0;
-	}
-
-	for (auto& update : trafficUpdate.update()) {
-		//original operation mode with update for exisiting cars
-
-		actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
-		auto actor = world->GetActor(actorId);
-		if (actor == nullptr && !runtimeParameter.replay.enabled) {
-			std::cout << "Actor not found! No position updates will be done!" << std::endl;
-			return 0;
-		}
-		applyTrafficUpdate(update, actor);
-	}
-	return 0;
-}
-
-void CARLAOSIInterface::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUpdate, carla::ActorId& actorID) {
-	//check if spawned from Carla-OSI-Service
-
-	for (auto& update : trafficUpdate.update()) {
-		auto ActorID = spawnedVehicles.find(update.id().value());
-		if (ActorID == spawnedVehicles.end()) {
-			//not found --> spawn car
-			std::string vehicleName;
-			if (!runtimeParameter.replay.spawnCarByName.empty()){
-				//name set by commandline parameter
-				vehicleName = runtimeParameter.replay.spawnCarByName;
-			} else if (!update.model_reference().empty()) {
-				//name set by TrafficUpdate message
-				vehicleName = std::string(update.model_reference().c_str());
-			} else {
-				//name set by best matching size of vehicle
-				vehicleName = CarlaUtility::findBestMatchingCarToSpawn(update.base().dimension(), replayVehicleBoundingBoxes,
-				runtimeParameter.replay.weightLength_X, runtimeParameter.replay.weightWidth_Y, runtimeParameter.replay.weightHeight_Z);
-			}
-			//calculate transform of vehicle
-			auto position = Geometry::getInstance()->toCarla(update.base().position());
-			position.z = runtimeParameter.replay.spawnHeight_Z;
-
-			auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
-			carla::geom::Transform transform(position, orientation);
-
-			std::cout << "Spawn vehicle: " << vehicleName << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
-
-			auto blueprintlibrary = world->GetBlueprintLibrary();
-			auto vehicleBlueprint = blueprintlibrary->Find(vehicleName);
-			carla::SharedPtr<carla::client::Actor> actor;
-			actor = world->TrySpawnActor(*vehicleBlueprint, transform);
-			if (actor == nullptr) {
-				std::cerr << "Could not spawn actor!" << std::endl;
-				continue;
-			}
-
-			spawnedVehicle addedVehicle;
-			addedVehicle.idInCarla = actor->GetId();
-			spawnedVehicles.emplace(update.id().value(), addedVehicle);
-			applyTrafficUpdate(update, actor);
-			} else {
-				applyTrafficUpdate(update, world->GetActor(ActorID->second.idInCarla));
-			}
-			//save the Update with current timestamp
-			spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos();
-		}
-
-		//deconstruct actors with no update
-		for (auto& vehicle : spawnedVehicles) {
-			if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos()) {
-				std::cout << "No update for vehicle: " << vehicle.first << " Will stop the display of this vehicle." << std::endl;
-				auto vehicleActor = world->GetActor(vehicle.second.idInCarla);
-				deletedVehicles.emplace(vehicle);
-				vehicleActor->Destroy();
-			}
-		}
-	for (auto& deletedVehicleId : deletedVehicles) {
-		spawnedVehicles.erase(deletedVehicleId.first);
-	}
-}
-
-void CARLAOSIInterface::applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
-{
-	//BASE
-	if (update.base().has_position() && update.base().has_orientation()) {
-		auto position = Geometry::getInstance()->toCarla(update.base().position());
-		auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
-		if (runtimeParameter.replay.enabled){
-			position.z = runtimeParameter.replay.spawnHeight_Z;
-		}
-
-		//height is controlled by terrain
-		if (actor->GetLocation().z != 0) {
-			//position.z = actor->GetLocation().z;
-		}
-		else {
-			//new height is spawnHeight
-		}
-
-		//do not set pitch an roll of vehicles in asynchronous mode
-		//these would break the visualization
-		//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
-		if (!runtimeParameter.sync) {
-			orientation.pitch = actor->GetTransform().rotation.pitch;
-			orientation.roll = actor->GetTransform().rotation.roll;
-		}
-		if (runtimeParameter.verbose) {
-			std::cout << "Apply position: " << position.x << ", " << position.y  << ", " << position.z << ", Yaw: " << orientation.yaw << std::endl;
-		}
-		actor->SetTransform(carla::geom::Transform(position, orientation));
-	}
-
-	//Velocity
-	if (update.base().has_velocity()) {
-		actor->SetTargetVelocity(Geometry::getInstance()->toCarlaVelocity(update.base().velocity()));
-	}
-
-	//Acceleration can not be set in CARLA
-	//GetAcceleration() calculates the acceleration with the actor's velocity
-	//if (update.base().has_acceleration()) {
-		//auto acceleration = carla_osi::geometry::toCarla(&update.mutable_base()->acceleration());
-	//}
-
-	//Orientation
-	if (update.base().has_orientation_rate()) {
-		const auto orientationRate = Geometry::getInstance()->toCarla(update.base().orientation_rate());
-
-		//TODO Check if conversion is correct: x should be forward, y should be up, z should be right
-		//actor->SetTargetAngularVelocity({ orientationRate.GetForwardVector().Length(), orientationRate.GetUpVector().Length(), orientationRate.GetRightVector().Length() });
-	}
-
-	//Acceleration can not be set in CARLA
-	//GetAcceleration() calculates the acceleration with the actor's velocity
-	//if (update.mutable_base()->has_orientation_acceleration()){
-	//const osi3::Orientation3d* accelerationRoll = update.mutable_base()->mutable_orientation_acceleration();
-	//}
-
-	//LIGHTSTATE
-	if (update.vehicle_classification().has_light_state()) {
-		auto classification = update.vehicle_classification();
-		auto light_state = classification.mutable_light_state();
-		auto carla_light_state = CarlaUtility::toCarla(light_state);
-		//auto indicatorState = CarlaUtility::toCarla(update.vehicle_classification().light_state());
-		auto vehicleActor = boost::static_pointer_cast<carla::client::Vehicle>(actor);
-
-		vehicleActor->SetLightState(carla_light_state);
-	}
-}
-
-void CARLAOSIInterface::deleteSpawnedVehicles() {
-	//deconstruct all spawned actors
-	for (auto& vehicle : spawnedVehicles) {
-		std::cout << "Remove: " << vehicle.first << std::endl;
-		auto vehicleActor = world->GetActor(vehicle.second.idInCarla);
-		deletedVehicles.emplace(vehicle);
-		vehicleActor->Destroy();
-	}
-}
 
 int CARLAOSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
 	//todo a
@@ -921,7 +664,7 @@ int CARLAOSIInterface::receiveSensorViewConfigurationRequest(osi3::SensorViewCon
 }
 
 OSIVehicleID CARLAOSIInterface::vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
-	for (auto& spawnedVehicle: spawnedVehicles) {
+	for (auto& spawnedVehicle : carla->spawnedVehicles) {
 		if (spawnedVehicle.second.idInCarla == vehicle->GetId()) {
 			return spawnedVehicle.first;
 		}
@@ -944,7 +687,7 @@ void CARLAOSIInterface::writeLog() {
 		std::cout << header;
 	}
 
-	double seconds = world->GetSnapshot().GetTimestamp().elapsed_seconds;
+	double seconds = carla->world->GetSnapshot().GetTimestamp().elapsed_seconds;
 
 	//log all vehicles
 	logData logData;

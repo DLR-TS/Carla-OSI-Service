@@ -1,12 +1,12 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Bj�rn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
 */
 
-#ifndef CARLAINTERFACE_H
-#define CARLAINTERFACE_H
+#ifndef CARLAOSIINTERFACE_H
+#define CARLAOSIINTERFACE_H
 
 #include <charconv>
-#include <string>
+
 #include <mutex>
 #include <shared_mutex>
 #include <chrono>
@@ -16,15 +16,15 @@
 #include <execution>
 #include <stdexcept>
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <boost/bimap.hpp>
 #include <boost/foreach.hpp>
 
 #include <carla/client/Actor.h>
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
-#include <carla/client/BlueprintLibrary.h>
-#include <carla/client/Client.h>
-#include <carla/client/Map.h>
 #include <carla/client/Sensor.h>
 #include <carla/sensor/SensorData.h>
 #include <carla/client/TimeoutException.h>
@@ -33,7 +33,6 @@
 #include <carla/client/TrafficLight.h>
 #include <carla/client/Vehicle.h>
 #include <carla/client/Walker.h>
-#include <carla/client/World.h>
 #include <carla/geom/BoundingBox.h>
 #include <carla/geom/Location.h>
 #include <carla/geom/Transform.h>
@@ -71,103 +70,24 @@
 #include "osi_trafficcommand.pb.h"
 //#include "osi_trafficlight.pb.h"
 //#include "osi_trafficsign.pb.h"
-#include "osi_trafficupdate.pb.h"
+//#include "osi_trafficupdate.pb.h"
 //#include "osi_version.pb.h"
 
 #include "Utility.h"
+#include "ParameterDefinitions.h"
+#include "CARLA_Interface.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
 #include "carla_osi/Lanes.h"
 #include "carla_osi/TrafficSignals.h"
 
 #include "pugixml.hpp"
-#define _USE_MATH_DEFINES
-#include <math.h>
 
-
-struct CityObjectLabel {
-	bool None = false;
-	bool Buildings = false;
-	bool Fences = false;
-	bool Other = false;
-	//bool Pedestrians = false; no static object
-	bool Poles = false;
-	bool RoadLines = false;
-	bool Roads = false;
-	bool Sidewalks = false;
-	bool TrafficSigns = false;
-	bool Vegetation = false;
-	//bool Vehicles = false; no static object
-	bool Walls = false;
-	//bool Sky = false;
-	bool Ground = false;
-	bool Bridge = false;
-	bool RailTrack = false;
-	bool GuardRail = false;
-	bool TrafficLight = false;
-	bool Static = false;
-	//bool Dynamic = false;
-	bool Water = false;
-	bool Terrain = false;
-	bool Any = false;
-};
-
-enum SENSORTYPES
-{
-	GENERIC,
-	ULTRASONIC,
-	RADAR,
-	LIDAR,
-	CAMERA
-};
-
-typedef uint64_t OSIVehicleID;
-
-//spawn and remove vehicles dynamically
-struct ReplayParameter {
-	bool enabled = false;
-
-	bool UTMOutput = false;
-	MapOffset mapOffset;
-	float spawnHeight_Z = 0;
-
-	double weightLength_X = 1;
-	double weightWidth_Y = 1;
-	double weightHeight_Z = 1;
-
-	std::string spawnCarByName;
-};
-
-struct RuntimeParameter {
-	bool sync = true;
-	bool verbose = false;
-	bool scenarioRunnerDoesTick = false;
-	bool filter = false;
-	std::string filterString = "";
-	bool log = false;
-	std::string ego = "hero";
-	std::string logFileName = "";
-	int resumeCarlaAsyncSeconds = 0;
-	bool carlaSensors = false;
-	std::set<SENSORTYPES> carlasensortypes;
-	//parsing options
-	CityObjectLabel options;
-	bool mapNetworkInGroundTruth = false;
-
-	ReplayParameter replay;
-
-	std::string carlaHost = "localhost";
-	int carlaPort;
-	float transactionTimeout;
-	float deltaSeconds;
-};
 
 class CARLAOSIInterface
 {
+	std::shared_ptr<CARLAInterface> carla;
 
-	std::unique_ptr<carla::client::World> world;
-	std::unique_ptr<carla::client::Client> client;
-	carla::SharedPtr<carla::client::Map> map;
 	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role. Role names are used as variable name to identify OSI messages
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
 	std::shared_mutex actorRole2IDMap_mutex;
@@ -189,21 +109,18 @@ class CARLAOSIInterface
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
-public:
 	// Parameters set by runtime
 	RuntimeParameter runtimeParameter;
-
-	~CARLAOSIInterface() {
-		if (world) resetWorldSettings();
-	};
+public:
 
 	/**
 	* initialise the interface with the given parameters and connect to the carla server
-	* \var runtimeParameter
+	* \var runtimeParams
+	* \var carla
 	* parameters set by start of program
 	* \return Success status.
 	*/
-	int initialise(RuntimeParameter& runtimeParameter);
+	int initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla);
 
 	/**
 	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
@@ -216,21 +133,6 @@ public:
 	* Should be called after a doStep()
 	*/
 	void fetchActorsFromCarla();
-
-	/**
-	* Load the world from carla (world and map)
-	*/
-	void loadWorld();
-
-	/**
-	* Apply specific settings to the world
-	*/
-	void applyWorldSettings();
-
-	/**
-	* Reset specific settings of the world
-	*/
-	void resetWorldSettings();
 
 	/**
 	Retrieve ground truth message generated during last step
@@ -251,12 +153,6 @@ public:
 	\return The sensor's configuration as osi3::SensorViewConfiguration, or nullptr if no sensor with given name is found
 	*/
 	std::shared_ptr<const osi3::SensorViewConfiguration> getSensorViewConfiguration(const std::string& sensor);
-
-	/**
-	Read traffic update message from traffic participant and update position, rotation, velocity and lightstate of CARLA actor.
-	\return success indicator
-	*/
-	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
 
 	/**
 	Receive configuration of SensorViewConfiguration message
@@ -286,11 +182,6 @@ public:
 	uint64_t getHeroId() { return trafficCommandMessageHeroId; }
 
 	/**
-	Delete spawned vehicles from replay.
-	*/
-	void deleteSpawnedVehicles();
-
-	/**
 	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
 	*/
 	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
@@ -308,33 +199,11 @@ private:
 	// parse CARLA world to update latestGroundTruth. Called during doStep()
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 
-	/**
-	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages.
-	*/
-	void fillBoundingBoxLookupTable();
-
 	/*
 	Checks if vehicle is spawned by Carla_OSI_Service
 	return 0 if not
 	*/
 	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle);
-
-	void replayTrafficUpdate(const osi3::TrafficUpdate& update, carla::ActorId& ActorID);
-
-	/**
-	Apply Traffic Update to existing vehicle in Carla
-	*/
-	void applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor);
-
-	struct spawnedVehicle {
-		uint32_t idInCarla;
-		uint64_t lastTimeUpdated;
-	};
-
-	std::map<OSIVehicleID, spawnedVehicle> spawnedVehicles;
-	//Deleted vehicles, which shall not be parsed, because they have been destroyed, but still be present in the list of actors.
-	std::map<OSIVehicleID, spawnedVehicle> deletedVehicles;
-	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
 	/**
 	Clear mapping data and preparsed messages and reparse environment objects.
@@ -348,4 +217,4 @@ private:
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index);
 };
 
-#endif //!CARLAINTERFACE_H
+#endif //!CARLAOSIINTERFACE_H
