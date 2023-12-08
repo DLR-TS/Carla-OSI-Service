@@ -10,20 +10,11 @@ int CARLAInterface::initialise(RuntimeParameter& runtimeParams) {
 
 		loadWorld();
 		applyWorldSettings();
-        //TODO December
-		//parseStationaryMapObjects();
-
-		//if (runtimeParameter.replay.enabled) {
-		//	fillBoundingBoxLookupTable();
-		//}
 	}
 	catch (std::exception e) {
 		std::cout << e.what() << std::endl;
 		return -1;
 	}
-    //TODO December
-	// perform a tick to fill actor and message lists
-	//doStep();
 	return 0;
 }
 
@@ -57,4 +48,23 @@ void CARLAInterface::resetWorldSettings() {
 	if (runtimeParameter.verbose) {
 		std::cout << "Reset CARLA World Settings." << std::endl;
 	}
+}
+
+double CARLAInterface::doStep() {
+	if (runtimeParameter.verbose) {
+		std::cout << "Do Step" << std::endl;
+	}
+	if (!world) {
+		std::cerr << "No world" << std::endl;
+		throw std::exception();
+	}
+	//tick not needed if in asynchronous mode
+	if (runtimeParameter.sync) {
+		//Length of simulationed tick is set in applyWorldSettings()
+		world->Tick(client->GetTimeout());
+	}
+	//carla->world->WaitForTick(this->transactionTimeout);
+
+	// only accurate if using fixed time step, as activated during initialise()
+	return world->GetSnapshot().GetTimestamp().delta_seconds;
 }

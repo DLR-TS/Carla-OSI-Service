@@ -57,8 +57,9 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 
 
 #pragma region fields for the Carla OSI Interface
-	CARLAOSIInterface carlaInterface;
-	TrafficUpdater trafficUpdater;
+	std::shared_ptr<CARLAInterface> carla = std::make_shared<CARLAInterface>();
+	std::unique_ptr<CARLAOSIInterface> carlaInterface = std::make_unique<CARLAOSIInterface>();
+	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
 	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
 	std::map<std::string, std::string> varName2MessageMap; //important!
 	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions

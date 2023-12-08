@@ -6,26 +6,6 @@ int CARLAOSIInterface::initialise(RuntimeParameter& runtimeParams, std::shared_p
 	return 0;
 }
 
-double CARLAOSIInterface::doStep() {
-	if (runtimeParameter.verbose) {
-		std::cout << "Do Step" << std::endl;
-	}
-	if (!carla->world) {
-		std::cerr << "No world" << std::endl;
-		throw std::exception();
-	}
-	//tick not needed if in asynchronous mode
-	if (runtimeParameter.sync) {
-		//Length of simulationed tick is set in applyWorldSettings()
-		carla->world->Tick(carla->client->GetTimeout());
-	}
-	//carla->world->WaitForTick(this->transactionTimeout);
-	validLatestGroundTruth = false;
-
-	// only accurate if using fixed time step, as activated during initialise()
-	return carla->world->GetSnapshot().GetTimestamp().delta_seconds;
-}
-
 void CARLAOSIInterface::fetchActorsFromCarla() {
 
 	// track actors added/removed inside Carla

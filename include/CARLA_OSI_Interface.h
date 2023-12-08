@@ -123,12 +123,6 @@ public:
 	int initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla);
 
 	/**
-	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
-	\return Time in seconds advanced during step
-	*/
-	double doStep();
-
-	/**
 	* Fetch the actors in carla and update cache.
 	* Should be called after a doStep()
 	*/

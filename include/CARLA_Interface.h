@@ -46,17 +46,23 @@ public:
 	*/
 	void loadWorld();
 
+	/**
+	* Reset specific settings of the world
+	*/
+	void resetWorldSettings();
+
+	/**
+	Perform a simulation step. Will perform a tick of deltaSeconds, as given in the configuration
+	\return Time in seconds advanced during step
+	*/
+	double doStep();
+
 private:
 
 	/**
 	* Apply specific settings to the world
 	*/
 	void applyWorldSettings();
-
-	/**
-	* Reset specific settings of the world
-	*/
-	void resetWorldSettings();
 };
 
 #endif //!CARLAINTERFACE_H2
