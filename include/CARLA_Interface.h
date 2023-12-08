@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <map>
+#include <iostream>
 
 #include "carla/client/Client.h"
 #include "carla/client/World.h"
@@ -17,7 +18,7 @@
 class CARLAInterface{
 
     RuntimeParameter runtimeParameter;
-
+	
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 

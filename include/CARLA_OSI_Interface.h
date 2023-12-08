@@ -73,20 +73,16 @@
 //#include "osi_trafficupdate.pb.h"
 //#include "osi_version.pb.h"
 
-#include "Utility.h"
-#include "ParameterDefinitions.h"
+#include "CARLA_Module.h"
 #include "CARLA_Interface.h"
 #include "carla_osi/Geometry.h"
 #include "carla_osi/Identifiers.h"
-#include "carla_osi/Lanes.h"
-#include "carla_osi/TrafficSignals.h"
 
 #include "pugixml.hpp"
 
 
-class CARLAOSIInterface
+class CARLAOSIInterface : public CARLAModule
 {
-	std::shared_ptr<CARLAInterface> carla;
 
 	// contains actor ids an the value of their role_name attribute. Does not contain actors without a role. Role names are used as variable name to identify OSI messages
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
@@ -104,8 +100,6 @@ class CARLAOSIInterface
 	bool validLatestGroundTruth = false;
 	// OpenDRIVE xml representation of the map (cached in initialise(), shouldn't change during the simulation)
 	//pugi::xml_document xodr;
-	//hero id
-	uint64_t trafficCommandMessageHeroId = 0;
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -114,25 +108,10 @@ class CARLAOSIInterface
 public:
 
 	/**
-	* initialise the interface with the given parameters and connect to the carla server
-	* \var runtimeParams
-	* \var carla
-	* parameters set by start of program
-	* \return Success status.
-	*/
-	int initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla);
-
-	/**
 	* Fetch the actors in carla and update cache.
 	* Should be called after a doStep()
 	*/
 	void fetchActorsFromCarla();
-
-	/**
-	Retrieve ground truth message generated during last step
-	\return Latest world state as osi3::GroundTruth
-	*/
-	std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
 	/**
 	Retrieve CARLA Sensor output from the sensor with the given index. Messages are cached and updated during a sensor's tick.
@@ -154,50 +133,7 @@ public:
 	*/
 	int receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration);
 
-	//Helper function for our client
-	/**
-	Try to parse the given osi::Identifier to its corresponding actor id and retrieve the actors role_name attribute
-
-	\return the role name of the actor with the given id, or empty string if the actor has no role name or doesn't exist
-
-	Throws std::bad_variant_access if id doesn't correspond to a regular carla actor
-	*/
-	std::string actorIdToRoleName(const osi3::Identifier& id);
-
-	// prepare a GroundTruth object with values from the current map which won't change 
-	void parseStationaryMapObjects();
-
-	std::vector<carla::rpc::EnvironmentObject> filterEnvironmentObjects();
-
-	/**
-	Returns the hero id.
-	\return hero id
-	*/
-	uint64_t getHeroId() { return trafficCommandMessageHeroId; }
-
-	/**
-	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
-	*/
-	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
-
-	/**
-	Write the log.
-	*/
-	void writeLog();
-
 private:
-
-	std::ofstream logFile;
-	struct logData { std::string id; double x, y, yaw; };
-
-	// parse CARLA world to update latestGroundTruth. Called during doStep()
-	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
-
-	/*
-	Checks if vehicle is spawned by Carla_OSI_Service
-	return 0 if not
-	*/
-	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle);
 
 	/**
 	Clear mapping data and preparsed messages and reparse environment objects.

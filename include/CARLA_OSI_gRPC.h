@@ -32,6 +32,8 @@
 #include "Semaphore.h"
 #include "Utility.h"
 #include "CARLA_TrafficUpdate.h"
+#include "CARLA_SensorView.h"
+#include "Logger.h"
 #include "carla_osi/Identifiers.h"
 #include "ScenarioRunner/TrafficCommandReceiver.h"
 
@@ -60,6 +62,8 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	std::shared_ptr<CARLAInterface> carla = std::make_shared<CARLAInterface>();
 	std::unique_ptr<CARLAOSIInterface> carlaInterface = std::make_unique<CARLAOSIInterface>();
 	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
+	std::unique_ptr<SensorViewer> sensorViewer = std::make_unique<SensorViewer>();
+	std::unique_ptr<Logger> logger = std::make_unique<Logger>();
 	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
 	std::map<std::string, std::string> varName2MessageMap; //important!
 	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions

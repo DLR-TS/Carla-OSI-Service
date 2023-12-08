@@ -11,29 +11,17 @@
 
 #include "carla/client/BlueprintLibrary.h"
 
+#include "CARLA_Module.h"
 #include "CARLA_Interface.h"
 #include "Utility.h"
 #include "ParameterDefinitions.h"
 
 
-class TrafficUpdater{
-
-	std::shared_ptr<CARLAInterface> carla;
+class TrafficUpdater : public CARLAModule {
 
 	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
 
-	// Parameters set by runtime
-    RuntimeParameter runtimeParameter;
 public:
-
-	/**
-	* initialise the interface with the given parameters and connect to the carla server
-	* \var runtimeParams
-	* \var carla
-	* parameters set by start of program
-	* \return Success status.
-	*/
-    int initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla);
 
 	/**
 	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages.

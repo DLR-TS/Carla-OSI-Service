@@ -1,11 +1,5 @@
 #include "CARLA_TrafficUpdate.h"
 
-int TrafficUpdater::initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla) {
-	this->runtimeParameter = runtimeParams;
-	this->carla = carla;
-	return 0;
-}
-
 void TrafficUpdater::fillBoundingBoxLookupTable() {
 	auto vehicleLibrary = carla->world->GetBlueprintLibrary()->Filter("vehicle.*");
 	carla::geom::Location location(0, 0, 0);
