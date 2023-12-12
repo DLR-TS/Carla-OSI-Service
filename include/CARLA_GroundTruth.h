@@ -7,16 +7,8 @@
 
 #include <execution>
 
-#include "CARLA_Module.h"
-
-#include "carla_osi/Lanes.h"
-#include "carla_osi/TrafficSignals.h"
-#include "carla/client/Actor.h"
-#include "carla/client/ActorList.h"
-
 #include "osi_groundtruth.pb.h"
 
-/////////////BEGING
 #include <carla/client/Actor.h>
 #include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
@@ -37,45 +29,15 @@
 #include <carla/image/ImageView.h>
 #include <carla/road/Lane.h>
 #include <carla/rpc/ObjectLabel.h>
-#include <carla/sensor/data/Image.h>
-#include <carla/sensor/data/LidarMeasurement.h>
-#include <carla/sensor/data/RadarMeasurement.h>
-
-//uncomment include if needed
-#include "osi_common.pb.h"
-//#include "osi_datarecording.pb.h"
-//#include "osi_detectedlane.pb.h"
-//#include "osi_detectedobject.pb.h"
-//#include "osi_detectedoccupant.pb.h"
-//#include "osi_detectedroadmarking.pb.h"
-//#include "osi_detectedtrafficlight.pb.h"
-//#include "osi_detectedtrafficsign.pb.h"
-//#include "osi_environment.pb.h"
-#include "osi_featuredata.pb.h"
-#include "osi_groundtruth.pb.h"
-//#include "osi_hostvehicledata.pb.h"
-//#include "osi_lane.pb.h"
-//#include "osi_object.pb.h"
-//#include "osi_occupant.pb.h"
-//#include "osi_roadmarking.pb.h"
-//#include "osi_sensordata.pb.h"
-//#include "osi_sensorspecific.pb.h"
-#include "osi_sensorview.pb.h"
-//#include "osi_sensorviewconfiguration.pb.h"
-#include "osi_trafficcommand.pb.h"
-//#include "osi_trafficlight.pb.h"
-//#include "osi_trafficsign.pb.h"
-//#include "osi_trafficupdate.pb.h"
-//#include "osi_version.pb.h"
 
 #include "CARLA_Module.h"
 #include "CARLA_Interface.h"
+#include "carla_osi/Lanes.h"
 #include "carla_osi/Geometry.h"
+#include "carla_osi/TrafficSignals.h"
 #include "carla_osi/Identifiers.h"
 
 #include "pugixml.hpp"
-
-//////////////END
 
 class GroundTruthCreator : public CARLAModule {
 
