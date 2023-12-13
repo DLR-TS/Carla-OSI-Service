@@ -1,15 +1,20 @@
 #include "CARLA_TrafficUpdate.h"
 
-void TrafficUpdater::fillBoundingBoxLookupTable() {
+void TrafficUpdater::initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla) {
+	CARLAModule::initialise(runtimeParams, carla);
+	if (runtimeParameter.replay.enabled) {
+		saveBoundingBoxesOfAvailableVehicles();
+	}
+}
+
+void TrafficUpdater::saveBoundingBoxesOfAvailableVehicles() {
 	auto vehicleLibrary = carla->world->GetBlueprintLibrary()->Filter("vehicle.*");
-	carla::geom::Location location(0, 0, 0);
-	carla::geom::Rotation rotation(0, 0, 0);
-	carla::geom::Transform transform(location, rotation);
+	carla::geom::Transform transform;//location 0,0,0 rotation 0,0,0
 	for (auto vehicle : *vehicleLibrary) {
 		auto temp_actor = carla->world->TrySpawnActor(vehicle, transform);
 		if (temp_actor == nullptr) {//map has object near 0 0 z
 			carla::geom::Location location_alternative(0, 0, 10000);
-			transform = carla::geom::Transform(location_alternative, rotation);
+			transform = carla::geom::Transform(location_alternative, carla::geom::Rotation(0,0,0));
 			temp_actor = carla->world->TrySpawnActor(vehicle, transform);
 			if (temp_actor == nullptr) {
 				std::cerr << "Can not spawn vehicle. Tried two locations with x,y,z: 0,0,0 and 0,0,10000" << std::endl;
@@ -30,111 +35,101 @@ void TrafficUpdater::fillBoundingBoxLookupTable() {
 }
 
 int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
-	//OSI documentation:
-	//Only the id, base member (without dimension and base_polygon),
-	//and the vehicle_classification.light_state members are considered in
-	//updates, all other members can be left undefined, and will be
-	//ignored by the receiver of this message.
-
 	if (trafficUpdate.update_size() == 0) {
 		std::cerr << __FUNCTION__ << " No update." << std::endl;
-		return 3;
+		return 1;
 	}
 
 	carla::ActorId actorId;
-
-	if (runtimeParameter.replay.enabled) {
-		replayTrafficUpdate(trafficUpdate, actorId);
-		return 0;
-	}
+	std::vector<int> listOfUpdatedVehicles;
 
 	for (auto& update : trafficUpdate.update()) {
-		//original operation mode with update for exisiting cars
-
+		//assumption: actor exists in Carla
 		actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
 		auto actor = carla->world->GetActor(actorId);
-		if (actor == nullptr && !runtimeParameter.replay.enabled) {
+		if (runtimeParameter.replay.enabled) {
+			actor = spawnVehicleIfNeeded(update, actorId);
+		}
+		if (actor == nullptr) {
 			std::cout << "Actor not found! No position updates will be done!" << std::endl;
 			return 0;
 		}
-		applyTrafficUpdate(update, actor);
+		listOfUpdatedVehicles.push_back(update.id().value());
+		applyTrafficUpdateToActor(update, actor);
 	}
+	removeSpawnedVehiclesIfNotUpdated(listOfUpdatedVehicles);
 	return 0;
 }
 
-void TrafficUpdater::replayTrafficUpdate(const osi3::TrafficUpdate& trafficUpdate, carla::ActorId& actorID) {
-	//check if spawned from Carla-OSI-Service
+void TrafficUpdater::removeSpawnedVehiclesIfNotUpdated(std::vector<int>& listOfUpdatedVehicles){
+    auto it = carla->spawnedVehiclesByCarlaOSIService.begin();
+    while (it != carla->spawnedVehiclesByCarlaOSIService.end()) {
 
-	for (auto& update : trafficUpdate.update()) {
-		auto ActorID = carla->spawnedVehicles.find(update.id().value());
-		if (ActorID == carla->spawnedVehicles.end()) {
-			//not found --> spawn car
-			std::string vehicleName;
-			if (!runtimeParameter.replay.spawnCarByName.empty()){
-				//name set by commandline parameter
-				vehicleName = runtimeParameter.replay.spawnCarByName;
-			} else if (!update.model_reference().empty()) {
-				//name set by TrafficUpdate message
-				vehicleName = std::string(update.model_reference().c_str());
-			} else {
-				//name set by best matching size of vehicle
-				vehicleName = CarlaUtility::findBestMatchingCarToSpawn(update.base().dimension(), replayVehicleBoundingBoxes,
-				runtimeParameter.replay.weightLength_X, runtimeParameter.replay.weightWidth_Y, runtimeParameter.replay.weightHeight_Z);
-			}
-			//calculate transform of vehicle
-			auto position = Geometry::getInstance()->toCarla(update.base().position());
-			position.z = runtimeParameter.replay.spawnHeight_Z;
+        if (std::find(listOfUpdatedVehicles.begin(), listOfUpdatedVehicles.end(), it->first) == listOfUpdatedVehicles.end()) {
+			std::cout << "No update for vehicle: " << it->first << " Will stop the display of this vehicle." << std::endl;
+			carla->world->GetActor(it->second)->Destroy();
+            it = carla->spawnedVehiclesByCarlaOSIService.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
 
-			auto optionalPoint = carla->world->GroundProjection(position);
-			if (optionalPoint) {
-        		carla::rpc::LabelledPoint point = *optionalPoint;
-				position = point._location;
-				position.z += 0.05;
-			} else {
-				std::cout << "No Ground Position!" << std::endl;
-			}
+carla::SharedPtr<carla::client::Actor> TrafficUpdater::spawnVehicleIfNeeded(const osi3::MovingObject& update, carla::ActorId& actorID) {
+	auto spawndVehicleID = carla->spawnedVehiclesByCarlaOSIService.find(update.id().value());
+	carla::SharedPtr<carla::client::Actor> actor;
 
-			std::cout << "Spawn vehicle: " << vehicleName << " Position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
-
-			///END TEST
-			auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
-			carla::geom::Transform transform(position, orientation);
-
-			auto blueprintlibrary = carla->world->GetBlueprintLibrary();
-			auto vehicleBlueprint = blueprintlibrary->Find(vehicleName);
-			carla::SharedPtr<carla::client::Actor> actor;
-			actor = carla->world->TrySpawnActor(*vehicleBlueprint, transform);
-			if (actor == nullptr) {
-				std::cerr << "Could not spawn actor!" << std::endl;
-				continue;
-			}
-
-			spawnedVehicle addedVehicle;
-			addedVehicle.idInCarla = actor->GetId();
-			carla->spawnedVehicles.emplace(update.id().value(), addedVehicle);
-			applyTrafficUpdate(update, actor);
-			} else {
-				applyTrafficUpdate(update, carla->world->GetActor(ActorID->second.idInCarla));
-			}
-			//save the Update with current timestamp
-			carla->spawnedVehicles[update.id().value()].lastTimeUpdated = trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos();
+	if (spawndVehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
+		actor = carla->world->GetActor(spawndVehicleID->second);
+	} else {
+		std::string vehicleName = determineVehicleName(update);
+		carla::geom::Transform transform = determineTransform(update);
+		auto vehicleBlueprint = carla->world->GetBlueprintLibrary()->Find(vehicleName);
+		actor = carla->world->TrySpawnActor(*vehicleBlueprint, transform);
+		if (actor == nullptr) {
+			std::cerr << "Could not spawn actor!" << std::endl;
 		}
 
-		//deconstruct actors with no update
-		for (auto& vehicle : carla->spawnedVehicles) {
-			if (vehicle.second.lastTimeUpdated != trafficUpdate.timestamp().seconds() * 1000000000u + trafficUpdate.timestamp().nanos()) {
-				std::cout << "No update for vehicle: " << vehicle.first << " Will stop the display of this vehicle." << std::endl;
-				auto vehicleActor = carla->world->GetActor(vehicle.second.idInCarla);
-				carla->deletedVehicles.emplace(vehicle);
-				vehicleActor->Destroy();
-			}
-		}
-	for (auto& deletedVehicleId : carla->deletedVehicles) {
-		carla->spawnedVehicles.erase(deletedVehicleId.first);
+		carla->spawnedVehiclesByCarlaOSIService.emplace(update.id().value(), actor->GetId());
+	}
+
+	return actor;
+}
+
+std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& update){
+	if (!runtimeParameter.replay.spawnCarByName.empty()){
+		//name set by commandline parameter
+		return runtimeParameter.replay.spawnCarByName;
+	} else if (!update.model_reference().empty()) {
+		//name set by TrafficUpdate message
+		return std::string(update.model_reference().c_str());
+	} else {
+		//name set by best matching size of vehicle
+		return CarlaUtility::findBestMatchingCarToSpawn(
+			update.base().dimension(), replayVehicleBoundingBoxes,
+			runtimeParameter.replay.weightLength_X, runtimeParameter.replay.weightWidth_Y, runtimeParameter.replay.weightHeight_Z);
 	}
 }
 
-void TrafficUpdater::applyTrafficUpdate(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
+carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObject& update){
+	auto position = Geometry::getInstance()->toCarla(update.base().position());
+	position.z = runtimeParameter.replay.spawnHeight_Z;
+
+	auto optionalPoint = carla->world->GroundProjection(position);
+	if (optionalPoint) {
+		carla::rpc::LabelledPoint point = *optionalPoint;
+		position = point._location;
+		position.z += 0.05;
+	} else {
+		std::cout << "No Ground Position!" << std::endl;
+	}
+
+	auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
+	std::cout << "Spawn vehicle at position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
+	return carla::geom::Transform(position, orientation);
+}
+
+void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
 {
 	//BASE
 	if (update.base().has_position() && update.base().has_orientation()) {
@@ -203,11 +198,8 @@ void TrafficUpdater::applyTrafficUpdate(const osi3::MovingObject& update, carla:
 }
 
 void TrafficUpdater::deleteSpawnedVehicles() {
-	//deconstruct all spawned actors
-	for (auto& vehicle : carla->spawnedVehicles) {
-		std::cout << "Remove: " << vehicle.first << std::endl;
-		auto vehicleActor = carla->world->GetActor(vehicle.second.idInCarla);
-		carla->deletedVehicles.emplace(vehicle);
-		vehicleActor->Destroy();
+	for (auto& vehicle : carla->spawnedVehiclesByCarlaOSIService) {
+		std::cout << "Remove vehicle: " << vehicle.first << std::endl;
+		carla->world->GetActor(vehicle.second)->Destroy();
 	}
 }

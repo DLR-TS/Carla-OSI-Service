@@ -190,15 +190,6 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
 		//std::cout << "Ground Truth: " << typeID  << "  " << actor->GetId() << std::endl;
-		bool destroyed = false;
-		for(auto& v: carla->deletedVehicles) {
-			if (v.second.idInCarla == actor->GetId())
-			{
-				destroyed = true;
-				break;
-			}
-		}
-		if (destroyed){ continue; }
 		//based on blueprint vehicle.*
 		if (typeID.rfind("vehicle", 0) == 0) {
 			auto vehicle = groundTruth->add_moving_object();
@@ -444,8 +435,8 @@ std::vector<carla::rpc::EnvironmentObject> GroundTruthCreator::filterEnvironment
 
 
 OSIVehicleID GroundTruthCreator::vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
-	for (auto& spawnedVehicle : carla->spawnedVehicles) {
-		if (spawnedVehicle.second.idInCarla == vehicle->GetId()) {
+	for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
+		if (spawnedVehicle.second == vehicle->GetId()) {
 			return spawnedVehicle.first;
 		}
 	}

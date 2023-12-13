@@ -86,9 +86,4 @@ struct RuntimeParameter {
 	float deltaSeconds;
 };
 
-struct spawnedVehicle {
-    uint32_t idInCarla;
-    uint64_t lastTimeUpdated;
-};
-
 #endif //!PARAMETERDEFINITONS_H

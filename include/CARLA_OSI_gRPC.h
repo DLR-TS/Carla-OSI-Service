@@ -64,12 +64,10 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
 	std::unique_ptr<SensorViewer> sensorViewer = std::make_unique<SensorViewer>();
 	std::unique_ptr<Logger> logger = std::make_unique<Logger>();
+
 	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
 	std::map<std::string, std::string> varName2MessageMap; //important!
-	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions
-	std::map<std::string, CoSiMa::rpc::SensorViewSensorMountingPosition, std::less<>> sensorMountingPositionMap;
-	// ids for non-carla sensorViews
-	std::map<std::string, uint64_t, std::less<>> sensorIds;
+
 #pragma endregion fields for the Carla OSI Interface
 
 	carla::srunner::TrafficCommandReceiver trafficCommandReceiver;
@@ -108,15 +106,8 @@ public:
 
 private:
 
-	// parse index from OSMP variable name, if present
-	virtual uint32_t getIndex(const std::string_view osmp_name);
-
 	virtual int deserializeAndSet(const std::string& base_name, const std::string& message);
 	virtual std::string getAndSerialize(const std::string& base_name);
-
-	// generate a SensorView that holds only ground truth. Can be used as input for osi3::SensorView generating OSI sensors;
-	virtual std::shared_ptr<osi3::SensorView> getSensorViewGroundTruth(const std::string& name);
-	static void copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to);
 
 	// Callback function passed to TrafficCommandReceiver
 	float saveTrafficCommand(const osi3::TrafficCommand& command);

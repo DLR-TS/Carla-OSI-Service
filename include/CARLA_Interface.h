@@ -31,8 +31,7 @@ public:
     //Vehicles are spawned and destroyed by TrafficUpdater.
     //Information about vehicles is needed by GroundTruth creation.
 	//So they are stored here.
-    std::map<OSIVehicleID, spawnedVehicle> spawnedVehicles;
-	std::map<OSIVehicleID, spawnedVehicle> deletedVehicles;
+    std::map<OSIVehicleID, uint32_t> spawnedVehiclesByCarlaOSIService; //ID in Carla
 
 	/**
 	* initialise the interface with the given parameters and connect to the carla server
