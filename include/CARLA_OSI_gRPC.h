@@ -33,7 +33,9 @@
 #include "Utility.h"
 #include "CARLA_TrafficUpdate.h"
 #include "CARLA_SensorView.h"
+#include "CARLA_TrafficCommand.h"
 #include "Logger.h"
+#include "CARLA_SensorViewConfiguration.h"
 #include "carla_osi/Identifiers.h"
 #include "ScenarioRunner/TrafficCommandReceiver.h"
 
@@ -57,18 +59,20 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	std::unique_ptr<std::thread> server_thread;
 #pragma endregion
 
-
 #pragma region fields for the Carla OSI Interface
 	std::shared_ptr<CARLAInterface> carla = std::make_shared<CARLAInterface>();
 	std::unique_ptr<CARLAOSIInterface> carlaInterface = std::make_unique<CARLAOSIInterface>();
 	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
 	std::unique_ptr<SensorViewer> sensorViewer = std::make_unique<SensorViewer>();
+	std::unique_ptr<TrafficCommander> trafficCommander = std::make_unique<TrafficCommander>();
 	std::unique_ptr<Logger> logger = std::make_unique<Logger>();
 
 	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
 	std::map<std::string, std::string> varName2MessageMap; //important!
 
 #pragma endregion fields for the Carla OSI Interface
+
+	std::unique_ptr<SensorViewConfiger> sensorViewConfiger = std::make_unique<SensorViewConfiger>();
 
 	carla::srunner::TrafficCommandReceiver trafficCommandReceiver;
 
@@ -114,6 +118,52 @@ private:
 
 	static void watchdog(CARLA_OSI_client* client);
 	bool watchdogDoStepCalled = true;
+
+	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+		Sensor sensor;
+		sensor.sensorViewConfiguration.CopyFrom(sensorViewConfiguration);
+		sensor.id = sensorViewConfiguration.sensor_id().value();
+
+		if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
+			sensor.type = GENERIC;
+		} else if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
+			sensor.type = RADAR;
+		} else if (sensorViewConfiguration.lidar_sensor_view_configuration_size()) {
+			sensor.type = LIDAR;
+		} else if (sensorViewConfiguration.camera_sensor_view_configuration_size()) {
+			sensor.type = CAMERA;
+		} else if (sensorViewConfiguration.ultrasonic_sensor_view_configuration_size()) {
+			sensor.type = ULTRASONIC;
+		}
+        return sensor;
+    }
+
+	Sensor toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration) {
+		Sensor sensor;
+		sensor.prefixed_fmu_variable_name = sensorViewConfiguration.prefixed_fmu_variable_name();
+
+		if (sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position(0));
+            sensor.type = GENERIC;	
+		}
+		else if (sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position(0));
+            sensor.type = RADAR;
+		}
+		else if (sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position(0));
+            sensor.type = LIDAR;
+		}
+		else if (sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position(0));
+            sensor.type = CAMERA;
+		}
+		else if (sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position(0));
+            sensor.type = ULTRASONIC;
+		}
+		return sensor;
+    }
 };
 
 #endif //!CARLAOSIGRPC_H

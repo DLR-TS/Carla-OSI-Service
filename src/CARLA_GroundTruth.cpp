@@ -196,13 +196,12 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 			auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 
 			vehicle->set_model_reference(vehicleActor->GetTypeId());
+			//if a vehicle is spawned by TrafficUpdate, then the ID from that OSI message shall be used, not the ID given by Carla when spawned.
 			OSIVehicleID spawnedVehicleID = vehicleIsSpawned(vehicleActor);
 			if (spawnedVehicleID) {
 				vehicle->mutable_id()->set_value(spawnedVehicleID);
 				if (runtimeParameter.ego == std::to_string(spawnedVehicleID)) {
 					groundTruth->mutable_host_vehicle_id()->set_value(spawnedVehicleID);
-					//saved for trafficCommand message from scenario runner
-					trafficCommandMessageHeroId = spawnedVehicleID;
 				}
 			}
 			else {
@@ -263,8 +262,6 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 				else if ("role_name" == attribute.GetId()) {
 					if (runtimeParameter.ego == attribute.GetValue()) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
-						//saved for trafficCommand message from scenario runner
-						trafficCommandMessageHeroId = vehicle->id().value();
 					}
 				}
 			}
@@ -431,14 +428,4 @@ std::vector<carla::rpc::EnvironmentObject> GroundTruthCreator::filterEnvironment
 		filteredprops.push_back(prop);
 	}
 	return filteredprops;
-}
-
-
-OSIVehicleID GroundTruthCreator::vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
-	for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
-		if (spawnedVehicle.second == vehicle->GetId()) {
-			return spawnedVehicle.first;
-		}
-	}
-	return 0;
 }

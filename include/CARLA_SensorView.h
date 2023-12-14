@@ -22,10 +22,6 @@ private:
 	// contains all actor ids reported by Carla during the last tick
 	std::set<carla::ActorId> activeActors;
 
-	// holds sensor position information for non-carla sensors. Maps prefixed_fmu_variable_name to mounting positions
-	//TODO December
-	//std::map<std::string, CoSiMa::rpc::SensorViewSensorMountingPosition, std::less<>> sensorMountingPositionMap;
-
 	// ids for non-carla sensorViews
 	std::map<std::string, uint64_t, std::less<>> sensorIds;
 
@@ -50,19 +46,6 @@ public:
 	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensor);
 
 	/**
-	Send applied SensorViewConfiguration for sensor.
-	\param sensor OSMPSensorViewConfiguration + index
-	\return The sensor's configuration as osi3::SensorViewConfiguration, or nullptr if no sensor with given name is found
-	*/
-	std::shared_ptr<const osi3::SensorViewConfiguration> getSensorViewConfiguration(const std::string& sensor);
-
-	/**
-	Receive configuration of SensorViewConfiguration message
-	\return success indicator
-	*/
-	int receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration);
-
-	/**
 	* Fetch the actors in carla and update cache.
 	* Should be called after a doStep()
 	*/
@@ -70,8 +53,6 @@ public:
 
     //TODO December add documentation
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index);
-
-	//void copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to);
 
 	void addSensorViewMountingPositions(osi3::SensorView& sensorViewMountingPositions){}
 };

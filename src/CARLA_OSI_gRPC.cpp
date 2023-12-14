@@ -201,38 +201,16 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	if (runtimeParameter.resumeCarlaAsyncSeconds != 0) {//option is active
 		watchdog_thread = std::make_unique<std::thread>(&CARLA_OSI_client::watchdog, this);
 	}
-	for (auto& sensorViewExtra : config->sensor_view_extras()) {
-		//CoSiMa::rpc::SensorViewSensorMountingPosition mountingPosition;
-		//mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
-		std::shared_ptr<osi3::MountingPosition> mountingPosition;
 
-		if (sensorViewExtra.generic_sensor_mounting_position_size()) {
-			mountingPosition->CopyFrom(sensorViewExtra.generic_sensor_mounting_position(0));
-		}
-		else if (sensorViewExtra.radar_sensor_mounting_position_size()) {
-			mountingPosition->CopyFrom(sensorViewExtra.radar_sensor_mounting_position(0));
-		}
-		else if (sensorViewExtra.lidar_sensor_mounting_position_size()) {
-			mountingPosition->CopyFrom(sensorViewExtra.lidar_sensor_mounting_position(0));
-		}
-		else if (sensorViewExtra.camera_sensor_mounting_position_size()) {
-			mountingPosition->CopyFrom(sensorViewExtra.camera_sensor_mounting_position(0));
-		}
-		else if (sensorViewExtra.ultrasonic_sensor_mounting_position_size()) {
-			mountingPosition->CopyFrom(sensorViewExtra.ultrasonic_sensor_mounting_position(0));
-		}
-		//TODO December Welche Art von Sensor wird nicht mitgegeben...
-
-		sensorViewer->addSensorViewMountingPositions(sensorViewExtra.prefixed_fmu_variable_name(), sensorViewMountingPosition);
-
-		//sensorMountingPositionMap.insert({ sensorViewExtra.prefixed_fmu_variable_name(), mountingPosition });
-	}
 	response->set_value(carla->initialise(runtimeParameter));
 	trafficUpdater->initialise(runtimeParameter, carla);
 	sensorViewer->initialise(runtimeParameter, carla);	
 	logger->initialise(runtimeParameter, carla);
 	carlaInterface->initialise(runtimeParameter, carla);
 
+	for (auto& sensorViewExtra : config->sensor_view_extras()) {
+		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
+	}
 	//special initialization
 	sensorViewer->groundTruthCreator->parseStationaryMapObjects();
 
@@ -305,10 +283,10 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
 	if (std::string::npos != base_name.rfind("OSMPSensorViewGroundTruth", 0)) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
-		message = sensorViwer->getSensorViewGroundTruth(base_name);
+		message = sensorViewer->getSensorViewGroundTruth(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
-		message = sensorViewer->getSensorViewConfiguration(base_name);
+		message = sensorViewConfiger->getSensorViewConfiguration(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
 		// OSMPSensorData
@@ -324,7 +302,6 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		if (trafficCommandForEgoVehicle == nullptr) {
 			std::cout << "No OSMPTrafficCommand available. Use -sr parameter to enable scenario runner listener." << std::endl;
 		} else {
-			trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(sensorViewer->groundTruthCreator->getHeroId());
 			message = trafficCommandForEgoVehicle;
 		}
 	}
@@ -368,7 +345,8 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 			return -1;
 		}
 		//return value will be added to request of SensorView
-		return sensorViewer->receiveSensorViewConfigurationRequest(sensorViewConfiguration);
+		sensorViewConfiger->sensorsByFMU.push_back(toSensorDescriptionInternal(sensorViewConfiguration));
+		return 0;
 	}
 	else {
 		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
@@ -378,6 +356,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 }
 
 //END OF CoSiMa::rpc::BaseInterface::Service
+
 //BEGIN OF ::srunner::osi::client::OSIVehicleController::Service
 
 float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
@@ -387,6 +366,7 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 		std::cout << __FUNCTION__ << std::endl;
 	}
 	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
+	trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(trafficCommander->getHeroId());
 
 	//Cosima can compute
 	smphSignalSRToCosima.release();

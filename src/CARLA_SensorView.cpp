@@ -1,15 +1,5 @@
 #include "CARLA_SensorView.h"
 
-std::shared_ptr<const osi3::SensorViewConfiguration> SensorViewer::getSensorViewConfiguration(const std::string& sensor)
-{
-	//string has format of: OSMPSensorViewConfigurationX
-	std::string index_string(&sensor[27]);
-	int index = std::stoi(index_string);
-	//todo a
-	return nullptr;
-}
-
-
 std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const std::string& varName) {
 	// create empty sensor view
 	auto sensorView = std::make_shared<osi3::SensorView>();
@@ -24,7 +14,8 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 	}
 
 	// if defined, set sensor mounting positions
-	auto iter = sensorMountingPositionMap.find(varName);
+	//TODO December move this code to somewhere else
+	/*auto iter = sensorMountingPositionMap.find(varName);
 	if (sensorMountingPositionMap.end() != iter) {
 		if (runtimeParameter.verbose)
 		{
@@ -46,6 +37,7 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 			std::cout << "No sensor positions are configured!" << std::endl;
 		}
 	}
+	*/
 
 	// find or generate id for the named sensor
 	auto id = sensorIds.find(varName);
@@ -189,94 +181,4 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 	if (runtimeParameter.verbose) {
 		std::cout << "Update " << sensorType << " with index " << index << "." << std::endl;
 	}
-}
-
-int SensorViewer::receiveSensorViewConfigurationRequest(osi3::SensorViewConfiguration& sensorViewConfiguration) {
-	//todo a
-	for (auto& cameraSensorConfiguration : sensorViewConfiguration.camera_sensor_view_configuration()) {
-		// todo
-	}
-	for (auto& lidarSensorConfiguration : sensorViewConfiguration.lidar_sensor_view_configuration()) {
-		// todo
-	}
-	for (auto& radarSensorConfiguration : sensorViewConfiguration.radar_sensor_view_configuration()) {
-		// todo
-	}
-	for (auto& ultrasonicSensorConfiguration : sensorViewConfiguration.ultrasonic_sensor_view_configuration()) {
-		// todo
-	}
-	for (auto& genericSensorConfiguration : sensorViewConfiguration.generic_sensor_view_configuration()) {
-		// todo
-	}
-	//sensorViewConfiguration.field_of_view_horizontal
-	//sensorViewConfiguration.field_of_view_vertical
-	//sensorViewConfiguration.update_cycle_offset
-	//sensorViewConfiguration.mounting_position
-	//sensorViewConfiguration.mounting_position_rmse
-	//sensorViewConfiguration.range
-	//sensorViewConfiguration.update_cycle_time
-	//sensorViewConfiguration.update_cycle_offset
-
-	//spawn sensor and attach to vehicle, vehicle should have name: runtimeparameter.ego
-	//add cache entry from fetchActorsFromCarla() and remove that function and its then useless subfunctions
-	//save applied sensorviewconfiguration so that getSensorViewConfiguration() can retrieve the information
-	return 0;
-}
-
-void SensorViewer::copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to)
-{
-	//TODO
-	//The virtual mounting position as well as rmse is not set: https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1SensorView.html
-	//Is the virtual mounting position needed? Yes!
-
-	if (from.generic_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(0));
-	}
-	else if (from.radar_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.radar_sensor_mounting_position(0));
-	}
-	else if (from.lidar_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.lidar_sensor_mounting_position(0));
-	}
-	else if (from.camera_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.camera_sensor_mounting_position(0));
-	}
-	else if (from.ultrasonic_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(0));
-	}
-
-	/*osi3::Vector3d bb_center_to_rear;//needed if virtual sensor mounting position is measured from bounding box center instead of rear axle
-	if (to->has_host_vehicle_id()) {
-		for (const auto &moving_object : to->global_ground_truth().moving_object()) {
-			if (moving_object.has_id() && moving_object.id().value() == to->host_vehicle_id().value()) {
-				if (moving_object.has_vehicle_attributes() && moving_object.vehicle_attributes().has_bbcenter_to_rear()) {
-					bb_center_to_rear.CopyFrom(moving_object.vehicle_attributes().bbcenter_to_rear());
-				}
-				break;
-			}
-		}
-	}
-	to->mutable_mounting_position()->mutable_position()->set_x(to->mutable_mounting_position()->mutable_position()->x() - bb_center_to_rear.x());
-	to->mutable_mounting_position()->mutable_position()->set_y(to->mutable_mounting_position()->mutable_position()->y() - bb_center_to_rear.y());
-	to->mutable_mounting_position()->mutable_position()->set_z(to->mutable_mounting_position()->mutable_position()->z() - bb_center_to_rear.z());
-	*/
-
-	//to->mutable_mounting_position_rmse
-
-	//physical sensor mounting position is defined by model itself
-	/*for (int i = 0; i < from.generic_sensor_mounting_position_size(); i++) {
-		to->add_generic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.radar_sensor_mounting_position_size(); i++) {
-		to->add_radar_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.radar_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.lidar_sensor_mounting_position_size(); i++) {
-		to->add_lidar_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.lidar_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.camera_sensor_mounting_position_size(); i++) {
-		to->add_camera_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.camera_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.ultrasonic_sensor_mounting_position_size(); i++) {
-		to->add_ultrasonic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(i));
-	}*/
 }

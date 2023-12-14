@@ -47,42 +47,35 @@ class GroundTruthCreator : public CARLAModule {
 	std::shared_ptr<osi3::GroundTruth> latestGroundTruth;
 	// invalid latest ground truth
 	bool validLatestGroundTruth = false;
-    //hero id
-	uint64_t trafficCommandMessageHeroId = 0;
 
 public:
-	/**
-	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
-	*/
-	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
-
 	/**
 	Retrieve ground truth message generated during last step
 	\return Latest world state as osi3::GroundTruth
 	*/
 	std::shared_ptr<const osi3::GroundTruth> getLatestGroundTruth();
 
-	// prepare a GroundTruth object with values from the current map which won't change 
+	/**
+	Prepare a GroundTruth object with values from the current map which won't change
+	*/
 	void parseStationaryMapObjects();
 
-	// parse CARLA world to update latestGroundTruth. Called during doStep()
+	/**
+	Invalidate latest ground truth. The next getLatestGroundTruth() shall return new retrieved data from carla.
+	*/
+	void invalidateLatestGroundTruth() { validLatestGroundTruth = false; }
+
+private:
+	/**
+	Parse CARLA world to update latestGroundTruth. Called during doStep()
+	*/
 	std::shared_ptr<osi3::GroundTruth> parseWorldToGroundTruth();
 
     /**
-	Returns the hero id.
-	\return hero id
+	Filter objects by carla::rpc::CityObjectLabel 
+	return List of 
 	*/
-	uint64_t getHeroId() { return trafficCommandMessageHeroId; }
-
-private:
-    //TODO December add documentation
     std::vector<carla::rpc::EnvironmentObject> filterEnvironmentObjects();
-
-    /*
-	Checks if vehicle is spawned by Carla_OSI_Service
-	return 0 if not
-	*/
-	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle);
 
 };
 

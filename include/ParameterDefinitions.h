@@ -8,6 +8,8 @@
 
 #include <string>
 
+#include "osi_sensorviewconfiguration.pb.h"
+
 #include "carla_osi/Geometry.h"
 
 struct CityObjectLabel {
@@ -44,6 +46,13 @@ enum SENSORTYPES
 	RADAR,
 	LIDAR,
 	CAMERA
+};
+
+struct Sensor {
+    SENSORTYPES type;
+    osi3::SensorViewConfiguration sensorViewConfiguration;
+    std::string prefixed_fmu_variable_name;
+    uint64_t id;
 };
 
 typedef uint64_t OSIVehicleID;
