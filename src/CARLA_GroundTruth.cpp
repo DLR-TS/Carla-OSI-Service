@@ -185,7 +185,7 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 	std::shared_ptr<osi3::GroundTruth> groundTruth = std::make_shared<osi3::GroundTruth>();
 	groundTruth->MergeFrom(*staticMapTruth);
 
-    //carla::SharedPtr<carla::client::ActorList>
+	//carla::SharedPtr<carla::client::ActorList>
 	auto worldActors = carla->world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
