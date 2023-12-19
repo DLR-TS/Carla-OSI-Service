@@ -1,7 +1,5 @@
 #include "CARLA_SensorViewConfiguration.h"
 
-
-//TODO Decemeber Irgendwann muss der Krams mal ausprobiert und gespawnt werden.
 //Vielleicht zwei Methoden um das Ausprobieren vom abfragen zu trennen
 	//spawn sensor and attach to vehicle, vehicle should have name: runtimeparameter.ego
 	//add cache entry from fetchActorsFromCarla() and remove that function and its then useless subfunctions

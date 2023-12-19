@@ -16,9 +16,9 @@ class Logger : public CARLAModule {
 
 public:
 	/**
-	Write the log.
+	Write the log with given ground truth data.
 	*/
-	void writeLog();
+	void writeLog(std::shared_ptr<const osi3::GroundTruth> groundTruth);
 
 };
 

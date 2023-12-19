@@ -1,5 +1,5 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef TRAFFICSIGNALS_H
@@ -7,13 +7,12 @@
 
 #include <carla/client/Map.h>
 #include <carla/client/TrafficSign.h>
-#include <carla/client/TrafficLight.h>
-#include <carla/geom/BoundingBox.h>
-//#include <carla/rpc/TrafficLightHead.h>
 
-#include <osi_common.pb.h>
 #include <osi_trafficlight.pb.h>
 #include <osi_trafficsign.pb.h>
+
+#include "carla_osi/Identifiers.h"
+#include "carla_osi/Geometry.h"
 
 namespace carla_osi::traffic_signals {
 

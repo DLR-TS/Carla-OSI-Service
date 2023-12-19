@@ -7,35 +7,12 @@
 
 #include <execution>
 
-#include "osi_groundtruth.pb.h"
-
-#include <carla/client/Actor.h>
-#include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
-#include <carla/client/Sensor.h>
-#include <carla/sensor/SensorData.h>
-#include <carla/client/TimeoutException.h>
-#include <carla/client/Timestamp.h>
-#include <carla/client/TrafficSign.h>
-#include <carla/client/TrafficLight.h>
-#include <carla/client/Vehicle.h>
-#include <carla/client/Walker.h>
-#include <carla/geom/BoundingBox.h>
-#include <carla/geom/Location.h>
-#include <carla/geom/Transform.h>
-#include <carla/geom/Vector3D.h>
-#include <carla/geom/Rotation.h>
-#include <carla/image/ImageIO.h>
-#include <carla/image/ImageView.h>
-#include <carla/road/Lane.h>
-#include <carla/rpc/ObjectLabel.h>
 
 #include "CARLA_Module.h"
 #include "CARLA_Interface.h"
 #include "carla_osi/Lanes.h"
-#include "carla_osi/Geometry.h"
 #include "carla_osi/TrafficSignals.h"
-#include "carla_osi/Identifiers.h"
 
 #include "pugixml.hpp"
 

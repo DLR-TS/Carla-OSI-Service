@@ -1,6 +1,6 @@
 #include "Logger.h"
 
-void Logger::writeLog() {
+void Logger::writeLog(std::shared_ptr<const osi3::GroundTruth> groundTruth) {
 
 	std::string separator = ",";
 
@@ -19,8 +19,7 @@ void Logger::writeLog() {
 
 	//log all vehicles
 	logData logData;
-    //TODO December + logging function in documentation
-	/*for (const auto& movingObject : latestGroundTruth->moving_object()) {
+	for (const auto& movingObject : groundTruth->moving_object()) {
 		logData.id = std::to_string(movingObject.id().value());
 		logData.x = movingObject.base().position().x();
 		logData.y = movingObject.base().position().y();
@@ -36,7 +35,7 @@ void Logger::writeLog() {
 			<< logData.x << separator
 			<< logData.y << separator
 			<< logData.yaw << "\n";
-	}*/
+	}
 	//end line and flush data
 	logFile << std::flush;
 	std::cout << std::flush;

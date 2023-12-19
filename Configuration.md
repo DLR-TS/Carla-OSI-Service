@@ -30,7 +30,7 @@ additional_parameter: "-l log.txt"
 additional_parameter: "--logfile log.txt"
 ```
 
-Write a csv log with trajectories to given location, like log.txt.
+Write a csv log with trajectories (ID, X, Y and Yaw) to log.txt.
 
 ```
 additional_parameter: "-ego hero"

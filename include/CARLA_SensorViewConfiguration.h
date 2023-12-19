@@ -2,14 +2,9 @@
 @authors German Aerospace Center: Björn Bahn
 */
 
-#include <vector>
-#include <string>
-
-#include "osi_sensorviewconfiguration.pb.h"
+#include <osi_sensorviewconfiguration.pb.h>
 
 #include "ParameterDefinitions.h"
-
-
 
 class SensorViewConfiger {
 public:

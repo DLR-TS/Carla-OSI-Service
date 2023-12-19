@@ -5,17 +5,11 @@
 #ifndef CARLATRAFFICUPDATE_H
 #define CARLATRAFFICUPDATE_H
 
-#include <memory>
+#include <carla/client/BlueprintLibrary.h>
 
-#include "osi_trafficupdate.pb.h"
-
-#include "carla/client/BlueprintLibrary.h"
+#include <osi_trafficupdate.pb.h>
 
 #include "CARLA_Module.h"
-#include "CARLA_Interface.h"
-#include "Utility.h"
-#include "ParameterDefinitions.h"
-
 
 class TrafficUpdater : public CARLAModule {
 

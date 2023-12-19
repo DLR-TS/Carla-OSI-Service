@@ -206,7 +206,6 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	trafficUpdater->initialise(runtimeParameter, carla);
 	sensorViewer->initialise(runtimeParameter, carla);	
 	logger->initialise(runtimeParameter, carla);
-	carlaInterface->initialise(runtimeParameter, carla);
 
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
 		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
@@ -234,7 +233,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 	watchdogDoStepCalled = true;
 
 	if (runtimeParameter.log) {
-		logger->writeLog();
+		logger->writeLog(sensorViewer->groundTruthCreator->getLatestGroundTruth());
 	}
 
 	if (runtimeParameter.scenarioRunnerDoesTick) {
@@ -329,7 +328,6 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 
 int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
 	if (std::string::npos != base_name.find("TrafficUpdate")) {
-		// parse as TrafficUpdate and apply
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {
 			std::cerr << "Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;

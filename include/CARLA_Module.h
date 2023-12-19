@@ -5,11 +5,8 @@
 #ifndef CARLAGMODULE_H
 #define CARLAGMODULE_H
 
-#include <memory>
-
 #include "CARLA_Interface.h"
 #include "Utility.h"
-#include "ParameterDefinitions.h"
 
 class CARLAModule{
 protected:

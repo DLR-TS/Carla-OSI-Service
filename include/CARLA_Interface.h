@@ -2,16 +2,12 @@
 @authors German Aerospace Center: Björn Bahn
 */
 
-#ifndef CARLAINTERFACE_H2
-#define CARLAINTERFACE_H2
+#ifndef CARLAINTERFACE_H
+#define CARLAINTERFACE_H
 
-#include <memory>
-#include <map>
-#include <iostream>
-
-#include "carla/client/Client.h"
-#include "carla/client/World.h"
-#include "carla/client/Map.h"
+#include <carla/client/Client.h>
+#include <carla/client/World.h>
+#include <carla/client/Map.h>
 
 #include "ParameterDefinitions.h"
 
@@ -65,4 +61,4 @@ private:
 	void applyWorldSettings();
 };
 
-#endif //!CARLAINTERFACE_H2
+#endif //!CARLAINTERFACE_H

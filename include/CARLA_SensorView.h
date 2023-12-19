@@ -51,11 +51,10 @@ public:
 	*/
 	void fetchActorsFromCarla();
 
-    //TODO December add documentation
+	/**
+	* Callback function for all Carla sensors
+	*/
 	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index);
-
-	void addSensorViewMountingPositions(osi3::SensorView& sensorViewMountingPositions){}
 };
-
 
 #endif //!CARLASENSORVIEW_H

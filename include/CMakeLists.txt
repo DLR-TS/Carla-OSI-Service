@@ -1,7 +1,6 @@
 #includes
 add_subdirectory(carla_osi)
 set(CARLA_OSI_LIB_INCLUDES ${CARLA_OSI_LIB_INCLUDES}
-${CMAKE_CURRENT_LIST_DIR}/CARLA_OSI_Interface.h
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_TrafficUpdate.h
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_TrafficCommand.h
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_GroundTruth.h

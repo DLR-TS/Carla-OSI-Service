@@ -8,7 +8,7 @@
 
 #include <string>
 
-#include "osi_sensorviewconfiguration.pb.h"
+#include <osi_sensorviewconfiguration.pb.h>
 
 #include "carla_osi/Geometry.h"
 

@@ -4,7 +4,6 @@ add_subdirectory(carla_osi)
 #sources
 set(CARLA_OSI_LIB_SOURCE ${CARLA_OSI_LIB_SOURCE}
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_Interface.cpp
-${CMAKE_CURRENT_LIST_DIR}/CARLA_OSI_Interface.cpp
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_TrafficUpdate.cpp
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_TrafficCommand.cpp
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_GroundTruth.cpp

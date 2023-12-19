@@ -5,14 +5,6 @@
 #ifndef CARLAOSIGRPC_H
 #define CARLAOSIGRPC_H
 
-#include "CARLA_OSI_Interface.h"
-
-#include <iostream>
-#include <optional>
-#include <string>
-#include <vector>
-
-#include <limits.h>
 #include <thread>
 
 #include <grpc/grpc.h>
@@ -21,20 +13,16 @@
 #include <grpcpp/server_context.h>
 #include <grpcpp/security/server_credentials.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
-
-#include "grpc_proto_files/base_interface/BaseInterface.grpc.pb.h"
-#include "grpc_proto_files/base_interface/BaseInterface.pb.h"
-#include "grpc_proto_files/base_interface/CARLAInterface.grpc.pb.h"
-#include "grpc_proto_files/base_interface/CARLAInterface.pb.h"
-
-#include "osi_common.pb.h"
+#include <grpc_proto_files/base_interface/BaseInterface.grpc.pb.h>
+#include <grpc_proto_files/base_interface/BaseInterface.pb.h>
+#include <grpc_proto_files/base_interface/CARLAInterface.grpc.pb.h>
+#include <grpc_proto_files/base_interface/CARLAInterface.pb.h>
 
 #include "Semaphore.h"
-#include "Utility.h"
+#include "Logger.h"
 #include "CARLA_TrafficUpdate.h"
 #include "CARLA_SensorView.h"
 #include "CARLA_TrafficCommand.h"
-#include "Logger.h"
 #include "CARLA_SensorViewConfiguration.h"
 #include "carla_osi/Identifiers.h"
 #include "ScenarioRunner/TrafficCommandReceiver.h"
@@ -61,7 +49,6 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 
 #pragma region fields for the Carla OSI Interface
 	std::shared_ptr<CARLAInterface> carla = std::make_shared<CARLAInterface>();
-	std::unique_ptr<CARLAOSIInterface> carlaInterface = std::make_unique<CARLAOSIInterface>();
 	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
 	std::unique_ptr<SensorViewer> sensorViewer = std::make_unique<SensorViewer>();
 	std::unique_ptr<TrafficCommander> trafficCommander = std::make_unique<TrafficCommander>();

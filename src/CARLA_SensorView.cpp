@@ -14,7 +14,7 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 	}
 
 	// if defined, set sensor mounting positions
-	//TODO December move this code to somewhere else
+	//TODO move this code to somewhere else
 	/*auto iter = sensorMountingPositionMap.find(varName);
 	if (sensorMountingPositionMap.end() != iter) {
 		if (runtimeParameter.verbose)
@@ -117,7 +117,7 @@ void SensorViewer::fetchActorsFromCarla() {
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
 							int index = (int)sensorCache.size();
 							sensorCache.emplace(index, nullptr);
-							//TODO December
+							//TODO
 							//sensor->Listen([this, sensor, index](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, index); });
 						}
 					}
@@ -175,7 +175,7 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
 	else if (runtimeParameter.verbose) {
-		std::cerr << "CARLAOSIInterface::sensorEventAction called for unsupported sensor type" << std::endl;
+		std::cerr << "SensorEventAction called for unsupported sensor type" << std::endl;
 	}
 	sensorCache[index] = std::move(sensorView);
 	if (runtimeParameter.verbose) {
