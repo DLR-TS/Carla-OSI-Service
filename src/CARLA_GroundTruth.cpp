@@ -12,16 +12,11 @@ std::shared_ptr<const osi3::GroundTruth> GroundTruthCreator::getLatestGroundTrut
 void GroundTruthCreator::parseStationaryMapObjects()
 {
 	staticMapTruth = std::make_unique<osi3::GroundTruth>();
-	staticMapTruth->set_map_reference(carla->map->GetName());
 	auto OSIStationaryObjects = staticMapTruth->mutable_stationary_object();
 	auto filteredStationaryMapObjects = filterEnvironmentObjects();
 	for (auto& mapObject : filteredStationaryMapObjects) {
 		OSIStationaryObjects->AddAllocated(
 			CarlaUtility::toOSI(mapObject, runtimeParameter.verbose));
-	}
-
-	for (auto& mapObject : filteredStationaryMapObjects) {
-		OSIStationaryObjects->AddAllocated(CarlaUtility::toOSI(mapObject, runtimeParameter.verbose));
 	}
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	auto signs = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
