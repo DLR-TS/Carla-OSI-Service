@@ -29,7 +29,7 @@ void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
 			client->trafficUpdater->deleteSpawnedVehicles();
 			client->carla->resetWorldSettings();
-			break;
+			exit(0);
 		}
 		else {
 			client->watchdogDoStepCalled = false;

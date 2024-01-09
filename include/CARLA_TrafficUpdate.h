@@ -5,15 +5,23 @@
 #ifndef CARLATRAFFICUPDATE_H
 #define CARLATRAFFICUPDATE_H
 
+#include <tuple>
 #include <carla/client/BlueprintLibrary.h>
 
 #include <osi_trafficupdate.pb.h>
 
 #include "CARLA_Module.h"
 
+struct GravityEntry{
+	float lastPosition;
+	float fallingSteps;
+};
+
 class TrafficUpdater : public CARLAModule {
 
 	std::vector<std::tuple<std::string, carla::geom::Vector3D>> replayVehicleBoundingBoxes;
+
+	std::map<carla::ActorId, GravityEntry> desiredHeight;
 
 public:
 
@@ -52,12 +60,12 @@ private:
 	Spawn vehicle in Carla
 	\return actor if newly spawned or already existing
 	*/
-	carla::SharedPtr<carla::client::Actor> spawnVehicleIfNeeded(const osi3::MovingObject& update, carla::ActorId& ActorID);
+	std::tuple<bool, carla::SharedPtr<carla::client::Actor>> spawnVehicleIfNeeded(const osi3::MovingObject& update, carla::ActorId& ActorID);
 
 	/**
 	Apply Traffic Update to existing vehicle in Carla
 	*/
-	void applyTrafficUpdateToActor(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor);
+	void applyTrafficUpdateToActor(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor, const carla::ActorId actorId);
 
 	/**
 	Remove all spawned vehicles by TrafficUpdate if id is not in given list

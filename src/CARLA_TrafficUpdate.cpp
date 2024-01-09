@@ -44,18 +44,20 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 	std::vector<int> listOfUpdatedVehicles;
 
 	for (auto& update : trafficUpdate.update()) {
-		//assumption: actor exists in Carla
 		actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
 		auto actor = carla->world->GetActor(actorId);
+		bool spawned = false;
 		if (runtimeParameter.replay.enabled) {
-			actor = spawnVehicleIfNeeded(update, actorId);
+			std::tie(spawned, actor) = spawnVehicleIfNeeded(update, actorId);
 		}
 		if (actor == nullptr) {
 			std::cout << "Actor not found! No position updates will be done!" << std::endl;
 			return 0;
 		}
 		listOfUpdatedVehicles.push_back(update.id().value());
-		applyTrafficUpdateToActor(update, actor);
+		if (!spawned) { //let vehicle spawn and run with doStep, then do normal traffic updates
+			applyTrafficUpdateToActor(update, actor, actorId);
+		}
 	}
 	removeSpawnedVehiclesIfNotUpdated(listOfUpdatedVehicles);
 	return 0;
@@ -75,25 +77,23 @@ void TrafficUpdater::removeSpawnedVehiclesIfNotUpdated(std::vector<int>& listOfU
     }
 }
 
-carla::SharedPtr<carla::client::Actor> TrafficUpdater::spawnVehicleIfNeeded(const osi3::MovingObject& update, carla::ActorId& actorID) {
+std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVehicleIfNeeded(const osi3::MovingObject& update, carla::ActorId& actorID) {
 	auto spawndVehicleID = carla->spawnedVehiclesByCarlaOSIService.find(update.id().value());
-	carla::SharedPtr<carla::client::Actor> actor;
 
 	if (spawndVehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
-		actor = carla->world->GetActor(spawndVehicleID->second);
+		return {false, carla->world->GetActor(spawndVehicleID->second)};
 	} else {
 		std::string vehicleName = determineVehicleName(update);
 		carla::geom::Transform transform = determineTransform(update);
 		auto vehicleBlueprint = carla->world->GetBlueprintLibrary()->Find(vehicleName);
-		actor = carla->world->TrySpawnActor(*vehicleBlueprint, transform);
+		carla::SharedPtr<carla::client::Actor> actor = carla->world->TrySpawnActor(*vehicleBlueprint, transform);
 		if (actor == nullptr) {
 			std::cerr << "Could not spawn actor!" << std::endl;
 		}
 
 		carla->spawnedVehiclesByCarlaOSIService.emplace(update.id().value(), actor->GetId());
+		return {true, actor};
 	}
-
-	return actor;
 }
 
 std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& update){
@@ -119,7 +119,7 @@ carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObje
 	if (optionalPoint) {
 		carla::rpc::LabelledPoint point = *optionalPoint;
 		position = point._location;
-		position.z += 0.05;
+		position.z += 0.05;//spawn needs to be a little bit higher
 	} else {
 		std::cout << "No Ground Position!" << std::endl;
 	}
@@ -129,22 +129,63 @@ carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObje
 	return carla::geom::Transform(position, orientation);
 }
 
-void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor)
+void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor, const carla::ActorId actorId)
 {
 	//BASE
 	if (update.base().has_position() && update.base().has_orientation()) {
 		auto position = Geometry::getInstance()->toCarla(update.base().position());
+		auto position2 = Geometry::getInstance()->toCarla(update.base().position());
+		auto positionProjectionStart = Geometry::getInstance()->toCarla(update.base().position());
 		auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
-		if (runtimeParameter.replay.enabled){
-			position.z = runtimeParameter.replay.spawnHeight_Z;
-		}
 
 		//height is controlled by terrain
-		if (actor->GetLocation().z != 0) {
-			//position.z = actor->GetLocation().z;
-		}
-		else {
-			//new height is spawnHeight
+		position.z = actor->GetLocation().z;//up works, down not
+		//std::cout << "location z:" << position.z << std::endl;
+
+		int gravity_mode = 1;
+		switch (gravity_mode){
+			case 0:
+			//sometimes vehicles stay airborne at slope
+			//this is most likely an effect of the start of the projection
+			//Problem: Projection starts inside the vehicle and the underbody
+			//Encountered problems on trying to solve these problems:
+			//- setting the startpoint under the vehicle results in possibility for startpoint under the street
+			{
+				float ground_z = 0;
+				if (position.z != 0) {//condition at beginning of simulation
+					auto optionalPoint = carla->world->GroundProjection(positionProjectionStart);
+					if (optionalPoint) {
+						carla::rpc::LabelledPoint point = *optionalPoint;
+						ground_z = point._location.z;
+						//std::cout << "label: 0 None, 21 Dynamic, 7 TrafficLight, 10 Terrain: " << unsigned(point._label) << std::endl;
+					}
+				}
+				if (ground_z != position.z) {
+					position.z = ground_z;
+				}
+			break;
+			}
+			case 1://linear fall per timestep
+				//on flat road looks like an overloaded vehicle
+				position.z = position.z - 0.01;
+				//position.z -= 0.5 * 9.81 * runtimeParameter.deltaSeconds * runtimeParameter.deltaSeconds;
+			break;
+			case 2://fall per timestep with g = 9.81
+			GravityEntry gravityEntry;
+			if (auto search = desiredHeight.find(actorId); search != desiredHeight.end()) {
+				if (position.z == search->second.lastPosition) {//exact falling
+					gravityEntry.fallingSteps = search->second.fallingSteps + 1;
+				} else {
+					gravityEntry.fallingSteps = 1;
+				}
+				float currentTime = runtimeParameter.deltaSeconds * gravityEntry.fallingSteps;
+				float beforeTime = runtimeParameter.deltaSeconds * gravityEntry.fallingSteps - 1; //is 0 if not falling in last timestep
+				float distance = 0.5 * (9.81 * currentTime * currentTime) - (9.81 * beforeTime * beforeTime);
+				position.z -= distance;
+				gravityEntry.lastPosition = position.z;
+			}
+			desiredHeight.insert_or_assign(actorId, gravityEntry);
+			break;
 		}
 
 		//do not set pitch an roll of vehicles in asynchronous mode
