@@ -168,7 +168,7 @@ additional_parameter: "--radar"
 additional_parameter: "--ultrasonic"
 ```
 
-Spawn specific sensor.
+Enable input of specific  sensors in Carla.
 
 ```
 additional_parameter: "--cityobjectlabel label"
