@@ -169,6 +169,7 @@ additional_parameter: "--ultrasonic"
 ```
 
 Enable input of specific  sensors in Carla.
+Use "OSMPSensorView0" for input of FMU.
 
 ```
 additional_parameter: "--cityobjectlabel label"
