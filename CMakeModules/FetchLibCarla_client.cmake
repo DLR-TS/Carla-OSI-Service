@@ -46,7 +46,7 @@ function(fetch_carla_and_non_conan_dependencies)
 
 	message(STATUS "Fetching Carla and non-conan dependencies")
 
-	if(WIN32)#TODO This test might be too unprecise
+	if(WIN32)#This test might be too unprecise
 		add_compile_definitions(_WIN32_WINNT=0x0600)
 		add_compile_definitions(HAVE_SNPRINTF)
 		# Always defined for windows builds, but server specific for linux builds.

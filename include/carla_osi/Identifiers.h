@@ -1,5 +1,5 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef IDENTIFIERS_H
@@ -17,7 +17,7 @@
 #include <carla/trafficmanager/SimpleWaypoint.h>
 #include <carla/rpc/ActorId.h>
 
-#include "osi_common.pb.h"
+#include <osi_common.pb.h>
 
 namespace carla_osi {
 	namespace id_mapping {

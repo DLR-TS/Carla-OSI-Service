@@ -1,20 +1,21 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef GEOMETRY_H
 #define GEOMETRY_H
 
+// enable math definitons using MSVC
 #define _USE_MATH_DEFINES
+#include <math.h>
 
 #include <carla/geom/BoundingBox.h>
 #include <carla/geom/Location.h>
 #include <carla/geom/Rotation.h>
 #include <carla/geom/Transform.h>
-#include <carla/geom/Vector2D.h>
 #include <carla/geom/Vector3D.h>
 
-#include "osi_common.pb.h"
+#include <osi_common.pb.h>
 
 struct MapOffset {
 	double X = 0;

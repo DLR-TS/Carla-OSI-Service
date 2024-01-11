@@ -1,13 +1,5 @@
 #include "carla_osi/TrafficSignals.h"
 
-// enable math definitons (M_PI) using MSVC
-#define _USE_MATH_DEFINES
-#include <math.h>
-
-#include "carla_osi/Identifiers.h"
-#include "carla_osi/Geometry.h"
-
-
 std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign(
 	/*const carla::SharedPtr<const carla::client::TrafficSign> actor,
 	const carla::geom::BoundingBox& bbox*//*, const pugi::xml_document& xodr*/carla::rpc::EnvironmentObject &sign)
@@ -29,7 +21,7 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 
 
 	base->set_allocated_position(position.release());
-	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90°
+	// OSI traffic signs point along x, while Carla traffic signs point along y => rotate yaw by 90ï¿½
 	//TODO assure rotation is applied local
 	auto rotation = carla::geom::Rotation(sign.transform.rotation.pitch, 90 + sign.transform.rotation.yaw, sign.transform.rotation.roll);
 	base->set_allocated_orientation(Geometry::getInstance()->toOSI(rotation).release());
@@ -47,42 +39,42 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 		std::cerr << "Traffic lights should not be parsed as traffic signs" << std::endl;
 	}
 	else if (sign.name == "traffic.speed_limit.30") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(30);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.40") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(40);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.50") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(50);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.60") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(60);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.90") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(90);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.100") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(100);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.120") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(120);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
 	else if (sign.name == "traffic.speed_limit.130") {
-		//TODO also set unit
+		classification->mutable_value()->set_value_unit(osi3::TrafficSignValue_Unit_UNIT_KILOMETER_PER_HOUR);
 		classification->mutable_value()->set_value(130);
 		classification->set_type(osi3::TrafficSign_MainSign_Classification_Type::TrafficSign_MainSign_Classification_Type_TYPE_SPEED_LIMIT_BEGIN);
 	}
@@ -153,7 +145,7 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 
 		auto base = trafficLightBulb->mutable_base();
 		base->set_allocated_position(Geometry::getInstance()->toOSI(bulbLocation).release());
-		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90°
+		// OSI traffic lights point along x, while Carla traffic lights point along y => rotate yaw by 90ï¿½
 		//TODO assure rotation is applied local
 		auto rotation = carla::geom::Rotation(baseTransform.rotation.pitch, 90 + baseTransform.rotation.yaw, baseTransform.rotation.roll);
 		base->set_allocated_orientation(Geometry::getInstance()->toOSI(rotation).release());

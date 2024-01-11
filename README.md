@@ -4,7 +4,8 @@ CARLA OSI Sercive is a client service for [CARLA](https://github.com/carla-simul
 It translates the world into Ground Truth OSI message and updates traffic participants by TrafficUpdate OSI Message.
 Carla OSI Service is used as a base simulator in [CoSiMa](https://github.com/DLR-TS/CoSiMa) and can synchronize with Carla and Carla Scenario Runner with OSI controller [OSTAR Version](https://github.com/DLR-TS/scenario_runner/tree/ostar).
 
-Many different configurations are available through runtime parameters. Full list can be found [here](https://github.com/DLR-TS/Carla-OSI-Service/blob/master/Configuration.md).
+Many different configurations are available through runtime parameters.
+The complete list of inputs and outputs can be found [here](https://github.com/DLR-TS/Carla-OSI-Service/blob/master/Configuration.md).
 
 # Installation Guide
 

@@ -27,9 +27,9 @@ void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
 		if (!client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
-			client->carlaInterface.deleteSpawnedVehicles();
-			client->carlaInterface.resetWorldSettings();
-			break;
+			client->trafficUpdater->deleteSpawnedVehicles();
+			client->carla->resetWorldSettings();
+			exit(0);
 		}
 		else {
 			client->watchdogDoStepCalled = false;
@@ -87,6 +87,11 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter.replay.weightHeight_Z = std::stod(config->runtimeparameter(++i));
 			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter.replay.weightLength_X << ", "
 				 << runtimeParameter.replay.weightWidth_Y << ", " << runtimeParameter.replay.weightHeight_Z << std::endl;
+		}
+		else if (parameter == "-replaySpawnCarByName") {
+			runtimeParameter.replay.enabled = true;
+			runtimeParameter.replay.spawnCarByName = config->runtimeparameter(++i);
+			std::cout << "Replay mode active. Spawn all cars with model name: " << runtimeParameter.replay.spawnCarByName << std::endl;
 		}
 		else if (parameter == "-replayMapOffsets") {
 			runtimeParameter.replay.enabled = true;
@@ -196,29 +201,39 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	if (runtimeParameter.resumeCarlaAsyncSeconds != 0) {//option is active
 		watchdog_thread = std::make_unique<std::thread>(&CARLA_OSI_client::watchdog, this);
 	}
+
+	response->set_value(carla->initialise(runtimeParameter));
+	trafficUpdater->initialise(runtimeParameter, carla);
+	sensorViewer->initialise(runtimeParameter, carla);	
+	logger->initialise(runtimeParameter, carla);
+
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
-		CoSiMa::rpc::SensorViewSensorMountingPosition mountingPosition;
-		mountingPosition.CopyFrom(sensorViewExtra.sensor_mounting_position());
-		sensorMountingPositionMap.insert({ sensorViewExtra.prefixed_fmu_variable_name(), mountingPosition });
+		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
 	}
-	response->set_value(carlaInterface.initialise(runtimeParameter));
+	//special initialization
+	sensorViewer->groundTruthCreator->parseStationaryMapObjects();
+
+	carla->doStep();
+
 	if (runtimeParameter.scenarioRunnerDoesTick) {
 		std::cout << "Waiting for connetion of scenario runner." << std::endl;
 		smphSignalSRToCosima.acquire();
 		//data could be changed by a new map loaded by the scenario runner
-		carlaInterface.loadWorld();
-		carlaInterface.parseStationaryMapObjects();
+		carla->loadWorld();
+		sensorViewer->groundTruthCreator->parseStationaryMapObjects();
 	}
 
 	return grpc::Status::OK;
 }
+
+//BEGIN OF CoSiMa::rpc::BaseInterface::Service
 
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
 	watchdogDoStepCalled = true;
 
 	if (runtimeParameter.log) {
-		carlaInterface.writeLog();
+		logger->writeLog(sensorViewer->groundTruthCreator->getLatestGroundTruth());
 	}
 
 	if (runtimeParameter.scenarioRunnerDoesTick) {
@@ -228,15 +243,16 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		smphSignalSRToCosima.acquire();
 		
 		//update changes in carla
-		carlaInterface.fetchActorsFromCarla();
-		response->set_value(carlaInterface.runtimeParameter.deltaSeconds);
+		sensorViewer->fetchActorsFromCarla();
+		response->set_value(runtimeParameter.deltaSeconds);
 	}
 	else 
 	{
 		//independent mode without scenario runner
-		auto timestep = carlaInterface.doStep();
+		auto timestep = carla->doStep();
+		sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
 		//update changes in carla
-		carlaInterface.fetchActorsFromCarla();
+		sensorViewer->fetchActorsFromCarla();
 		response->set_value(timestep);
 	}
 
@@ -245,8 +261,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 
 grpc::Status CARLA_OSI_client::GetStringValue(grpc::ServerContext* context, const CoSiMa::rpc::String* request, CoSiMa::rpc::Bytes* response)
 {
-	std::string message = getAndSerialize(request->value());
-	response->set_value(message);
+	response->set_value(getAndSerialize(request->value()));
 	return grpc::Status::OK;
 }
 
@@ -254,75 +269,6 @@ grpc::Status CARLA_OSI_client::SetStringValue(grpc::ServerContext* context, cons
 {
 	response->set_value(deserializeAndSet(request->name(), request->value()));
 	return grpc::Status::OK;
-}
-
-float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
-{
-	
-	if (runtimeParameter.verbose) {
-		std::cout << __FUNCTION__ << std::endl;
-	}
-	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
-
-	//Cosima can compute
-	smphSignalSRToCosima.release();
-	//Cosima has computed timestep
-	smphSignalCosimaToSR.acquire();
-
-	if (runtimeParameter.verbose) {
-		std::cout << "Send delta to scenario runner: " << carlaInterface.runtimeParameter.deltaSeconds << std::endl;
-	}
-
-	//control is given back to the scenario runner.
-	//The state of the simulation can change.
-	//The cached ground truth is now invalid.
-	carlaInterface.invalidateLatestGroundTruth();
-	return carlaInterface.runtimeParameter.deltaSeconds;
-}
-
-uint32_t CARLA_OSI_client::getIndex(const std::string_view osmp_name)
-{
-	if (']' == osmp_name.back()) {
-		size_t index = osmp_name.rfind('[');
-		//if brackets sourround something, try to parse as index
-		if (std::string_view::npos != index && index < osmp_name.size() - 2) {
-			auto chars = osmp_name.substr(index + 1, osmp_name.size() - 1);
-			uint32_t value = 0;
-			// parse as uint32_t
-			auto result = std::from_chars(chars.data(), chars.data() + chars.size(), value);
-			if (result.ec != std::errc::invalid_argument && result.ec != std::errc::result_out_of_range) {
-				return value;
-			}
-		}
-	}
-	return 0;
-}
-
-int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
-	if (std::string::npos != base_name.find("TrafficUpdate")) {
-		// parse as TrafficUpdate and apply
-		osi3::TrafficUpdate trafficUpdate;
-		if (!trafficUpdate.ParseFromString(message)) {
-			std::cerr << "Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
-			return -1;
-		}
-		carlaInterface.receiveTrafficUpdate(trafficUpdate);
-		return 0;
-	}
-	else if (std::string::npos != base_name.find("OSMPSensorViewConfigurationRequest")) {
-		osi3::SensorViewConfiguration sensorViewConfiguration;
-		if (!sensorViewConfiguration.ParseFromString(message)) {
-			std::cerr << "Variable name'" << base_name << "' indicates this is a SensorViewConfiguration, but parsing failed." << std::endl;
-			return -1;
-		}
-		//return value will be added to request of SensorView
-		return carlaInterface.receiveSensorViewConfigurationRequest(sensorViewConfiguration);
-	}
-	else {
-		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
-		varName2MessageMap[base_name] = message;
-		return 0;
-	}
 }
 
 std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
@@ -336,18 +282,18 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
 	if (std::string::npos != base_name.rfind("OSMPSensorViewGroundTruth", 0)) {
 		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
-		message = getSensorViewGroundTruth(base_name);
+		message = sensorViewer->getSensorViewGroundTruth(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
-		message = carlaInterface.getSensorViewConfiguration(base_name);
+		message = sensorViewConfiger->getSensorViewConfiguration(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
 		// OSMPSensorData
-		message = carlaInterface.getSensorView(base_name);
+		message = sensorViewer->getSensorView(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
 		// OSMPGroundTruthInit
-		message = carlaInterface.getLatestGroundTruth();
+		message = sensorViewer->groundTruthCreator->getLatestGroundTruth();
 	}
 	else if (std::string::npos != base_name.rfind("OSMPTrafficCommand", 0)) {
 		// OSMPTrafficCommand
@@ -355,7 +301,6 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		if (trafficCommandForEgoVehicle == nullptr) {
 			std::cout << "No OSMPTrafficCommand available. Use -sr parameter to enable scenario runner listener." << std::endl;
 		} else {
-			trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(carlaInterface.getHeroId());
 			message = trafficCommandForEgoVehicle;
 		}
 	}
@@ -381,117 +326,60 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	}
 }
 
-std::shared_ptr<osi3::SensorView> CARLA_OSI_client::getSensorViewGroundTruth(const std::string& varName) {
-	// create empty sensor view
-	auto sensorView = std::make_shared<osi3::SensorView>();
-	// create empty ground truth as part of sensor view
-	auto groundTruth = sensorView->mutable_global_ground_truth();
-	// copy latest ground truth into previously created ground truth
-	groundTruth->MergeFrom(*carlaInterface.getLatestGroundTruth());
-
-	//host_vehicle_id
-	if (groundTruth->has_host_vehicle_id()) {
-		sensorView->mutable_host_vehicle_id()->set_value(groundTruth->host_vehicle_id().value());
-	}
-
-	// if defined, set sensor mounting positions
-	auto iter = sensorMountingPositionMap.find(varName);
-	if (sensorMountingPositionMap.end() != iter) {
-		if (runtimeParameter.verbose)
-		{
-			std::cout << "Searched successfully for sensor " << varName << " Copy mounting position to sensorview message." << std::endl;
+int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
+	if (std::string::npos != base_name.find("TrafficUpdate")) {
+		osi3::TrafficUpdate trafficUpdate;
+		if (!trafficUpdate.ParseFromString(message)) {
+			std::cerr << "Variable name'" << base_name << "' indicates this is a TrafficUpdate, but parsing failed." << std::endl;
+			return -1;
 		}
-		copyMountingPositions(iter->second, sensorView);
+		trafficUpdater->receiveTrafficUpdate(trafficUpdate);
+		return 0;
 	}
-	else if (runtimeParameter.verbose)
-	{
-		std::cout << "No sensor found with name: " << varName << " Can not set mounting position.\n";
-		if (sensorMountingPositionMap.size() != 0) {
-			std::cout << "Available sensors are: ";
-			for (auto& positions : sensorMountingPositionMap) {
-				std::cout << positions.first << " ";
-			}
-			std::cout << std::endl;
+	else if (std::string::npos != base_name.find("OSMPSensorViewConfigurationRequest")) {
+		osi3::SensorViewConfiguration sensorViewConfiguration;
+		if (!sensorViewConfiguration.ParseFromString(message)) {
+			std::cerr << "Variable name'" << base_name << "' indicates this is a SensorViewConfiguration, but parsing failed." << std::endl;
+			return -1;
 		}
-		else {
-			std::cout << "No sensor positions are configured!" << std::endl;
-		}
-	}
-
-	// find or generate id for the named sensor
-	auto id = sensorIds.find(varName);
-	if (sensorIds.end() != id) {
-		sensorView->mutable_sensor_id()->set_value(id->second);
+		//return value will be added to request of SensorView
+		sensorViewConfiger->sensorsByFMU.push_back(toSensorDescriptionInternal(sensorViewConfiguration));
+		return 0;
 	}
 	else {
-		carla_osi::id_mapping::IDUnion sensorId;
-		//TODO make sure the type is not defined in CarlaUtility::CarlaUniqueID_e
-		sensorId.type = 100;
-		sensorId.id = (uint32_t)sensorIds.size() + 1;
-		sensorIds[varName] = sensorId.value;
-		sensorView->mutable_sensor_id()->set_value(sensorId.value);
+		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
+		varName2MessageMap[base_name] = message;
+		return 0;
 	}
+}
+
+//END OF CoSiMa::rpc::BaseInterface::Service
+
+//BEGIN OF ::srunner::osi::client::OSIVehicleController::Service
+
+float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
+{
+	
+	if (runtimeParameter.verbose) {
+		std::cout << __FUNCTION__ << std::endl;
+	}
+	trafficCommandForEgoVehicle = std::make_shared<osi3::TrafficCommand>(command);
+	trafficCommandForEgoVehicle->mutable_traffic_participant_id()->set_value(trafficCommander->getHeroId());
+
+	//Cosima can compute
+	smphSignalSRToCosima.release();
+	//Cosima has computed timestep
+	smphSignalCosimaToSR.acquire();
 
 	if (runtimeParameter.verbose) {
-		std::cout << sensorView->DebugString() << std::endl;
+		std::cout << "Send delta to scenario runner: " << runtimeParameter.deltaSeconds << std::endl;
 	}
-	return sensorView;
+
+	//control is given back to the scenario runner.
+	//The state of the simulation can change.
+	//The cached ground truth is now invalid.
+	sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
+	return runtimeParameter.deltaSeconds;
 }
 
-void CARLA_OSI_client::copyMountingPositions(const CoSiMa::rpc::SensorViewSensorMountingPosition& from, std::shared_ptr<osi3::SensorView> to)
-{
-	//TODO
-	//The virtual mounting position as well as rmse is not set: https://opensimulationinterface.github.io/open-simulation-interface/structosi3_1_1SensorView.html
-	//Is the virtual mounting position needed? Yes!
-
-	if (from.generic_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(0));
-	}
-	else if (from.radar_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.radar_sensor_mounting_position(0));
-	}
-	else if (from.lidar_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.lidar_sensor_mounting_position(0));
-	}
-	else if (from.camera_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.camera_sensor_mounting_position(0));
-	}
-	else if (from.ultrasonic_sensor_mounting_position_size()) {
-		to->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(0));
-	}
-
-	/*osi3::Vector3d bb_center_to_rear;//needed if virtual sensor mounting position is measured from bounding box center instead of rear axle
-	if (to->has_host_vehicle_id()) {
-		for (const auto &moving_object : to->global_ground_truth().moving_object()) {
-			if (moving_object.has_id() && moving_object.id().value() == to->host_vehicle_id().value()) {
-				if (moving_object.has_vehicle_attributes() && moving_object.vehicle_attributes().has_bbcenter_to_rear()) {
-					bb_center_to_rear.CopyFrom(moving_object.vehicle_attributes().bbcenter_to_rear());
-				}
-				break;
-			}
-		}
-	}
-	to->mutable_mounting_position()->mutable_position()->set_x(to->mutable_mounting_position()->mutable_position()->x() - bb_center_to_rear.x());
-	to->mutable_mounting_position()->mutable_position()->set_y(to->mutable_mounting_position()->mutable_position()->y() - bb_center_to_rear.y());
-	to->mutable_mounting_position()->mutable_position()->set_z(to->mutable_mounting_position()->mutable_position()->z() - bb_center_to_rear.z());
-	*/
-
-	//to->mutable_mounting_position_rmse
-
-	//physical sensor mounting position is defined by model itself
-	/*for (int i = 0; i < from.generic_sensor_mounting_position_size(); i++) {
-		to->add_generic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.generic_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.radar_sensor_mounting_position_size(); i++) {
-		to->add_radar_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.radar_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.lidar_sensor_mounting_position_size(); i++) {
-		to->add_lidar_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.lidar_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.camera_sensor_mounting_position_size(); i++) {
-		to->add_camera_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.camera_sensor_mounting_position(i));
-	}
-	for (int i = 0; i < from.ultrasonic_sensor_mounting_position_size(); i++) {
-		to->add_ultrasonic_sensor_view()->mutable_view_configuration()->mutable_mounting_position()->CopyFrom(from.ultrasonic_sensor_mounting_position(i));
-	}*/
-}
+//END OF ::srunner::osi::client::OSIVehicleController::Service

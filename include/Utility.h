@@ -1,77 +1,26 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef CARLAUTILITY_H
 #define CARLAUTILITY_H
 
-#define _USE_MATH_DEFINES
-
-#include <iterator>
-#include <math.h>
-#include <optional>
-#include <variant>
-
-#include <carla/client/Actor.h>
-#include <carla/client/Junction.h>
-#include <carla/client/LightState.h>
-#include <carla/client/Map.h>
 #include <carla/client/Sensor.h>
-#include <carla/client/TrafficLight.h>
-#include <carla/client/TrafficSign.h>
 #include <carla/client/Vehicle.h>
 #include <carla/client/Walker.h>
-#include <carla/geom/BoundingBox.h>
-#include <carla/geom/Rotation.h>
-#include <carla/geom/Transform.h>
-#include <carla/geom/Vector3D.h>
-#include <carla/geom/Vector2D.h>
-#include "carla/image/ImageView.h"
-#include <carla/road/RoadTypes.h>
+#include <carla/image/ImageView.h>
 #include <carla/rpc/VehicleLightState.h>
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 
-#include "carla_osi/Geometry.h"
-#include "carla_osi/Identifiers.h"
+#include <osi_sensorview.pb.h>
+
+#include <boost/gil.hpp>
+#include <boost/gil/io/write_view.hpp>
+#include <boost/gil/extension/io/png.hpp>
+
 #include "carla_osi/TrafficSignals.h"
-
-#include "boost/gil.hpp"
-#include "boost/gil/io/write_view.hpp"
-#include "boost/gil/extension/io/png.hpp"
-
-//#include "pugixml.hpp"
-
-//uncomment includes if needed
-#include "osi_common.pb.h"
-//#include "osi_datarecording.pb.h"
-//#include "osi_detectedlane.pb.h"
-//#include "osi_detectedobject.pb.h"
-//#include "osi_detectedoccupant.pb.h"
-//#include "osi_detectedroadmarking.pb.h"
-//#include "osi_detectedtrafficlight.pb.h"
-//#include "osi_detectedtrafficsign.pb.h"
-//#include "osi_environment.pb.h"
-//#include "osi_featuredata.pb.h"
-#include "osi_groundtruth.pb.h"
-//#include "osi_hostvehicledata.pb.h"
-#include "osi_lane.pb.h"
-//#include "osi_logicaldetectiondata.pb.h"
-//#include "osi_logicallane.pb.h"
-//#include "osi_object.pb.h"
-//#include "osi_occupant.pb.h"
-//#include "osi_referenceline.pb.h"
-#include "osi_roadmarking.pb.h"
-#include "osi_sensordata.pb.h"
-//#include "osi_sensorspecific.pb.h"
-#include "osi_sensorview.pb.h"
-#include "osi_sensorviewconfiguration.pb.h"
-//#include "osi_trafficcommand.pb.h"
-#include "osi_trafficlight.pb.h"
-#include "osi_trafficsign.pb.h"
-//#include "osi_trafficupdate.pb.h"
-//#include "osi_version.pb.h"
 
 namespace CarlaUtility {
 
@@ -95,6 +44,9 @@ namespace CarlaUtility {
 
 	carla::SharedPtr<carla::client::Vehicle> getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor);
 	std::unique_ptr<osi3::Timestamp> parseTimestamp(const carla::client::Timestamp& carlaTime);
+
+	std::string findBestMatchingCarToSpawn(const osi3::Dimension3d& dimension, const std::vector<std::tuple<std::string, carla::geom::Vector3D>>& replayVehicleBoundingBoxes,
+		double& weightLength_X, double& weightWidth_Y, double& weightHeight_Z);
 
 	/**
 	* Comparing the first two sorted containers, determine which elements are only in the first container @a rem_first or second container @a add_first
