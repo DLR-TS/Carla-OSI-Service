@@ -5,6 +5,9 @@
 #ifndef CARLASENSORVIEW_H
 #define CARLASENSORVIEW_H
 
+#include <mutex>
+#include <shared_mutex>
+
 #include "boost/bimap.hpp"
 
 #include "CARLA_GroundTruth.h"
