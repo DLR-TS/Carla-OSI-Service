@@ -10,7 +10,7 @@ boost/1.80.0
 # requirement of  Carla (wants 1.2.11)
 zlib/1.2.11
 # wanted by Carla (wants 1.2.37, but conan only has newer versions)
-libpng/1.6.37
+libpng/1.6.40
 # requirement of grpc on windows (see https://github.com/grpc/grpc/blob/v1.31.0/BUILDING.md#windows)
 nasm/2.15.05
 tbb/2020.3
