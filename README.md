@@ -10,7 +10,7 @@ Many different configurations are available through runtime parameters. Use -h o
 
 ## Linux
 
-install [conan](https://conan.io/)
+Install [conan](https://conan.io/) 1.x. Conan 2 not yet supported!
 
 in root folder:
 ```sh
