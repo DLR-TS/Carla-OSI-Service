@@ -205,11 +205,14 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	response->set_value(carla->initialise(runtimeParameter));
 	trafficUpdater->initialise(runtimeParameter, carla);
 	sensorViewer->initialise(runtimeParameter, carla);	
+	sensorViewConfiger->initialise(runtimeParameter, carla);
 	logger->initialise(runtimeParameter, carla);
 
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
 		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
 	}
+	sensorViewConfiger->trySpawnSensors(sensorViewer);
+
 	//special initialization
 	sensorViewer->groundTruthCreator->parseStationaryMapObjects();
 
@@ -235,6 +238,8 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 	if (runtimeParameter.log) {
 		logger->writeLog(sensorViewer->groundTruthCreator->getLatestGroundTruth());
 	}
+
+	sensorViewConfiger->trySpawnSensors(sensorViewer);
 
 	if (runtimeParameter.scenarioRunnerDoesTick) {
 		//Cosima has computed timestep
@@ -285,10 +290,10 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		message = sensorViewer->getSensorViewGroundTruth(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
-		message = sensorViewConfiger->getSensorViewConfiguration(base_name);
+		message = sensorViewConfiger->getLastSensorViewConfiguration();
 	}
 	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
-		// OSMPSensorData
+		// OSMPSensorView
 		message = sensorViewer->getSensorView(base_name);
 	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {

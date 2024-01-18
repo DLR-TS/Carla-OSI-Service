@@ -168,8 +168,10 @@ additional_parameter: "--radar"
 additional_parameter: "--ultrasonic"
 ```
 
-Enable input of specific  sensors in Carla.
-Use "OSMPSensorView0" for input of FMU.
+Enable input of specific sensors in Carla.
+Use "OSMPSensorView0" for first sensor to get the input.
+The number increase for every added sensor in the simulation.
+Use this only, if the sensor can not be spawned via OSTAR and is spawned by Carla itself or an other tool.
 
 ```
 additional_parameter: "--cityobjectlabel label"

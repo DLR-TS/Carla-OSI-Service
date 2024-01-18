@@ -50,7 +50,8 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 #pragma region fields for the Carla OSI Interface
 	std::shared_ptr<CARLAInterface> carla = std::make_shared<CARLAInterface>();
 	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
-	std::unique_ptr<SensorViewer> sensorViewer = std::make_unique<SensorViewer>();
+	std::shared_ptr<SensorViewer> sensorViewer = std::make_shared<SensorViewer>();
+	std::unique_ptr<SensorViewConfiger> sensorViewConfiger = std::make_unique<SensorViewConfiger>();
 	std::unique_ptr<TrafficCommander> trafficCommander = std::make_unique<TrafficCommander>();
 	std::unique_ptr<Logger> logger = std::make_unique<Logger>();
 
@@ -58,8 +59,6 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	std::map<std::string, std::string> varName2MessageMap; //important!
 
 #pragma endregion fields for the Carla OSI Interface
-
-	std::unique_ptr<SensorViewConfiger> sensorViewConfiger = std::make_unique<SensorViewConfiger>();
 
 	carla::srunner::TrafficCommandReceiver trafficCommandReceiver;
 
@@ -151,6 +150,7 @@ private:
 		}
 		return sensor;
     }
+
 };
 
 #endif //!CARLAOSIGRPC_H

@@ -15,7 +15,6 @@
 class SensorViewer : public CARLAModule {
 private:
 	// contains OSI messages (values) for variable names / actor roles (keys) that can not always be retrieved, such as the sensor messages, which originate from CARLA sensor events and don't have to occur on every tick. 
-	std::map<int, std::shared_ptr<osi3::SensorView>> sensorCache;
 	std::shared_mutex sensorCache_mutex;
 
     // contains actor ids an the value of their role_name attribute. Does not contain actors without a role. Role names are used as variable name to identify OSI messages
@@ -31,6 +30,7 @@ private:
 public:
 
     std::unique_ptr<GroundTruthCreator> groundTruthCreator = std::make_unique<GroundTruthCreator>();
+	std::map<std::string, std::shared_ptr<osi3::SensorView>> sensorCache;
 
     virtual void initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla) override {
         this->runtimeParameter = runtimeParams;
@@ -46,7 +46,7 @@ public:
 	\param sensor OSMPSensorView + index
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
-	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensor);
+	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensorName);
 
 	/**
 	* Fetch the actors in carla and update cache.
@@ -57,7 +57,7 @@ public:
 	/**
 	* Callback function for all Carla sensors
 	*/
-	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index);
+	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, std::string index);
 };
 
 #endif //!CARLASENSORVIEW_H

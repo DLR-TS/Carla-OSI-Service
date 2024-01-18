@@ -53,6 +53,7 @@ struct Sensor {
     osi3::SensorViewConfiguration sensorViewConfiguration;
     std::string prefixed_fmu_variable_name;
     uint64_t id;
+	bool spawned = false;
 };
 
 typedef uint64_t OSIVehicleID;

@@ -59,20 +59,15 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 	return sensorView;
 }
 
-std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::string& sensor)
+std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::string& sensorName)
 {
-	//string has format of: OSMPSensorViewX
-	std::string index_string(&sensor[14]);
-	int index = std::stoi(index_string);
-	{
-		// mutex scope: using a shared lock - read only access
-		std::shared_lock lock(sensorCache_mutex);
-		auto iter = sensorCache.find(index);
-		if (iter == sensorCache.end()) {
-			return nullptr;
-		}
-		return iter->second;
+	// mutex scope: using a shared lock - read only access
+	std::shared_lock lock(sensorCache_mutex);
+	auto iter = sensorCache.find(sensorName);
+	if (iter == sensorCache.end()) {
+		return nullptr;
 	}
+	return iter->second;
 }
 
 void SensorViewer::fetchActorsFromCarla() {
@@ -113,12 +108,11 @@ void SensorViewer::fetchActorsFromCarla() {
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
 						if (runtimeParameter.carlaSensors && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
-							std::cout << "add sensor "  << actor->GetTypeId() << std::endl;
+							std::cout << "Add already spawned sensor in Carla"  << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
-							int index = (int)sensorCache.size();
+							std::string index =  "OSMPSensorView" + sensorCache.size();
 							sensorCache.emplace(index, nullptr);
-							//TODO
-							//sensor->Listen([this, sensor, index](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, index); });
+							sensor->Listen([this, sensor, index](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, index); });
 						}
 					}
 					break;
@@ -128,7 +122,7 @@ void SensorViewer::fetchActorsFromCarla() {
 	}
 }
 
-void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, int index)
+void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, std::string index)
 {
 	if (!carla->world) {
 		// Local world object has been destroyed and thus probably also the CARLA OSI interface, but client is still sending
