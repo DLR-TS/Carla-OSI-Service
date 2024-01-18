@@ -111,6 +111,7 @@ void SensorViewer::fetchActorsFromCarla() {
 							std::cout << "Add already spawned sensor in Carla"  << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
 							std::string index =  "OSMPSensorView" + sensorCache.size();
+							std::cout << "Sensorview can be requested by base_name: " << index << std::endl;
 							sensorCache.emplace(index, nullptr);
 							sensor->Listen([this, sensor, index](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, index); });
 						}

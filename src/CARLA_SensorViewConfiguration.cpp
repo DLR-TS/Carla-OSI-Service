@@ -64,7 +64,7 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	}
 	carla::client::Actor* parent = carla->world->GetActor(actorId).get();
 
-	std::string sensorType = matchSensorType(sensor.type);
+	std::string sensorType = matchSensorType(sensor.type, sensor.prefixed_fmu_variable_name);
 	auto sensorBP = carla->world->GetBlueprintLibrary()->Find(sensorType);
 
 	carla::geom::Transform transform;
@@ -109,7 +109,7 @@ carla::ActorId SensorViewConfiger::getActorIdFromName(std::string roleName) {
 	return 0;
 }
 
-std::string SensorViewConfiger::matchSensorType(SENSORTYPES type) {
+std::string SensorViewConfiger::matchSensorType(SENSORTYPES type, const std::string& name) {
 	switch (type) {
 	case SENSORTYPES::CAMERA:
 		return "sensor.camera.rgb";

@@ -43,5 +43,5 @@ private:
 
 	carla::ActorId getActorIdFromName(std::string roleName);
 
-	std::string matchSensorType(SENSORTYPES type);
+	std::string matchSensorType(SENSORTYPES type, const std::string& name);
 };
