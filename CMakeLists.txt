@@ -1,20 +1,18 @@
-﻿# CMakeList.txt: CMake-Projektdatei der obersten Ebene.
-#
-cmake_minimum_required (VERSION 3.12)
-message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
-
+﻿cmake_minimum_required (VERSION 3.12)
 project ("CARLA OSI Service" CXX)
+
+message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(MSVC)
- option(DONT_FORCE_STATIC_LIBS "Building dynamic libraries fails for some targets because of incompatabilities in dependencies (protobuf, see FetchGRPC.cmake) and thus static lib's are enforced. Enable this option to abide CMAKE's BUILD_SHARED_LIBS variable" OFF)
- if(NOT DONT_FORCE_STATIC_LIBS)
- set(BUILD_SHARED_LIBS false)
- message("Forcing the use of static libraries as building dynamic libraries fails for some targets using MSVC because of incompatabilities in some dependencies. Enable DONT_FORCE_STATIC_LIBS to unforce this behaviour")
- endif(NOT DONT_FORCE_STATIC_LIBS)
+	option(DONT_FORCE_STATIC_LIBS "Building dynamic libraries fails for some targets because of incompatabilities in dependencies (protobuf, see FetchGRPC.cmake) and thus static lib's are enforced. Enable this option to abide CMAKE's BUILD_SHARED_LIBS variable" OFF)
+	if(NOT DONT_FORCE_STATIC_LIBS)
+		set(BUILD_SHARED_LIBS false)
+		message("Forcing the use of static libraries as building dynamic libraries fails for some targets using MSVC because of incompatabilities in some dependencies. Enable DONT_FORCE_STATIC_LIBS to unforce this behaviour")
+	endif(NOT DONT_FORCE_STATIC_LIBS)
 endif(MSVC)
 
 option(GIT_SUBMODULE "Check submodules during build" OFF)
