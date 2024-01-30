@@ -5,7 +5,13 @@
 #ifndef CARLAGROUNDTRUTH_H
 #define CARLAGROUNDTRUTH_H
 
+#if __has_include(<excecution>)
 #include <execution>
+#elif __has_include(<boost/range/algorithm/for_each.hpp>)
+#include <boost/range/algorithm/for_each.hpp>
+#else
+error "Missing the <execution> header."
+#endif
 
 #include <carla/client/ActorList.h>
 

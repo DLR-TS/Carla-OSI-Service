@@ -47,7 +47,11 @@ void GroundTruthCreator::parseStationaryMapObjects()
 		const carla::road::Map& roadMap = carla->map->GetMap();
 
 		// execute in parallel to increase performance for large maps
+#if __has_include(<excecution>)
 		std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
+#else
+		boost::range::for_each(combined, [&](zip_type::value_type& tuple) {
+#endif
 			auto&[endpoints, lane, boundaries] = tuple;
 			auto&[laneStart, laneEnd] = *endpoints;
 			if (laneStart->IsJunction() && laneEnd->IsJunction()) {
