@@ -21,7 +21,7 @@ std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>> G
 	dim->set_width(boundingBox.extent.y * 2);
 	dim->set_height(boundingBox.extent.z * 2);
 	std::unique_ptr<osi3::Vector3d> vec = Geometry::toOSI(boundingBox.location);
-	return std::pair(std::move(dim), std::move(vec));
+	return std::pair<std::unique_ptr<osi3::Dimension3d>, std::unique_ptr<osi3::Vector3d>>(std::move(dim), std::move(vec));
 }
 
 std::unique_ptr<osi3::Vector3d> Geometry::toOSI(const carla::geom::Location& location) {

@@ -4,9 +4,11 @@
 
 #ifndef IDENTIFIERS_H
 #define IDENTIFIERS_H
-
+#if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
 #include <variant>
-
+#elif defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
+#include "boost/variant.hpp"
+#endif
 #include <carla/client/Actor.h>
 #include <carla/client/Junction.h>
 #include <carla/client/TrafficLight.h>
@@ -26,7 +28,11 @@ namespace carla_osi {
 		//as Carla uses different counters for ids of actors, roads/lanes and junctions. (As does OpenDRIVE)
 		//
 		//LaneIDs are not globally unique, but relative to their road. Also, they are close to 0, as they have to be defined continuously from 0, up and/or down. Thus, they have to be combined with their RoadID
+#if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
 		typedef std::variant<carla::ActorId, std::tuple<carla::road::RoadId, carla::road::LaneId, uint16_t>, carla::road::JuncId> CarlaUniqueID_t;
+#elif defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
+		typedef boost::variant<carla::ActorId, std::tuple<carla::road::RoadId, carla::road::LaneId, uint16_t>, carla::road::JuncId> CarlaUniqueID_t;
+#endif
 		//
 		//Carla ids have only 32 bits, which will be copied into the lower 32 bits of the OSI identifier. (RoadID in case of Lanes)
 		//The type will be marked in the next 8 bits of the osi3::Identifier's 64bit value, the remaining 24 upper bits are used for special sub-ids, e.g. the LaneID and road mark id. This limits the implementation to only 256 lanes per road.

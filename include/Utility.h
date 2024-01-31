@@ -74,7 +74,7 @@ namespace CarlaUtility {
 		if (first2 != last2) {
 			add_first = std::copy(first2, last2, add_first);
 		}
-		return std::pair(add_first, rem_first);
+		return std::pair<AddIt, RemIt>(add_first, rem_first);
 	};
 
 };

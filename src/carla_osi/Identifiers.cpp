@@ -14,7 +14,6 @@ carla_osi::id_mapping::CarlaUniqueID_t carla_osi::id_mapping::toCarla(const osi3
 	case JuncID:
 		return (carla::road::JuncId) idUnion.id;
 	}
-
 }
 
 std::unique_ptr<osi3::Identifier> carla_osi::id_mapping::getOSIActorId(carla::SharedPtr<const carla::client::Actor> actor)
