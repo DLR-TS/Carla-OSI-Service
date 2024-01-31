@@ -5,9 +5,9 @@
 #ifndef CARLAGROUNDTRUTH_H
 #define CARLAGROUNDTRUTH_H
 
-#if __has_include(<excecution>)
+#if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
 #include <execution>
-#elif __has_include(<boost/range/algorithm/for_each.hpp>)
+#elif defined(_WIN32) && (_MSC_VER >= 1600) || defined(__linux__) && __cplusplus >= 201103L
 #include <boost/range/algorithm/for_each.hpp>
 #else
 error "Missing the <execution> header."

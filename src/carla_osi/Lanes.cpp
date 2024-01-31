@@ -112,7 +112,8 @@ carla_osi::lanes::parseLaneBoundary(const carla::road::element::LaneMarking& lan
 
 std::tuple<google::protobuf::RepeatedPtrField<osi3::LaneBoundary>, uint64_t, uint64_t>
 carla_osi::lanes::parseLaneBoundary(carla::client::Map::TopologyList::value_type laneSection) {
-	auto&[begin, end] = laneSection;
+	auto &begin = std::get<0>(laneSection);
+	auto &end = std::get<1>(laneSection);
 	// From OSI documentationon of osi3::LaneBoundary::Classification::Type:
 	// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
 	// cases, each lane will define its own side of the lane boundary.

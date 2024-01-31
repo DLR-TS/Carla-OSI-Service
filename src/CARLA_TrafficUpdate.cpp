@@ -119,7 +119,7 @@ carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObje
 	if (optionalPoint) {
 		carla::rpc::LabelledPoint point = *optionalPoint;
 		position = point._location;
-		position.z += 0.05;//spawn needs to be a little bit higher
+		position.z += 0.05f;//spawn needs to be a little bit higher
 	} else {
 		std::cout << "No Ground Position!" << std::endl;
 	}
@@ -167,7 +167,7 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 			}
 			case 1://linear fall per timestep
 				//on flat road looks like an overloaded vehicle
-				position.z = position.z - 0.01;
+				position.z = position.z - 0.01f;
 				//position.z -= 0.5 * 9.81 * runtimeParameter.deltaSeconds * runtimeParameter.deltaSeconds;
 			break;
 			case 2://fall per timestep with g = 9.81
@@ -180,11 +180,11 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 				}
 				float currentTime = runtimeParameter.deltaSeconds * gravityEntry.fallingSteps;
 				float beforeTime = runtimeParameter.deltaSeconds * gravityEntry.fallingSteps - 1; //is 0 if not falling in last timestep
-				float distance = 0.5 * (9.81 * currentTime * currentTime) - (9.81 * beforeTime * beforeTime);
+				float distance = float(0.5 * (9.81 * currentTime * currentTime) - (9.81 * beforeTime * beforeTime));
 				position.z -= distance;
 				gravityEntry.lastPosition = position.z;
 			}
-			desiredHeight.insert_or_assign(actorId, gravityEntry);
+			desiredHeight[actorId] = gravityEntry;
 			break;
 		}
 

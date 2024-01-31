@@ -47,13 +47,18 @@ void GroundTruthCreator::parseStationaryMapObjects()
 		const carla::road::Map& roadMap = carla->map->GetMap();
 
 		// execute in parallel to increase performance for large maps
-#if __has_include(<excecution>)
+#if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
 		std::for_each(std::execution::par, combined.begin(), combined.end(), [&](zip_type::value_type& tuple) {
-#else
-		boost::range::for_each(combined, [&](zip_type::value_type& tuple) {
-#endif
 			auto&[endpoints, lane, boundaries] = tuple;
 			auto&[laneStart, laneEnd] = *endpoints;
+#elif defined(_WIN32) && (_MSC_VER >= 1600) || defined(__linux__) && __cplusplus >= 201103L
+		boost::range::for_each(combined, [&](zip_type::value_type& tuple) {
+			auto& endpoints = std::get<0>(tuple);
+			auto& lane = std::get<1>(tuple);
+			auto& boundaries = std::get<2>(tuple);
+			auto& laneStart = std::get<0>(*endpoints);
+			auto& laneEnd = std::get<1>(*endpoints);
+#endif
 			if (laneStart->IsJunction() && laneEnd->IsJunction()) {
 				auto junction = laneStart->GetJunction();
 
@@ -69,7 +74,9 @@ void GroundTruthCreator::parseStationaryMapObjects()
 				auto waypoints = junction->GetWaypoints();
 				auto lanePairings = classification->mutable_lane_pairing();
 				lanePairings->Reserve((int)waypoints.size());
-				for (const auto&[inbound, outbound] : waypoints) {
+				for (const auto& waypoint : waypoints) {
+					const auto& inbound = std::get<0>(waypoint);
+					const auto& outbound = std::get<1>(waypoint);
 					// OSI lane_pairing needs an antecessor/successor pair
 					auto pairs = carla_osi::lanes::GetOSILanePairings(roadMap,
 						inbound, outbound);
@@ -144,7 +151,13 @@ void GroundTruthCreator::parseStationaryMapObjects()
 				// There is no special representation for double lines, e.g. solid / solid or dashed / solid. In such 
 				// cases, each lane will define its own side of the lane boundary.
 				auto boundary = carla_osi::lanes::parseLaneBoundary(*endpoints);
+#if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
 				auto&[parsedBoundaries, left_lane_boundary_id, right_lane_boundary_id] = boundary;
+#elif defined(_WIN32) && (_MSC_VER >= 1600) || defined(__linux__) && __cplusplus >= 201103L
+				auto& parsedBoundaries = std::get<0>(boundary);
+				auto& left_lane_boundary_id = std::get<1>(boundary);
+				auto& right_lane_boundary_id = std::get<2>(boundary);
+#endif
 				if (0 < left_lane_boundary_id) {
 					classification->add_left_lane_boundary_id()->set_value(left_lane_boundary_id);
 				}
@@ -161,7 +174,9 @@ void GroundTruthCreator::parseStationaryMapObjects()
 		// => remove duplicates
 		std::set<uint64_t> junctionIds;
 		for (auto& zipped : combined) {
-			auto&[_, lane, boundaries] = zipped;
+			//get<0> not used
+			auto& lane = std::get<1>(zipped);
+			auto& boundaries = std::get<2>(zipped);
 			if (osi3::Lane_Classification_Type::Lane_Classification_Type_TYPE_INTERSECTION == lane->classification().type()) {
 				if (junctionIds.count(lane->id().value())) {
 					continue;

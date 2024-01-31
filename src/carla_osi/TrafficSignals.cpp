@@ -132,8 +132,8 @@ std::vector<std::unique_ptr<osi3::TrafficLight>> carla_osi::traffic_signals::get
 	for (auto info : bulbInfos)
 	{
 		//apply yaw to location vector
-		float x = info.second.x * std::cos(yaw) - info.second.y * std::sin(yaw);
-		float y = info.second.x * std::sin(yaw) + info.second.y * std::cos(yaw);
+		float x = float(info.second.x * std::cos(yaw) - info.second.y * std::sin(yaw));
+		float y = float(info.second.x * std::sin(yaw) + info.second.y * std::cos(yaw));
 		//combine base vector and added vector from base to lightbulb
 		carla::geom::Location bulbLocation;
 		bulbLocation.x = x + baseTransform.location.x;
