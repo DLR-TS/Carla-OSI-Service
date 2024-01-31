@@ -44,7 +44,11 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 	std::vector<int> listOfUpdatedVehicles;
 
 	for (auto& update : trafficUpdate.update()) {
+#if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
 		actorId = std::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
+#elif defined(_WIN32) && (_MSC_VER >= 1600) || defined(__linux__) && __cplusplus >= 201103L
+		actorId = boost::get<carla::ActorId>(carla_osi::id_mapping::toCarla(&update.id()));
+#endif
 		auto actor = carla->world->GetActor(actorId);
 		bool spawned = false;
 		if (runtimeParameter.replay.enabled) {
@@ -54,7 +58,7 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 			std::cout << "Actor not found! No position updates will be done!" << std::endl;
 			return 0;
 		}
-		listOfUpdatedVehicles.push_back(update.id().value());
+		listOfUpdatedVehicles.push_back(int(update.id().value()));
 		if (!spawned) { //let vehicle spawn and run with doStep, then do normal traffic updates
 			applyTrafficUpdateToActor(update, actor, actorId);
 		}

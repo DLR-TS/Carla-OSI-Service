@@ -5,6 +5,8 @@
 #ifndef TRAFFICSIGNALS_H
 #define TRAFFICSIGNALS_H
 
+#include <tuple>
+
 #include <carla/client/Map.h>
 #include <carla/client/TrafficSign.h>
 

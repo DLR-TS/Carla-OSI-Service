@@ -62,7 +62,7 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::string& sensorName)
 {
 	// mutex scope: using a shared lock - read only access
-	std::shared_lock lock(sensorCache_mutex);
+	std::unique_lock<std::mutex> lock(sensorCache_mutex);
 	auto iter = sensorCache.find(sensorName);
 	if (iter == sensorCache.end()) {
 		return nullptr;
@@ -88,8 +88,7 @@ void SensorViewer::fetchActorsFromCarla() {
 
 	//TODO implement reactions
 	{//mutex scope
-		// using a unique lock - access not limited to read
-		std::unique_lock lock(actorRole2IDMap_mutex);
+		std::unique_lock<std::mutex> lock(actorRole2IDMap_mutex);
 		for (auto removedActor : removedActors) {
 			if (actorRole2IDMap.right.count(removedActor)) {
 				actorRole2IDMap.right.erase(removedActor);
@@ -102,7 +101,7 @@ void SensorViewer::fetchActorsFromCarla() {
 			auto attributes = actor->GetAttributes();
 			for (auto attribute : attributes) {
 				if ("role_name" == attribute.GetId()) {
-					if (!std::empty(attribute.GetValue())) {
+					if (!attribute.GetValue().empty()) {
 						auto value = boost::bimap<std::string, carla::ActorId>::value_type(attribute.GetValue(), addedActor);
 						actorRole2IDMap.insert(value);
 
@@ -140,7 +139,7 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 
 	auto typeID = sensor->GetTypeId();
 	//substring of typeID: sensor.camera.rgb -> camera.rgb
-	std::string_view sensorType(&typeID[7]);
+	std::string sensorType(&typeID[7]);
 
 	if (0 == sensorType.rfind("camera.rgb", 0))
 	{

@@ -6,7 +6,6 @@
 #define CARLASENSORVIEW_H
 
 #include <mutex>
-#include <shared_mutex>
 
 #include "boost/bimap.hpp"
 
@@ -15,11 +14,11 @@
 class SensorViewer : public CARLAModule {
 private:
 	// contains OSI messages (values) for variable names / actor roles (keys) that can not always be retrieved, such as the sensor messages, which originate from CARLA sensor events and don't have to occur on every tick. 
-	std::shared_mutex sensorCache_mutex;
+	std::mutex sensorCache_mutex;
 
     // contains actor ids an the value of their role_name attribute. Does not contain actors without a role. Role names are used as variable name to identify OSI messages
 	boost::bimap<std::string, carla::ActorId> actorRole2IDMap;
-	std::shared_mutex actorRole2IDMap_mutex;
+	std::mutex actorRole2IDMap_mutex;
 
 	// contains all actor ids reported by Carla during the last tick
 	std::set<carla::ActorId> activeActors;

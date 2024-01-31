@@ -15,7 +15,9 @@ std::unique_ptr<osi3::TrafficSign> carla_osi::traffic_signals::getOSITrafficSign
 	auto base = main->mutable_base();
 	// bounding boxes of traffic signs declare hit boxes where their restrictions should apply and don't identify the bounds of the sign
 	// --> use world::GetActorBoundingBox and pass as argument
-	auto[dimension, position] = Geometry::getInstance()->toOSI(sign.bounding_box);
+	auto dimpos = Geometry::getInstance()->toOSI(sign.bounding_box);
+	auto& dimension = std::get<0>(dimpos);
+	auto& position = std::get<1>(dimpos);
 
 	base->set_allocated_dimension(dimension.release());
 
