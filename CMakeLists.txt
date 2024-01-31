@@ -180,7 +180,7 @@ include(Catch)
 catch_discover_tests(Test_CARLA_OSI)
 
 add_executable (CARLA_OSI_Service "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_Service.cpp")
-target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_Lib)
+target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_Lib stdc++fs)
 target_include_directories(CARLA_OSI_Service PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
 target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_gRPC_ServiceLib)
 # public include of target CARLA_OSI_gRPC_Lib is supposed to propagate, but is missing...
