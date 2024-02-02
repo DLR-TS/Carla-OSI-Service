@@ -332,6 +332,10 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 }
 
 int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std::string& message) {
+	if (runtimeParameter.verbose)
+	{
+		std::cout << "Set " << base_name << std::endl;
+	}
 	if (std::string::npos != base_name.find("TrafficUpdate")) {
 		osi3::TrafficUpdate trafficUpdate;
 		if (!trafficUpdate.ParseFromString(message)) {

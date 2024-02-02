@@ -89,7 +89,11 @@ std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVe
 	} else {
 		std::string vehicleName = determineVehicleName(update);
 		carla::geom::Transform transform = determineTransform(update);
-		auto vehicleBlueprint = carla->world->GetBlueprintLibrary()->Find(vehicleName);
+		//Never try to merge the two lines in one line, it will break the at least TypeID of the new actors, like in carla->world->GetActors();
+		//I don't know why. Leave the next two lines separate!
+		//auto vehicleBlueprint = carla->world->GetBlueprintLibrary()->Find(vehicleName);
+		auto blueprintLibrary = carla->world->GetBlueprintLibrary();
+		auto vehicleBlueprint = blueprintLibrary->Find(vehicleName);
 		carla::SharedPtr<carla::client::Actor> actor = carla->world->TrySpawnActor(*vehicleBlueprint, transform);
 		if (actor == nullptr) {
 			std::cerr << "Could not spawn actor!" << std::endl;
