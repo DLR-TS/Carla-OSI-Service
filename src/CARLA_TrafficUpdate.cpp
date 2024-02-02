@@ -89,9 +89,10 @@ std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVe
 	} else {
 		std::string vehicleName = determineVehicleName(update);
 		carla::geom::Transform transform = determineTransform(update);
-		//Never try to merge the two lines in one line, it will break the at least TypeID of the new actors, like in carla->world->GetActors();
-		//I don't know why. Leave the next two lines separate!
-		//auto vehicleBlueprint = carla->world->GetBlueprintLibrary()->Find(vehicleName);
+		//Never try to merge the following two lines of code!
+		//It will break at least TypeID of the new actors, like in carla->world->GetActors();
+		//Blueprint library is a shared pointer and needs to be alive for carla->world->TrySpawnActor().
+		//auto vehicleBlueprint = carla->world->GetBlueprintLibrary()->Find(vehicleName); does not work
 		auto blueprintLibrary = carla->world->GetBlueprintLibrary();
 		auto vehicleBlueprint = blueprintLibrary->Find(vehicleName);
 		carla::SharedPtr<carla::client::Actor> actor = carla->world->TrySpawnActor(*vehicleBlueprint, transform);

@@ -113,6 +113,7 @@ private:
 	float saveTrafficCommand(const osi3::TrafficCommand& command);
 
 	static void watchdog(CARLA_OSI_client* client);
+	bool watchdogInitDone = false;
 	bool watchdogDoStepCalled = true;
 
 	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration) {

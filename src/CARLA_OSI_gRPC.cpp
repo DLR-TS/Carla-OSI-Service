@@ -25,14 +25,16 @@ void CARLA_OSI_client::StartServer(const bool nonBlocking)
 void CARLA_OSI_client::watchdog(CARLA_OSI_client* client) {
 	while (true) {
 		std::this_thread::sleep_for(std::chrono::seconds(client->runtimeParameter.resumeCarlaAsyncSeconds));
-		if (!client->watchdogDoStepCalled) {
+		if (client->watchdogInitDone && !client->watchdogDoStepCalled) {
 			std::cout << "Reset Carla mode by watchdog because of no activity." << std::endl;
 			client->trafficUpdater->deleteSpawnedVehicles();
 			client->carla->resetWorldSettings();
 			exit(0);
 		}
 		else {
-			client->watchdogDoStepCalled = false;
+			if (client->watchdogInitDone) {
+				client->watchdogDoStepCalled = false;
+			}
 		}
 	}
 }
@@ -204,7 +206,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 
 	response->set_value(carla->initialise(runtimeParameter));
 	trafficUpdater->initialise(runtimeParameter, carla);
-	sensorViewer->initialise(runtimeParameter, carla);	
+	sensorViewer->initialise(runtimeParameter, carla);
 	sensorViewConfiger->initialise(runtimeParameter, carla);
 	logger->initialise(runtimeParameter, carla);
 
@@ -233,6 +235,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 
 grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa::rpc::Empty* request, CoSiMa::rpc::Double* response)
 {
+	watchdogInitDone = true;
 	watchdogDoStepCalled = true;
 
 	if (runtimeParameter.log) {
@@ -246,12 +249,12 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		smphSignalCosimaToSR.release();
 		//wait for Scenario Runner
 		smphSignalSRToCosima.acquire();
-		
+
 		//update changes in carla
 		sensorViewer->fetchActorsFromCarla();
 		response->set_value(runtimeParameter.deltaSeconds);
 	}
-	else 
+	else
 	{
 		//independent mode without scenario runner
 		auto timestep = carla->doStep();
@@ -368,7 +371,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 
 float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 {
-	
+
 	if (runtimeParameter.verbose) {
 		std::cout << __FUNCTION__ << std::endl;
 	}
