@@ -1,0 +1,19 @@
+FROM ubuntu:18.04 as carla_osi_service_builder
+MAINTAINER frank.baumgarten@dlr.de
+
+ENV DEBIAN_FRONTEND=noninteractive MAKEFLAGS="-j$(nproc)"
+RUN apt-get update && apt-get install -y build-essential python3-pip git libtbb2 libboost-filesystem-dev && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip
+RUN pip3 install cmake==3.28.1 conan==1.59.0
+
+RUN mkdir carlaosiservice && mkdir carlaosiservice/build
+WORKDIR /carlaosiservice/build
+COPY . /carlaosiservice/
+
+RUN cmake .. -DCMAKE_CXX_STANDARD=14 -DCMAKE_BUILD_TYPE=Release
+RUN cmake --build . --target CARLA_OSI_Service
+
+WORKDIR /
+RUN mkdir logs
+CMD /carlaosiservice/build/bin/CARLA_OSI_Service -log /logs/log.csv

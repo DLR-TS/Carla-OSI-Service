@@ -3,7 +3,9 @@ project ("CARLA OSI Service" CXX)
 
 message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
 
-set(CMAKE_CXX_STANDARD 17)
+if (NOT DEFINED CMAKE_CXX_STANDARD)
+	set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -42,7 +44,7 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 conan_cmake_run(CONANFILE conanfile.txt
                 BASIC_SETUP CMAKE_TARGETS
                 BUILD missing)
-                
+
 # include conan packages for protobuf, catch2, fakeit ...
 include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
 
