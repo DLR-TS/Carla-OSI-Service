@@ -90,7 +90,8 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	return true;
 }
 
-carla::ActorId SensorViewConfiger::getActorIdFromName(std::string roleName) {
+carla::ActorId SensorViewConfiger::getActorIdFromName(std::string& roleName) {
+	std::string roleNameintern = checkForSpawnedID(roleName);
 	auto worldActors = carla->world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
@@ -99,7 +100,7 @@ carla::ActorId SensorViewConfiger::getActorIdFromName(std::string roleName) {
 			vehicleActor->GetAttributes();
 			for (auto& attribute : vehicleActor->GetAttributes()) {
 				if ("role_name" == attribute.GetId()) {
-					if (attribute.GetValue() == roleName) {
+					if (attribute.GetValue() == roleNameintern) {
 						return actor->GetId();
 					}
 				}
@@ -123,4 +124,23 @@ std::string SensorViewConfiger::matchSensorType(SENSORTYPES type, const std::str
 		return "";
 	}
 	return "";
+}
+
+std::string SensorViewConfiger::checkForSpawnedID(std::string& roleName) {
+	if (isNumeric(roleName)) {
+		auto vehicleID = carla->spawnedVehiclesByCarlaOSIService.find(std::stoi(roleName));
+		if (vehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
+			return std::to_string(vehicleID->second);
+		}
+	}
+	return roleName;
+}
+
+bool SensorViewConfiger::isNumeric(const std::string& str) {
+	for (char c : str) {
+		if (!std::isdigit(c)) {
+			return false;
+		}
+	}
+	return true;
 }
