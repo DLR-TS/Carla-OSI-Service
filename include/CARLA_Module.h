@@ -9,6 +9,16 @@
 #include "Utility.h"
 
 class CARLAModule{
+private:
+	bool isNumeric(const std::string& str) {
+		for (char c : str) {
+			if (!std::isdigit(c)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 protected:
 	std::shared_ptr<CARLAInterface> carla;
     RuntimeParameter runtimeParameter;
@@ -19,17 +29,33 @@ protected:
 	*/
 	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
         for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
-            if (spawnedVehicle.second == vehicle->GetId()) {
+            if (spawnedVehicle.second.vehicle == vehicle->GetId()) {
                 return spawnedVehicle.first;
             }
         }
         return 0;
     }
 
+	/*
+	Checks if roleName is a self spawned vehicle.
+	return if true actorId is set accordingly
+	*/
+	bool isSpawnedID(const std::string& roleName, uint32_t& actorId) {
+		if (isNumeric(roleName)) {
+			auto vehicleID = carla->spawnedVehiclesByCarlaOSIService.find(std::stoi(roleName));
+			if (vehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
+				actorId = vehicleID->second.vehicle;
+				return true;
+			}
+		}
+		return false;
+	}
+
 public:
     virtual void initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla){
         this->runtimeParameter = runtimeParams;
         this->carla = carla;
     }
+
 };
 #endif //!CARLAGMODULE_H

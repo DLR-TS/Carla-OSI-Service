@@ -36,6 +36,10 @@ public:
 	*/
 	std::shared_ptr<osi3::SensorViewConfiguration> getLastSensorViewConfiguration();
 
+	/*
+	Destroy all sensors spawmed om external spawned vehicles
+	*/
+	void deleteSpawnedSensorsOnExternalSpawnedVehicles();
 
 private:
 
@@ -44,8 +48,8 @@ private:
 	carla::ActorId getActorIdFromName(const std::string& roleName);
 
 	std::string matchSensorType(const SENSORTYPES type, const std::string& name);
-
-	bool isSpawnedID(const std::string& roleName, uint32_t& actorId);
-
-	bool isNumeric(const std::string& str);
+	/*
+	return false, if sensor is not attached to self spawned vehicle
+	*/
+	bool addSensorIdToStorage(const carla::ActorId& vehicle, const carla::ActorId& sensorId);
 };

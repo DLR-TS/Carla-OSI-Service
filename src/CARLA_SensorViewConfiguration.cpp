@@ -59,7 +59,7 @@ void SensorViewConfiger::trySpawnSensors(std::shared_ptr<SensorViewer> sensorVie
 
 bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor) {
 	auto actorId = getActorIdFromName(runtimeParameter.ego);
-	if (actorId == -1) {//actor is not spawned
+	if (actorId == -1) {//actor is not spawned yet
 		return false;
 	}
 	carla::client::Actor* parent = carla->world->GetActor(actorId).get();
@@ -79,6 +79,9 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 		return false;
 	}
 	auto sensorActor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
+	if (!addSensorIdToStorage(actorId, sensorActor->GetId())) {
+		carla->spawnedSensorsOnExternalSpawnedVehicles.push_back(sensorActor->GetId());
+	}
 
 	std::string index = sensor.prefixed_fmu_variable_name;
 	sensorViewer->sensorCache.emplace(index, nullptr);
@@ -133,22 +136,20 @@ std::string SensorViewConfiger::matchSensorType(const SENSORTYPES type, const st
 	return "";
 }
 
-bool SensorViewConfiger::isSpawnedID(const std::string& roleName, uint32_t& actorId) {
-	if (isNumeric(roleName)) {
-		auto vehicleID = carla->spawnedVehiclesByCarlaOSIService.find(std::stoi(roleName));
-		if (vehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
-			actorId = vehicleID->second;
+bool SensorViewConfiger::addSensorIdToStorage(const carla::ActorId& actorId, const carla::ActorId& sensorId) {
+	for (auto& vehicle : carla->spawnedVehiclesByCarlaOSIService) {
+		if (vehicle.second.vehicle == actorId) {
+			vehicle.second.sensors.push_back(sensorId);
 			return true;
 		}
 	}
 	return false;
 }
 
-bool SensorViewConfiger::isNumeric(const std::string& str) {
-	for (char c : str) {
-		if (!std::isdigit(c)) {
-			return false;
-		}
+void SensorViewConfiger::deleteSpawnedSensorsOnExternalSpawnedVehicles() {
+	for (auto& sensorId : carla->spawnedSensorsOnExternalSpawnedVehicles) {
+		auto sensorActor = carla->world->GetActor(sensorId);
+		if (sensorActor != nullptr) { sensorActor->Destroy(); };
 	}
-	return true;
+	carla->spawnedSensorsOnExternalSpawnedVehicles.clear();
 }
