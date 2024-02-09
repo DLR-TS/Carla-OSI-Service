@@ -68,9 +68,7 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	auto blueprintLibrary = carla->world->GetBlueprintLibrary();
 	auto sensorBP = blueprintLibrary->Find(sensorType);
 
-	carla::geom::Transform transform;
-	//TODO set transform
-	//sensor.sensorViewConfiguration
+	carla::geom::Transform transform = determineTransform(sensor.type, sensor.sensorViewConfiguration);
 
 	auto actor = carla->world->TrySpawnActor(*sensorBP, transform, parent);
 	if (actor == nullptr) {
@@ -121,7 +119,7 @@ bool SensorViewConfiger::getActorIdFromName(const std::string& roleName, carla::
 	return false;
 }
 
-std::string SensorViewConfiger::matchSensorType(const SENSORTYPES type, const std::string& name) {
+std::string SensorViewConfiger::matchSensorType(const SENSORTYPES& type, const std::string& name) {
 	switch (type) {
 	case SENSORTYPES::CAMERA:
 		return "sensor.camera.rgb";
@@ -135,6 +133,44 @@ std::string SensorViewConfiger::matchSensorType(const SENSORTYPES type, const st
 		return "";
 	}
 	return "";
+}
+
+carla::geom::Transform SensorViewConfiger::determineTransform(const SENSORTYPES& type, const osi3::SensorViewConfiguration& config) {
+	osi3::MountingPosition mountingPosition;
+	int size(0);
+	switch (type) {
+	case SENSORTYPES::CAMERA:
+		size = config.camera_sensor_view_configuration().size();
+		if (size) {
+			mountingPosition = config.camera_sensor_view_configuration().at(0).mounting_position();
+		}
+		break;
+	case SENSORTYPES::LIDAR:
+		size = config.lidar_sensor_view_configuration().size();
+		if (size) {
+			mountingPosition = config.lidar_sensor_view_configuration().at(0).mounting_position();
+		}
+		break;
+	case SENSORTYPES::RADAR:
+		size = config.radar_sensor_view_configuration().size();
+		if (size) {
+			mountingPosition = config.radar_sensor_view_configuration().at(0).mounting_position();
+		}
+		break;
+	case SENSORTYPES::ULTRASONIC:
+		size = config.ultrasonic_sensor_view_configuration().size();
+		if (size) {
+			mountingPosition = config.ultrasonic_sensor_view_configuration().at(0).mounting_position();
+		}
+		break;
+	case SENSORTYPES::GENERIC:
+		size = config.generic_sensor_view_configuration().size();
+		if (size) {
+			mountingPosition = config.generic_sensor_view_configuration().at(0).mounting_position();
+		}
+		break;
+	}
+	return Geometry::getInstance()->toCarla(mountingPosition);
 }
 
 bool SensorViewConfiger::addSensorIdToStorage(const carla::ActorId& actorId, const carla::ActorId& sensorId) {

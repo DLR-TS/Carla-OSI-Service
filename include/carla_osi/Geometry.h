@@ -57,6 +57,7 @@ public:
  	std::unique_ptr<osi3::Vector3d> toOSIVelocity(const carla::geom::Vector3D& vector);
 	std::unique_ptr<osi3::MountingPosition> toOSI(const carla::geom::Transform& transform);
 
+	carla::geom::Transform Geometry::toCarla(const osi3::MountingPosition& mountingPosition);
 	carla::geom::Rotation toCarla(const osi3::Orientation3d& orientation);
 	carla::geom::BoundingBox toCarla(const osi3::Dimension3d& dimension, const osi3::Vector3d& position);
 	carla::geom::Location toCarla(const osi3::Vector3d& position);
