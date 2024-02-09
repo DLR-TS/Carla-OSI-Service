@@ -45,7 +45,7 @@ private:
 
 	bool trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor);
 
-	carla::ActorId getActorIdFromName(const std::string& roleName);
+	bool getActorIdFromName(const std::string& roleName, carla::ActorId& actorId);
 
 	std::string matchSensorType(const SENSORTYPES type, const std::string& name);
 	/*

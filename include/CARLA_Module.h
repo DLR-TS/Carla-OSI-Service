@@ -40,11 +40,25 @@ protected:
 	Checks if roleName is a self spawned vehicle.
 	return if true actorId is set accordingly
 	*/
-	bool isSpawnedID(const std::string& roleName, uint32_t& actorId) {
+	bool isSpawnedId(const std::string& roleName, carla::ActorId& actorId) {
 		if (isNumeric(roleName)) {
 			auto vehicleID = carla->spawnedVehiclesByCarlaOSIService.find(std::stoi(roleName));
 			if (vehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
 				actorId = vehicleID->second.vehicle;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool isSpawnedActorId(const carla::ActorId& actorId) {
+		for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
+			if (spawnedVehicle.second.vehicle == actorId) {
+				return true;
+			}
+		}
+		for (auto& spawnedSensor : carla->spawnedSensorsOnExternalSpawnedVehicles) {
+			if (spawnedSensor == actorId) {
 				return true;
 			}
 		}

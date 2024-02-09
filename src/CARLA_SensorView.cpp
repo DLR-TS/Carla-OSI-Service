@@ -106,7 +106,7 @@ void SensorViewer::fetchActorsFromCarla() {
 						actorRole2IDMap.insert(value);
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
-						if (runtimeParameter.carlaSensors && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
+						if (runtimeParameter.carlaSensors && !isSpawnedActorId(addedActor) && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
 							std::cout << "Add already spawned sensor in Carla"  << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
 							std::string index =  "OSMPSensorView" + sensorCache.size();

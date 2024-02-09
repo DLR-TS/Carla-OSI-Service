@@ -58,8 +58,8 @@ void SensorViewConfiger::trySpawnSensors(std::shared_ptr<SensorViewer> sensorVie
 }
 
 bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor) {
-	auto actorId = getActorIdFromName(runtimeParameter.ego);
-	if (actorId == -1) {//actor is not spawned yet
+	carla::ActorId actorId;
+	if (!getActorIdFromName(runtimeParameter.ego, actorId)) {//actor is not spawned yet
 		return false;
 	}
 	carla::client::Actor* parent = carla->world->GetActor(actorId).get();
@@ -94,10 +94,10 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	return true;
 }
 
-carla::ActorId SensorViewConfiger::getActorIdFromName(const std::string& roleName) {
-	uint32_t actorId;
-	if (isSpawnedID(roleName, actorId)) {
-		return actorId;
+bool SensorViewConfiger::getActorIdFromName(const std::string& roleName, carla::ActorId& actorId) {
+
+	if (isSpawnedId(roleName, actorId)) {
+		return true;
 	}
 	
 	//if not spawned by Carla-OSI-Service, check all actors with role_name attribute
@@ -111,13 +111,14 @@ carla::ActorId SensorViewConfiger::getActorIdFromName(const std::string& roleNam
 			for (auto& attribute : vehicleActor->GetAttributes()) {
 				if ("role_name" == attribute.GetId()) {
 					if (attribute.GetValue() == roleName) {
-						return actor->GetId();
+						actorId = actor->GetId();
+						return true;
 					}
 				}
 			}
 		}
 	}
-	return -1;
+	return false;
 }
 
 std::string SensorViewConfiger::matchSensorType(const SENSORTYPES type, const std::string& name) {
