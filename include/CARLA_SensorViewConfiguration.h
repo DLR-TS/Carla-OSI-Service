@@ -45,7 +45,7 @@ private:
 
 	std::string matchSensorType(SENSORTYPES type, const std::string& name);
 
-	std::string checkForSpawnedID(std::string& roleName);
+	uint32_t checkForSpawnedID(std::string& roleName);
 
 	bool isNumeric(const std::string& str);
 };

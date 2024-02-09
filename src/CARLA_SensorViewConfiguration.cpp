@@ -65,7 +65,8 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	carla::client::Actor* parent = carla->world->GetActor(actorId).get();
 
 	std::string sensorType = matchSensorType(sensor.type, sensor.prefixed_fmu_variable_name);
-	auto sensorBP = carla->world->GetBlueprintLibrary()->Find(sensorType);
+	auto blueprintLibrary = carla->world->GetBlueprintLibrary();
+	auto sensorBP = blueprintLibrary->Find(sensorType);
 
 	carla::geom::Transform transform;
 	//TODO set transform
@@ -91,7 +92,13 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 }
 
 carla::ActorId SensorViewConfiger::getActorIdFromName(std::string& roleName) {
-	std::string roleNameintern = checkForSpawnedID(roleName);
+	uint32_t actorId = checkForSpawnedID(roleName);
+	if (actorId != -1) {
+		return actorId;
+	}
+	
+	//if not spawned by Carla-OSI-Service, check all actors with role_name attribute
+
 	auto worldActors = carla->world->GetActors();
 	for (auto actor : *worldActors) {
 		auto typeID = actor->GetTypeId();
@@ -100,7 +107,7 @@ carla::ActorId SensorViewConfiger::getActorIdFromName(std::string& roleName) {
 			vehicleActor->GetAttributes();
 			for (auto& attribute : vehicleActor->GetAttributes()) {
 				if ("role_name" == attribute.GetId()) {
-					if (attribute.GetValue() == roleNameintern) {
+					if (attribute.GetValue() == roleName) {
 						return actor->GetId();
 					}
 				}
@@ -126,14 +133,14 @@ std::string SensorViewConfiger::matchSensorType(SENSORTYPES type, const std::str
 	return "";
 }
 
-std::string SensorViewConfiger::checkForSpawnedID(std::string& roleName) {
+uint32_t SensorViewConfiger::checkForSpawnedID(std::string& roleName) {
 	if (isNumeric(roleName)) {
 		auto vehicleID = carla->spawnedVehiclesByCarlaOSIService.find(std::stoi(roleName));
 		if (vehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
-			return std::to_string(vehicleID->second);
+			vehicleID->second;
 		}
 	}
-	return roleName;
+	return -1;
 }
 
 bool SensorViewConfiger::isNumeric(const std::string& str) {
