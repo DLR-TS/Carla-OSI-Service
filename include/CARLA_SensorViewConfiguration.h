@@ -41,11 +41,11 @@ private:
 
 	bool trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor);
 
-	carla::ActorId getActorIdFromName(std::string& roleName);
+	carla::ActorId getActorIdFromName(const std::string& roleName);
 
-	std::string matchSensorType(SENSORTYPES type, const std::string& name);
+	std::string matchSensorType(const SENSORTYPES type, const std::string& name);
 
-	uint32_t checkForSpawnedID(std::string& roleName);
+	bool isSpawnedID(const std::string& roleName, uint32_t& actorId);
 
 	bool isNumeric(const std::string& str);
 };

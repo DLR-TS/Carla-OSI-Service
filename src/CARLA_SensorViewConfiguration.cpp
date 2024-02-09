@@ -59,7 +59,7 @@ void SensorViewConfiger::trySpawnSensors(std::shared_ptr<SensorViewer> sensorVie
 
 bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor) {
 	auto actorId = getActorIdFromName(runtimeParameter.ego);
-	if (actorId == 0) {//actor is not spawned
+	if (actorId == -1) {//actor is not spawned
 		return false;
 	}
 	carla::client::Actor* parent = carla->world->GetActor(actorId).get();
@@ -91,9 +91,9 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	return true;
 }
 
-carla::ActorId SensorViewConfiger::getActorIdFromName(std::string& roleName) {
-	uint32_t actorId = checkForSpawnedID(roleName);
-	if (actorId != -1) {
+carla::ActorId SensorViewConfiger::getActorIdFromName(const std::string& roleName) {
+	uint32_t actorId;
+	if (isSpawnedID(roleName, actorId)) {
 		return actorId;
 	}
 	
@@ -114,10 +114,10 @@ carla::ActorId SensorViewConfiger::getActorIdFromName(std::string& roleName) {
 			}
 		}
 	}
-	return 0;
+	return -1;
 }
 
-std::string SensorViewConfiger::matchSensorType(SENSORTYPES type, const std::string& name) {
+std::string SensorViewConfiger::matchSensorType(const SENSORTYPES type, const std::string& name) {
 	switch (type) {
 	case SENSORTYPES::CAMERA:
 		return "sensor.camera.rgb";
@@ -133,14 +133,15 @@ std::string SensorViewConfiger::matchSensorType(SENSORTYPES type, const std::str
 	return "";
 }
 
-uint32_t SensorViewConfiger::checkForSpawnedID(std::string& roleName) {
+bool SensorViewConfiger::isSpawnedID(const std::string& roleName, uint32_t& actorId) {
 	if (isNumeric(roleName)) {
 		auto vehicleID = carla->spawnedVehiclesByCarlaOSIService.find(std::stoi(roleName));
 		if (vehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
-			vehicleID->second;
+			actorId = vehicleID->second;
+			return true;
 		}
 	}
-	return -1;
+	return false;
 }
 
 bool SensorViewConfiger::isNumeric(const std::string& str) {
