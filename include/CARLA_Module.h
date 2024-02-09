@@ -56,6 +56,11 @@ protected:
 			if (spawnedVehicle.second.vehicle == actorId) {
 				return true;
 			}
+			for (carla::ActorId& sensorId : spawnedVehicle.second.sensors) {
+				if (sensorId == actorId) {
+					return true;
+				}
+			}
 		}
 		for (auto& spawnedSensor : carla->spawnedSensorsOnExternalSpawnedVehicles) {
 			if (spawnedSensor == actorId) {

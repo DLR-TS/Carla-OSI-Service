@@ -52,6 +52,4 @@ private:
 	return false, if sensor is not attached to self spawned vehicle
 	*/
 	bool addSensorIdToStorage(const carla::ActorId& vehicle, const carla::ActorId& sensorId);
-
-	carla::geom::Transform determineTransform(const SENSORTYPES& type, const osi3::SensorViewConfiguration& config);
 };

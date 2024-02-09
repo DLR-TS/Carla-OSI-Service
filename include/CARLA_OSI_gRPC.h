@@ -141,23 +141,23 @@ private:
 
 		if (sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position(0));
-            sensor.type = GENERIC;	
+			sensor.type = GENERIC;
 		}
 		else if (sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position(0));
-            sensor.type = RADAR;
+			sensor.type = RADAR;
 		}
 		else if (sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position(0));
-            sensor.type = LIDAR;
+			sensor.type = LIDAR;
 		}
 		else if (sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position(0));
-            sensor.type = CAMERA;
+			sensor.type = CAMERA;
 		}
 		else if (sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position(0));
-            sensor.type = ULTRASONIC;
+			sensor.type = ULTRASONIC;
 		}
 		return sensor;
     }
