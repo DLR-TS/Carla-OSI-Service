@@ -72,10 +72,10 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	//TODO set transform
 	//sensor.sensorViewConfiguration
 
-	auto actor = carla->world->TrySpawnActor(sensorBP[0], transform, parent);
+	auto actor = carla->world->TrySpawnActor(*sensorBP, transform, parent);
 	if (actor == nullptr) {
 		std::cerr << "Could not spawn sensor and attach to actor. Actor Id: " << actorId
-			<< " SensorBP: " << sensorBP[0].GetId() << std::endl;
+			<< " SensorBP: " << (*sensorBP).GetId() << std::endl;
 		return false;
 	}
 	auto sensorActor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
