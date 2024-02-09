@@ -258,8 +258,8 @@ void TrafficUpdater::deleteSpawnedVehicles() {
 void TrafficUpdater::deleteSpawnedVehiclesWithSensors(const uint32_t& id, const spawnedActors& actors) {
 	std::cout << "Remove vehicle: " << id << std::endl;
 	for (auto& sensorId : actors.sensors) {
-		auto sensorActor = carla->world->GetActor(sensorId);
-		if (sensorActor != nullptr) { sensorActor->Destroy(); };
+		auto sensorActor = boost::dynamic_pointer_cast<carla::client::Sensor>(carla->world->GetActor(sensorId));
+		if (sensorActor != nullptr) { sensorActor->Stop(); sensorActor->Destroy(); };
 	}
 	auto vehicleActor = carla->world->GetActor(actors.vehicle);
 	if (vehicleActor != nullptr) { vehicleActor->Destroy(); };
