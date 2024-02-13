@@ -61,6 +61,7 @@ public:
 	carla::geom::Rotation toCarla(const osi3::Orientation3d& orientation);
 	carla::geom::BoundingBox toCarla(const osi3::Dimension3d& dimension, const osi3::Vector3d& position);
 	carla::geom::Location toCarla(const osi3::Vector3d& position);
+	float Geometry::toCarla(const double& rad);
  	carla::geom::Location toCarlaVelocity(const osi3::Vector3d& position);
 
 	void setOffset(const MapOffset& offset);

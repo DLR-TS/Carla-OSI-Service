@@ -4,11 +4,13 @@
 
 #include <osi_sensorviewconfiguration.pb.h>
 #include <carla/client/BlueprintLibrary.h>
+#include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
 
 #include "boost/bimap.hpp"
 
 #include "CARLA_SensorView.h"
+#include "carla_osi/Geometry.h"
 
 class SensorViewConfiger : public CARLAModule {
 public:
@@ -52,4 +54,9 @@ private:
 	return false, if sensor is not attached to self spawned vehicle
 	*/
 	bool addSensorIdToStorage(const carla::ActorId& vehicle, const carla::ActorId& sensorId);
+
+	void configureBP(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBPCamera(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBPLidar(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBPRadar(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
 };
