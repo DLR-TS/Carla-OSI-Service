@@ -64,12 +64,12 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
 	auto iter = sensorCache.find(sensorName);
-	if (iter == sensorCache.end()) {
+	if (iter == sensorCache.end() || iter->second == nullptr) {
 		return nullptr;
 	}
 	iter->second->mutable_global_ground_truth()->MergeFrom(*groundTruthCreator->getLatestGroundTruth());
 	iter->second->mutable_timestamp()->CopyFrom(iter->second->global_ground_truth().timestamp());
-	iter->second->mutable_host_vehicle_data()->CopyFrom(iter->second->global_ground_truth().host_vehicle_id());
+	iter->second->mutable_host_vehicle_id()->CopyFrom(iter->second->global_ground_truth().host_vehicle_id());
 	return iter->second;
 }
 
