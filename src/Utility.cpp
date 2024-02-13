@@ -237,10 +237,9 @@ std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtilit
 	return lightState;
 }
 
-osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
+osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::data::Image> image)
 {
 	//Contains RGBA uint8 values
-	auto image = boost::dynamic_pointer_cast<const carla::sensor::data::Image>(sensorData);
 	if (!image) return nullptr;
 	auto height = image->GetHeight();
 	auto width = image->GetWidth();
@@ -267,7 +266,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	boost::gil::copy_and_convert_pixels(rgbaView, rgbView);
 
 	//Debug
-	boost::gil::write_view("CARLA_camera_image.png", rgbView, boost::gil::png_tag());
+	//boost::gil::write_view("CARLA_camera_image_" + std::to_string(rand()) + ".png", rgbView, boost::gil::png_tag());
 
 	// Fill OSI CameraSensorView Message
 	osi3::CameraSensorView* cameraSensorView = new osi3::CameraSensorView();
@@ -288,7 +287,6 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
 	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
-
 
 	return cameraSensorView;
 }

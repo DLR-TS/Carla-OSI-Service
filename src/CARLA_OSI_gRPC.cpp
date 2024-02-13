@@ -295,10 +295,6 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
 		message = sensorViewConfiger->getLastSensorViewConfiguration();
 	}
-	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
-		// OSMPSensorView
-		message = sensorViewer->getSensorView(base_name);
-	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
 		// OSMPGroundTruthInit
 		message = sensorViewer->groundTruthCreator->getLatestGroundTruth();
@@ -311,6 +307,9 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		} else {
 			message = trafficCommandForEgoVehicle;
 		}
+	} else {
+		// OSMPSensorView by spawned sensor
+		message = sensorViewer->getSensorView(base_name);
 	}
 
 	// if the CARLA OSI interface did provide a message, return its string serialization;

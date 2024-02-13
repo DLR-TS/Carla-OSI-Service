@@ -67,6 +67,9 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 	if (iter == sensorCache.end()) {
 		return nullptr;
 	}
+	iter->second->mutable_global_ground_truth()->MergeFrom(*groundTruthCreator->getLatestGroundTruth());
+	iter->second->mutable_timestamp()->CopyFrom(iter->second->global_ground_truth().timestamp());
+	iter->second->mutable_host_vehicle_data()->CopyFrom(iter->second->global_ground_truth().host_vehicle_id());
 	return iter->second;
 }
 
