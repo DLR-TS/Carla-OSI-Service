@@ -306,7 +306,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 			upperFov = std::stod(attribute.GetValue());
 		}
 		else if ("lower_fov" == attribute.GetId()) {
-			upperFov = std::stod(attribute.GetValue());
+			lowerFov = std::stod(attribute.GetValue());
 		}
 	}
 	double vFov;

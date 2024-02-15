@@ -120,6 +120,8 @@ private:
 	From FMU to internal sensor description format
 	*/
 	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+		runtimeParameter.carlaSensors = true;
+
 		Sensor sensor;
 		sensor.sensorViewConfiguration.CopyFrom(sensorViewConfiguration);
 		sensor.id = sensorViewConfiguration.sensor_id().value();
@@ -127,18 +129,23 @@ private:
 		//save all mounting bositions in base. Only one sensor possible
 		if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.generic_sensor_view_configuration()[0].mounting_position());
+			runtimeParameter.carlasensortypes.emplace(GENERIC);
 			sensor.type = GENERIC;
 		} else if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.radar_sensor_view_configuration()[0].mounting_position());
+			runtimeParameter.carlasensortypes.emplace(RADAR);
 			sensor.type = RADAR;
 		} else if (sensorViewConfiguration.lidar_sensor_view_configuration_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.lidar_sensor_view_configuration()[0].mounting_position());
+			runtimeParameter.carlasensortypes.emplace(LIDAR);
 			sensor.type = LIDAR;
 		} else if (sensorViewConfiguration.camera_sensor_view_configuration_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.camera_sensor_view_configuration()[0].mounting_position());
+			runtimeParameter.carlasensortypes.emplace(CAMERA);
 			sensor.type = CAMERA;
 		} else if (sensorViewConfiguration.ultrasonic_sensor_view_configuration_size()) {
 			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.ultrasonic_sensor_view_configuration()[0].mounting_position());
+			runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
 			sensor.type = ULTRASONIC;
 		}
         return sensor;
@@ -148,16 +155,20 @@ private:
 	From CoSiMa Configuration to internal sensor description format
 	*/
 	Sensor toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration) {
+		runtimeParameter.carlaSensors = true;
+
 		Sensor sensor;
 		sensor.prefixed_fmu_variable_name = sensorViewConfiguration.prefixed_fmu_variable_name();
 		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position());
 
 		if (sensorViewConfiguration.sensor_type() == "generic") {
 			sensor.type = GENERIC;
+			runtimeParameter.carlasensortypes.emplace(GENERIC);
 			sensor.sensorViewConfiguration.add_generic_sensor_view_configuration();
 		}
 		else if (sensorViewConfiguration.sensor_type() == "radar") {
 			sensor.type = RADAR;
+			runtimeParameter.carlasensortypes.emplace(RADAR);
 			auto* radar = sensor.sensorViewConfiguration.add_radar_sensor_view_configuration();
 			radar->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
 			radar->set_field_of_view_vertical(sensorViewConfiguration.field_of_view_vertical());
@@ -165,6 +176,7 @@ private:
 		}
 		else if (sensorViewConfiguration.sensor_type() == "lidar") {
 			sensor.type = LIDAR;
+			runtimeParameter.carlasensortypes.emplace(LIDAR);
 			auto* lidar = sensor.sensorViewConfiguration.add_lidar_sensor_view_configuration();
 			lidar->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
 			lidar->set_field_of_view_vertical(sensorViewConfiguration.field_of_view_vertical());
@@ -172,13 +184,16 @@ private:
 		}
 		else if (sensorViewConfiguration.sensor_type() == "camera") {
 			sensor.type = CAMERA;
+			runtimeParameter.carlasensortypes.emplace(CAMERA);
 			auto* camera = sensor.sensorViewConfiguration.add_camera_sensor_view_configuration();
 			camera->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
 			camera->set_number_of_pixels_horizontal(sensorViewConfiguration.number_of_pixels_horizontal());
 			camera->set_number_of_pixels_vertical(sensorViewConfiguration.number_of_pixels_vertical());
+			runtimeParameter.carlasensortypes.emplace(CAMERA);
 		}
 		else if (sensorViewConfiguration.sensor_type() == "ultrasonic") {
 			sensor.type = ULTRASONIC;
+			runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
 			sensor.sensorViewConfiguration.add_ultrasonic_sensor_view_configuration();
 		}
 		return sensor;

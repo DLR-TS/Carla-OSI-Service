@@ -86,7 +86,7 @@ carla::geom::Location Geometry::toCarlaVelocity(const osi3::Vector3d& position) 
 }
 
 float Geometry::toCarla(const double& rad) {
-	return rad * 180 * M_1_PI;
+	return (float)(rad * 180 * M_1_PI);
 }
 
 void Geometry::setOffset(const MapOffset& offset) {
