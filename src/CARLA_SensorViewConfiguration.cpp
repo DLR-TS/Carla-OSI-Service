@@ -58,6 +58,11 @@ void SensorViewConfiger::trySpawnSensors(std::shared_ptr<SensorViewer> sensorVie
 }
 
 bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor) {
+	if (sensor.type == SENSORTYPES::GENERIC) {
+		//no specific geometrical sensor can be spawned. information will be provided by a (subset of) groundtruth.
+		return false;
+	}
+
 	carla::ActorId actorId;
 	if (!getActorIdFromName(runtimeParameter.ego, actorId)) {//actor is not spawned yet
 		return false;
@@ -201,7 +206,7 @@ std::string SensorViewConfiger::matchSensorType(const SENSORTYPES& type, const s
 	case SENSORTYPES::LIDAR:
 		return "sensor.lidar.ray_cast";
 	case SENSORTYPES::RADAR:
-		return "";
+		return "sensor.other.radar";
 	case SENSORTYPES::ULTRASONIC:
 		return "";
 	case SENSORTYPES::GENERIC:
