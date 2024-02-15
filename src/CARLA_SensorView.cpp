@@ -65,7 +65,7 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
 	if (runtimeParameter.verbose) {
 		for(auto& s: sensorCache) {
-			std::cout << "SensorCache: " << s << std::endl;
+			std::cout << "SensorCache: " << s.first << std::endl;
 		}
 	}
 
