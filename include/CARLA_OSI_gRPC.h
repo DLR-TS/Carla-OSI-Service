@@ -116,48 +116,70 @@ private:
 	bool watchdogInitDone = false;
 	bool watchdogDoStepCalled = true;
 
+	/**
+	From FMU to internal sensor description format
+	*/
 	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration) {
 		Sensor sensor;
 		sensor.sensorViewConfiguration.CopyFrom(sensorViewConfiguration);
 		sensor.id = sensorViewConfiguration.sensor_id().value();
 
+		//save all mounting bositions in base. Only one sensor possible
 		if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.generic_sensor_view_configuration()[0].mounting_position());
 			sensor.type = GENERIC;
 		} else if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.radar_sensor_view_configuration()[0].mounting_position());
 			sensor.type = RADAR;
 		} else if (sensorViewConfiguration.lidar_sensor_view_configuration_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.lidar_sensor_view_configuration()[0].mounting_position());
 			sensor.type = LIDAR;
 		} else if (sensorViewConfiguration.camera_sensor_view_configuration_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.camera_sensor_view_configuration()[0].mounting_position());
 			sensor.type = CAMERA;
 		} else if (sensorViewConfiguration.ultrasonic_sensor_view_configuration_size()) {
+			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.ultrasonic_sensor_view_configuration()[0].mounting_position());
 			sensor.type = ULTRASONIC;
 		}
         return sensor;
     }
 
+	/**
+	From CoSiMa Configuration to internal sensor description format
+	*/
 	Sensor toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration) {
 		Sensor sensor;
 		sensor.prefixed_fmu_variable_name = sensorViewConfiguration.prefixed_fmu_variable_name();
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position());
 
-		if (sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position(0));
+		if (sensorViewConfiguration.sensor_type() == "generic") {
 			sensor.type = GENERIC;
+			sensor.sensorViewConfiguration.add_generic_sensor_view_configuration();
 		}
-		else if (sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position(0));
+		else if (sensorViewConfiguration.sensor_type() == "radar") {
 			sensor.type = RADAR;
+			auto* radar = sensor.sensorViewConfiguration.add_radar_sensor_view_configuration();
+			radar->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
+			radar->set_field_of_view_vertical(sensorViewConfiguration.field_of_view_vertical());
+			radar->set_emitter_frequency(sensorViewConfiguration.emitter_frequency());
 		}
-		else if (sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position(0));
+		else if (sensorViewConfiguration.sensor_type() == "lidar") {
 			sensor.type = LIDAR;
+			auto* lidar = sensor.sensorViewConfiguration.add_lidar_sensor_view_configuration();
+			lidar->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
+			lidar->set_field_of_view_vertical(sensorViewConfiguration.field_of_view_vertical());
+			lidar->set_emitter_frequency(sensorViewConfiguration.emitter_frequency());
 		}
-		else if (sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position(0));
+		else if (sensorViewConfiguration.sensor_type() == "camera") {
 			sensor.type = CAMERA;
+			auto* camera = sensor.sensorViewConfiguration.add_camera_sensor_view_configuration();
+			camera->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
+			camera->set_number_of_pixels_horizontal(sensorViewConfiguration.number_of_pixels_horizontal());
+			camera->set_number_of_pixels_vertical(sensorViewConfiguration.number_of_pixels_vertical());
 		}
-		else if (sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position(0));
+		else if (sensorViewConfiguration.sensor_type() == "ultrasonic") {
 			sensor.type = ULTRASONIC;
+			sensor.sensorViewConfiguration.add_ultrasonic_sensor_view_configuration();
 		}
 		return sensor;
     }
