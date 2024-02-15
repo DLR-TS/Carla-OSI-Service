@@ -63,6 +63,12 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 {
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
+	if (runtimeParameter.verbose) {
+		for(auto& s: sensorCache) {
+			std::cout << "SensorCache: " << s << std::endl;
+		}
+	}
+
 	auto iter = sensorCache.find(sensorName);
 	if (iter == sensorCache.end() || iter->second == nullptr) {
 		return nullptr;

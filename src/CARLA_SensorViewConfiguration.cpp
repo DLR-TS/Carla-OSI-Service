@@ -8,35 +8,35 @@ std::shared_ptr<osi3::SensorViewConfiguration> SensorViewConfiger::getLastSensor
 	case GENERIC:
 	{
 		auto* c = appliedSensorConfig->add_generic_sensor_view_configuration();
-		c->CopyFrom(sensorConfiguration.sensorViewConfiguration);
+		c->CopyFrom(sensorConfiguration.sensorViewConfiguration.generic_sensor_view_configuration()[0]);
 		c->mutable_sensor_id()->set_value(sensorConfiguration.id);
 		break;
 	}
 	case RADAR:
 	{
 		auto* c = appliedSensorConfig->add_radar_sensor_view_configuration();
-		c->CopyFrom(sensorConfiguration.sensorViewConfiguration);
+		c->CopyFrom(sensorConfiguration.sensorViewConfiguration.radar_sensor_view_configuration()[0]);
 		c->mutable_sensor_id()->set_value(sensorConfiguration.id);
 		break;
 	}
 	case LIDAR:
 	{
 		auto* c = appliedSensorConfig->add_lidar_sensor_view_configuration();
-		c->CopyFrom(sensorConfiguration.sensorViewConfiguration);
+		c->CopyFrom(sensorConfiguration.sensorViewConfiguration.lidar_sensor_view_configuration()[0]);
 		c->mutable_sensor_id()->set_value(sensorConfiguration.id);
 		break;
 	}
 	case CAMERA:
 	{
-		auto* c = appliedSensorConfig->add_camera_sensor_view_configuration();
-		c->CopyFrom(sensorConfiguration.sensorViewConfiguration);
+		auto* c = appliedSensorConfig->add_camera_sensor_view_configuration();;
+		c->CopyFrom(sensorConfiguration.sensorViewConfiguration.camera_sensor_view_configuration()[0]);
 		c->mutable_sensor_id()->set_value(sensorConfiguration.id);
 		break;
 	}
 	case ULTRASONIC:
 	{
 		auto* c = appliedSensorConfig->add_ultrasonic_sensor_view_configuration();
-		c->CopyFrom(sensorConfiguration.sensorViewConfiguration);
+		c->CopyFrom(sensorConfiguration.sensorViewConfiguration.ultrasonic_sensor_view_configuration()[0]);
 		c->mutable_sensor_id()->set_value(sensorConfiguration.id);
 		break;
 	}

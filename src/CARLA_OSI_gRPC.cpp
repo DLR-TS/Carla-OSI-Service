@@ -327,8 +327,9 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		return iter->second;
 	}
 	else {
-		std::cerr << __FUNCTION__ << ": Could not find a variable named " << base_name << " in Carla." << std::endl;
-		return "";
+		//generic sensor
+		message = sensorViewer->getSensorViewGroundTruth(base_name);
+		return message->SerializeAsString();
 	}
 }
 
@@ -402,12 +403,7 @@ Sensor CARLA_OSI_client::toSensorDescriptionInternal(osi3::SensorViewConfigurati
 	sensor.id = sensorViewConfiguration.sensor_id().value();
 
 	//save all mounting bositions in base. Only one sensor possible
-	if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
-		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.generic_sensor_view_configuration()[0].mounting_position());
-		runtimeParameter.carlasensortypes.emplace(GENERIC);
-		sensor.type = GENERIC;
-	}
-	else if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
+	if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
 		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.radar_sensor_view_configuration()[0].mounting_position());
 		runtimeParameter.carlasensortypes.emplace(RADAR);
 		sensor.type = RADAR;
@@ -426,6 +422,11 @@ Sensor CARLA_OSI_client::toSensorDescriptionInternal(osi3::SensorViewConfigurati
 		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.ultrasonic_sensor_view_configuration()[0].mounting_position());
 		runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
 		sensor.type = ULTRASONIC;
+	}
+	else if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.generic_sensor_view_configuration()[0].mounting_position());
+		runtimeParameter.carlasensortypes.emplace(GENERIC);
+		sensor.type = GENERIC;
 	}
 	return sensor;
 }
