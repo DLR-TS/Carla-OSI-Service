@@ -39,6 +39,7 @@
 * sensor_view.global_ground_truth.traffic_sign.main_sign.classification.direction_scope
 * sensor_view.global_ground_truth.traffic_sign.main_sign.classification.variability
 * sensor_view.global_ground_truth.traffic_sign.main_sign.classification.value
+
 Additional fields with option --mapnetwork:
 * sensor_view.global_ground_truth.lane.id
 * sensor_view.global_ground_truth.lane.classification.type
@@ -48,6 +49,32 @@ Additional fields with option --mapnetwork:
 * sensor_view.global_ground_truth.lane.classification.right_adjacent_lane_id
 * sensor_view.global_ground_truth.lane_boundary.left_lane_boundary_id
 * sensor_view.global_ground_truth.lane_boundary.right_lane_boundary_id
+
+Additional fields with camera sensor:
+* sensor_view.camera_sensor_view.image_data
+* sensor_view.camera_sensor_view.view_configuration.channel_format
+* sensor_view.camera_sensor_view.view_configuration.field_of_view_horizontal
+* sensor_view.camera_sensor_view.view_configuration.field_of_view_vertical
+* sensor_view.camera_sensor_view.view_configuration.number_of_pixels_horizontal
+* sensor_view.camera_sensor_view.view_configuration.set_number_of_pixels_vertical
+* sensor_view.camera_sensor_view.view_configuration.sensor_id
+* sensor_view.camera_sensor_view.view_configuration.mounting_position
+
+Additional fields with lidar sensor:
+* sensor_view.lidar_sensor_view.view_configuration.emitter_frequency
+* sensor_view.lidar_sensor_view.view_configuration.field_of_view_horizontal
+* sensor_view.lidar_sensor_view.view_configuration.field_of_view_vertical
+* sensor_view.lidar_sensor_view.view_configuration.max_number_of_interactions
+* sensor_view.lidar_sensor_view.view_configuration.num_of_pixels
+* sensor_view.lidar_sensor_view.view_configuration.sensor_id
+* sensor_view.lidar_sensor_view.view_configuration.mounting_position
+
+Additional fields with radar sensor:
+* sensor_view.radar_sensor_view.view_configuration.field_of_view_horizontal
+* sensor_view.radar_sensor_view.view_configuration.field_of_view_vertical
+* sensor_view.radar_sensor_view.view_configuration.max_number_of_interactions
+* sensor_view.radar_sensor_view.view_configuration.sensor_id
+* sensor_view.radar_sensor_view.view_configuration.mounting_position
 
 ### Interpreted Fields in OSI3 TrafficUpdate
 
