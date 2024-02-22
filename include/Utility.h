@@ -5,6 +5,8 @@
 #ifndef CARLAUTILITY_H
 #define CARLAUTILITY_H
 
+#include <unordered_set>
+
 #include <carla/client/Sensor.h>
 #include <carla/client/Vehicle.h>
 #include <carla/client/Walker.h>
@@ -13,6 +15,7 @@
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
+#include <carla/sensor/data/LidarData.h>
 
 #include <osi_sensorview.pb.h>
 
