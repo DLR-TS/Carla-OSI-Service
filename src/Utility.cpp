@@ -278,7 +278,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	auto fov = image->GetFOVAngle() * M_PI / 180.0;
 	config->set_field_of_view_horizontal(fov);
 	// guess vertical fov based on aspect ratio
-	config->set_field_of_view_horizontal(fov / aspect);
+	config->set_field_of_view_vertical(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
@@ -347,6 +347,11 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	//TODO number of rays (horizontal/vertical) of lidar
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
+	//TODO calculate sensor position in vehicle coordinates
+	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
+	// not given in CARLA
+	//config->set_allocated_mounting_position_rmse(rmse)
+
 	return lidarSensorView;
 }
 
@@ -382,7 +387,10 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 	//TODO number of rays (horizontal/vertical)
 	//TODO rx and tx antenna diagrams
 	//TODO calculate sensor position in vehicle coordinates, that is relative to the vehicles rear
-	//config->set_allocated_mounting_position(position)
+
+	//TODO calculate sensor position in vehicle coordinates
+	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
+	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
 
 	return radarSensorview;
