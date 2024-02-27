@@ -4,11 +4,13 @@
 
 #include <osi_sensorviewconfiguration.pb.h>
 #include <carla/client/BlueprintLibrary.h>
+#include <carla/client/ActorBlueprint.h>
 #include <carla/client/ActorList.h>
 
 #include "boost/bimap.hpp"
 
 #include "CARLA_SensorView.h"
+#include "carla_osi/Geometry.h"
 
 class SensorViewConfiger : public CARLAModule {
 public:
@@ -36,12 +38,25 @@ public:
 	*/
 	std::shared_ptr<osi3::SensorViewConfiguration> getLastSensorViewConfiguration();
 
+	/*
+	Destroy all sensors spawmed om external spawned vehicles
+	*/
+	void deleteSpawnedSensorsOnExternalSpawnedVehicles();
 
 private:
 
 	bool trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor);
 
-	carla::ActorId getActorIdFromName(std::string roleName);
+	bool getActorIdFromName(const std::string& roleName, carla::ActorId& actorId);
 
-	std::string matchSensorType(SENSORTYPES type, const std::string& name);
+	std::string matchSensorType(const SENSORTYPES& type, const std::string& name);
+	/*
+	return false, if sensor is not attached to self spawned vehicle
+	*/
+	bool addSensorIdToStorage(const carla::ActorId& vehicle, const carla::ActorId& sensorId);
+
+	void configureBP(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBPCamera(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBPLidar(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBPRadar(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
 };

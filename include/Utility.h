@@ -5,6 +5,8 @@
 #ifndef CARLAUTILITY_H
 #define CARLAUTILITY_H
 
+#include <unordered_set>
+
 #include <carla/client/Sensor.h>
 #include <carla/client/Vehicle.h>
 #include <carla/client/Walker.h>
@@ -13,6 +15,7 @@
 #include <carla/sensor/data/Image.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
+#include <carla/sensor/data/LidarData.h>
 
 #include <osi_sensorview.pb.h>
 
@@ -38,7 +41,7 @@ namespace CarlaUtility {
 
 	osi3::MovingObject_VehicleClassification_Type ParseVehicleType(const std::string& typeName);
 
-	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
+	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::data::Image> image);
 	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
 

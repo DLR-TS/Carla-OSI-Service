@@ -1,7 +1,14 @@
 # CARLA OSI Service
 
 CARLA OSI Sercive is a client service for [CARLA](https://github.com/carla-simulator/carla).
-It translates the world into Ground Truth OSI message and updates traffic participants by TrafficUpdate OSI Message.
+It communicates with [ASAM OSI](https://www.asam.net/standards/detail/osi/) messages:
+
+ - Ground Truth 
+ - Sensor View for generic sensors and [CARLA sensors](https://carla.readthedocs.io/en/0.9.13/ref_sensors/)
+ - Sensor View Configuration
+ - Traffic Command
+ - Traffic Update
+
 Carla OSI Service is used as a base simulator in [CoSiMa](https://github.com/DLR-TS/CoSiMa) and can synchronize with Carla and Carla Scenario Runner with OSI controller [OSTAR Version](https://github.com/DLR-TS/scenario_runner/tree/ostar).
 
 Many different configurations are available through runtime parameters.
@@ -11,7 +18,7 @@ The complete list of inputs and outputs can be found [here](https://github.com/D
 
 ## Linux
 
-install [conan](https://conan.io/)
+install [conan 1.x](https://conan.io/)
 
 in root folder:
 ```sh
@@ -28,7 +35,7 @@ in root folder:
 
 ## Windows with MSVC 2017
 
-Install [conan](https://conan.io/) \
+Install [conan 1.x](https://conan.io/) \
 Add conan.exe to PATH environment variable \
 Open the folder in Visual Studio and use the cmake integration.
 

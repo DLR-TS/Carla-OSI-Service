@@ -203,6 +203,10 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	if (runtimeParameter.resumeCarlaAsyncSeconds != 0) {//option is active
 		watchdog_thread = std::make_unique<std::thread>(&CARLA_OSI_client::watchdog, this);
 	}
+	//check for sensors configured by cosima configuration
+	for (auto& sensorViewExtra : config->sensor_view_extras()) {
+		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
+	}
 
 	response->set_value(carla->initialise(runtimeParameter));
 	trafficUpdater->initialise(runtimeParameter, carla);
@@ -210,12 +214,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	sensorViewConfiger->initialise(runtimeParameter, carla);
 	logger->initialise(runtimeParameter, carla);
 
-	for (auto& sensorViewExtra : config->sensor_view_extras()) {
-		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
-	}
 	sensorViewConfiger->trySpawnSensors(sensorViewer);
-
-	//special initialization
 	sensorViewer->groundTruthCreator->parseStationaryMapObjects();
 
 	carla->doStep();
@@ -295,10 +294,6 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
 		message = sensorViewConfiger->getLastSensorViewConfiguration();
 	}
-	else if (std::string::npos != base_name.rfind("OSMPSensorView", 0)) {
-		// OSMPSensorView
-		message = sensorViewer->getSensorView(base_name);
-	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
 		// OSMPGroundTruthInit
 		message = sensorViewer->groundTruthCreator->getLatestGroundTruth();
@@ -311,6 +306,9 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		} else {
 			message = trafficCommandForEgoVehicle;
 		}
+	} else {
+		// OSMPSensorView by spawned sensor
+		message = sensorViewer->getSensorView(base_name);
 	}
 
 	// if the CARLA OSI interface did provide a message, return its string serialization;
@@ -329,8 +327,9 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		return iter->second;
 	}
 	else {
-		std::cerr << __FUNCTION__ << ": Could not find a variable named " << base_name << " in Carla." << std::endl;
-		return "";
+		//generic sensor
+		message = sensorViewer->getSensorViewGroundTruth(base_name);
+		return message->SerializeAsString();
 	}
 }
 
@@ -395,3 +394,83 @@ float CARLA_OSI_client::saveTrafficCommand(const osi3::TrafficCommand & command)
 }
 
 //END OF ::srunner::osi::client::OSIVehicleController::Service
+
+Sensor CARLA_OSI_client::toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration) {
+	runtimeParameter.carlaSensors = true;
+
+	Sensor sensor;
+	sensor.sensorViewConfiguration.CopyFrom(sensorViewConfiguration);
+	sensor.id = sensorViewConfiguration.sensor_id().value();
+
+	//save all mounting bositions in base. Only one sensor possible
+	if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.radar_sensor_view_configuration()[0].mounting_position());
+		runtimeParameter.carlasensortypes.emplace(RADAR);
+		sensor.type = RADAR;
+	}
+	else if (sensorViewConfiguration.lidar_sensor_view_configuration_size()) {
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.lidar_sensor_view_configuration()[0].mounting_position());
+		runtimeParameter.carlasensortypes.emplace(LIDAR);
+		sensor.type = LIDAR;
+	}
+	else if (sensorViewConfiguration.camera_sensor_view_configuration_size()) {
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.camera_sensor_view_configuration()[0].mounting_position());
+		runtimeParameter.carlasensortypes.emplace(CAMERA);
+		sensor.type = CAMERA;
+	}
+	else if (sensorViewConfiguration.ultrasonic_sensor_view_configuration_size()) {
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.ultrasonic_sensor_view_configuration()[0].mounting_position());
+		runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
+		sensor.type = ULTRASONIC;
+	}
+	else if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
+		sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.generic_sensor_view_configuration()[0].mounting_position());
+		runtimeParameter.carlasensortypes.emplace(GENERIC);
+		sensor.type = GENERIC;
+	}
+	return sensor;
+}
+
+Sensor CARLA_OSI_client::toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration) {
+	runtimeParameter.carlaSensors = true;
+
+	Sensor sensor;
+	sensor.prefixed_fmu_variable_name = sensorViewConfiguration.prefixed_fmu_variable_name();
+	sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position());
+
+	if (sensorViewConfiguration.sensor_type() == "generic") {
+		sensor.type = GENERIC;
+		runtimeParameter.carlasensortypes.emplace(GENERIC);
+		sensor.sensorViewConfiguration.add_generic_sensor_view_configuration();
+	}
+	else if (sensorViewConfiguration.sensor_type() == "radar") {
+		sensor.type = RADAR;
+		runtimeParameter.carlasensortypes.emplace(RADAR);
+		auto* radar = sensor.sensorViewConfiguration.add_radar_sensor_view_configuration();
+		radar->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
+		radar->set_field_of_view_vertical(sensorViewConfiguration.field_of_view_vertical());
+		radar->set_emitter_frequency(sensorViewConfiguration.emitter_frequency());
+	}
+	else if (sensorViewConfiguration.sensor_type() == "lidar") {
+		sensor.type = LIDAR;
+		runtimeParameter.carlasensortypes.emplace(LIDAR);
+		auto* lidar = sensor.sensorViewConfiguration.add_lidar_sensor_view_configuration();
+		lidar->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
+		lidar->set_field_of_view_vertical(sensorViewConfiguration.field_of_view_vertical());
+		lidar->set_emitter_frequency(sensorViewConfiguration.emitter_frequency());
+	}
+	else if (sensorViewConfiguration.sensor_type() == "camera") {
+		sensor.type = CAMERA;
+		runtimeParameter.carlasensortypes.emplace(CAMERA);
+		auto* camera = sensor.sensorViewConfiguration.add_camera_sensor_view_configuration();
+		camera->set_field_of_view_horizontal(sensorViewConfiguration.field_of_view_horizontal());
+		camera->set_number_of_pixels_horizontal(sensorViewConfiguration.number_of_pixels_horizontal());
+		camera->set_number_of_pixels_vertical(sensorViewConfiguration.number_of_pixels_vertical());
+	}
+	else if (sensorViewConfiguration.sensor_type() == "ultrasonic") {
+		sensor.type = ULTRASONIC;
+		runtimeParameter.carlasensortypes.emplace(ULTRASONIC);
+		sensor.sensorViewConfiguration.add_ultrasonic_sensor_view_configuration();
+	}
+	return sensor;
+}

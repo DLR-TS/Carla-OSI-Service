@@ -116,52 +116,15 @@ private:
 	bool watchdogInitDone = false;
 	bool watchdogDoStepCalled = true;
 
-	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration) {
-		Sensor sensor;
-		sensor.sensorViewConfiguration.CopyFrom(sensorViewConfiguration);
-		sensor.id = sensorViewConfiguration.sensor_id().value();
+	/**
+	From FMU to internal sensor description format
+	*/
+	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration);
 
-		if (sensorViewConfiguration.generic_sensor_view_configuration_size()) {
-			sensor.type = GENERIC;
-		} else if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
-			sensor.type = RADAR;
-		} else if (sensorViewConfiguration.lidar_sensor_view_configuration_size()) {
-			sensor.type = LIDAR;
-		} else if (sensorViewConfiguration.camera_sensor_view_configuration_size()) {
-			sensor.type = CAMERA;
-		} else if (sensorViewConfiguration.ultrasonic_sensor_view_configuration_size()) {
-			sensor.type = ULTRASONIC;
-		}
-        return sensor;
-    }
-
-	Sensor toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration) {
-		Sensor sensor;
-		sensor.prefixed_fmu_variable_name = sensorViewConfiguration.prefixed_fmu_variable_name();
-
-		if (sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().generic_sensor_mounting_position(0));
-            sensor.type = GENERIC;	
-		}
-		else if (sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().radar_sensor_mounting_position(0));
-            sensor.type = RADAR;
-		}
-		else if (sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().lidar_sensor_mounting_position(0));
-            sensor.type = LIDAR;
-		}
-		else if (sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().camera_sensor_mounting_position(0));
-            sensor.type = CAMERA;
-		}
-		else if (sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position_size()) {
-			sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position().ultrasonic_sensor_mounting_position(0));
-            sensor.type = ULTRASONIC;
-		}
-		return sensor;
-    }
-
+	/**
+	From CoSiMa Configuration to internal sensor description format
+	*/
+	Sensor toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration);
 };
 
 #endif //!CARLAOSIGRPC_H

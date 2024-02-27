@@ -11,6 +11,11 @@
 
 #include "ParameterDefinitions.h"
 
+struct spawnedActors {
+	uint32_t vehicle;
+	std::vector<uint32_t> sensors;
+};
+
 class CARLAInterface{
 
     RuntimeParameter runtimeParameter;
@@ -27,7 +32,9 @@ public:
     //Vehicles are spawned and destroyed by TrafficUpdater.
     //Information about vehicles is needed by GroundTruth creation.
 	//So they are stored here.
-    std::map<OSIVehicleID, uint32_t> spawnedVehiclesByCarlaOSIService; //ID in Carla
+    std::map<OSIVehicleID, spawnedActors> spawnedVehiclesByCarlaOSIService; //ID in Carla
+
+	std::vector<uint32_t> spawnedSensorsOnExternalSpawnedVehicles;
 
 	/**
 	* initialise the interface with the given parameters and connect to the carla server

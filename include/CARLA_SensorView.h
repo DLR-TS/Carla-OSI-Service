@@ -42,7 +42,7 @@ public:
 
 	/**
 	Retrieve CARLA Sensor output from the sensor with the given index. Messages are cached and updated during a sensor's tick.
-	\param sensor OSMPSensorView + index
+	\param configured sensorname
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
 	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensorName);

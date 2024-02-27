@@ -41,7 +41,7 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 	}
 
 	carla::ActorId actorId;
-	std::vector<int> listOfUpdatedVehicles;
+	std::vector<uint32_t> listOfUpdatedVehicles;
 
 	for (auto& update : trafficUpdate.update()) {
 #if defined(_WIN32) && (_MSC_VER >= 1910) || defined(__linux__) && __cplusplus >= 201703L
@@ -58,7 +58,7 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 			std::cout << "Actor not found! No position updates will be done!" << std::endl;
 			return 0;
 		}
-		listOfUpdatedVehicles.push_back(int(update.id().value()));
+		listOfUpdatedVehicles.push_back(uint32_t(update.id().value()));
 		if (!spawned) { //let vehicle spawn and run with doStep, then do normal traffic updates
 			applyTrafficUpdateToActor(update, actor, actorId);
 		}
@@ -67,13 +67,13 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 	return 0;
 }
 
-void TrafficUpdater::removeSpawnedVehiclesIfNotUpdated(std::vector<int>& listOfUpdatedVehicles){
+void TrafficUpdater::removeSpawnedVehiclesIfNotUpdated(std::vector<uint32_t>& listOfUpdatedVehicles){
     auto it = carla->spawnedVehiclesByCarlaOSIService.begin();
     while (it != carla->spawnedVehiclesByCarlaOSIService.end()) {
 
         if (std::find(listOfUpdatedVehicles.begin(), listOfUpdatedVehicles.end(), it->first) == listOfUpdatedVehicles.end()) {
-			std::cout << "No update for vehicle: " << it->first << " Will stop the display of this vehicle." << std::endl;
-			carla->world->GetActor(it->second)->Destroy();
+			std::cout << "No update for vehicle: " << unsigned(it->first) << " Will stop the display of this vehicle." << std::endl;
+			deleteSpawnedVehiclesWithSensors(it->first, it->second);
             it = carla->spawnedVehiclesByCarlaOSIService.erase(it);
         } else {
             ++it;
@@ -85,7 +85,7 @@ std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVe
 	auto spawndVehicleID = carla->spawnedVehiclesByCarlaOSIService.find(update.id().value());
 
 	if (spawndVehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
-		return {false, carla->world->GetActor(spawndVehicleID->second)};
+		return {false, carla->world->GetActor(spawndVehicleID->second.vehicle)};
 	} else {
 		std::string vehicleName = determineVehicleName(update);
 		carla::geom::Transform transform = determineTransform(update);
@@ -99,8 +99,9 @@ std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVe
 		if (actor == nullptr) {
 			std::cerr << "Could not spawn actor!" << std::endl;
 		}
-
-		carla->spawnedVehiclesByCarlaOSIService.emplace(update.id().value(), actor->GetId());
+		spawnedActors vehicle;
+		vehicle.vehicle = actor->GetId();
+		carla->spawnedVehiclesByCarlaOSIService.emplace(update.id().value(), vehicle);
 		return {true, actor};
 	}
 }
@@ -249,7 +250,17 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 
 void TrafficUpdater::deleteSpawnedVehicles() {
 	for (auto& vehicle : carla->spawnedVehiclesByCarlaOSIService) {
-		std::cout << "Remove vehicle: " << vehicle.first << std::endl;
-		carla->world->GetActor(vehicle.second)->Destroy();
+		deleteSpawnedVehiclesWithSensors(vehicle.first, vehicle.second);
 	}
+	carla->spawnedVehiclesByCarlaOSIService.clear();
+}
+
+void TrafficUpdater::deleteSpawnedVehiclesWithSensors(const uint32_t& id, const spawnedActors& actors) {
+	std::cout << "Remove vehicle: " << id << std::endl;
+	for (auto& sensorId : actors.sensors) {
+		auto sensorActor = boost::dynamic_pointer_cast<carla::client::Sensor>(carla->world->GetActor(sensorId));
+		if (sensorActor != nullptr) { sensorActor->Stop(); sensorActor->Destroy(); };
+	}
+	auto vehicleActor = carla->world->GetActor(actors.vehicle);
+	if (vehicleActor != nullptr) { vehicleActor->Destroy(); };
 }

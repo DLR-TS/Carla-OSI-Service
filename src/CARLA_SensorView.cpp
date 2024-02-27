@@ -63,10 +63,19 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 {
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
+	if (runtimeParameter.verbose) {
+		for(auto& s: sensorCache) {
+			std::cout << "SensorCache: " << s.first << std::endl;
+		}
+	}
+
 	auto iter = sensorCache.find(sensorName);
-	if (iter == sensorCache.end()) {
+	if (iter == sensorCache.end() || iter->second == nullptr) {
 		return nullptr;
 	}
+	iter->second->mutable_global_ground_truth()->MergeFrom(*groundTruthCreator->getLatestGroundTruth());
+	iter->second->mutable_timestamp()->CopyFrom(iter->second->global_ground_truth().timestamp());
+	iter->second->mutable_host_vehicle_id()->CopyFrom(iter->second->global_ground_truth().host_vehicle_id());
 	return iter->second;
 }
 
@@ -106,7 +115,7 @@ void SensorViewer::fetchActorsFromCarla() {
 						actorRole2IDMap.insert(value);
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
-						if (runtimeParameter.carlaSensors && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
+						if (runtimeParameter.carlaSensors && !isSpawnedActorId(addedActor) && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
 							std::cout << "Add already spawned sensor in Carla"  << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
 							std::string index =  "OSMPSensorView" + sensorCache.size();
