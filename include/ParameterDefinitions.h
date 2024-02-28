@@ -72,10 +72,16 @@ struct ReplayParameter {
 	std::string spawnCarByName;
 };
 
+struct ScenarioRunnerSettings {
+	//nearly stock scenario runner implementation
+	bool doesTick = false;
+	//specific scenario runner implementation in SetLevel
+	bool doesTickSL = false;
+};
+
 struct RuntimeParameter {
 	bool sync = true;
 	bool verbose = false;
-	bool scenarioRunnerDoesTick = false;
 	bool filter = false;
 	std::string filterString = "";
 	bool log = false;
@@ -89,6 +95,7 @@ struct RuntimeParameter {
 	bool mapNetworkInGroundTruth = false;
 
 	ReplayParameter replay;
+	ScenarioRunnerSettings scenarioRunner;
 
 	std::string carlaHost = "localhost";
 	int carlaPort;

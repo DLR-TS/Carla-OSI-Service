@@ -24,6 +24,10 @@ void CARLAInterface::loadWorld() {
 }
 
 void CARLAInterface::applyWorldSettings() {
+	if (runtimeParameter.scenarioRunner.doesTick) {
+		std::cout << "No settings applied because scenario runner should be active." << std::endl;
+		return;
+	}
 	auto settings = world->GetSettings();
 	//set sync or async operational mode
 	settings.synchronous_mode = runtimeParameter.sync;
@@ -42,6 +46,10 @@ void CARLAInterface::applyWorldSettings() {
 }
 
 void CARLAInterface::resetWorldSettings() {
+	if (runtimeParameter.scenarioRunner.doesTick) {
+		std::cout << "No settings resetted because scenario runner should be active." << std::endl;
+		return;
+	}
 	auto settings = world->GetSettings();
 	settings.synchronous_mode = false;
 	this->world->ApplySettings(settings, settingsDuration);

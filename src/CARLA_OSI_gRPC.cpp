@@ -62,8 +62,12 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			std::cout << "Running with verbose prints.\n";
 		}
 		else if (parameter == "-sr" || parameter == "--scenariorunner") {
-			runtimeParameter.scenarioRunnerDoesTick = true;
-			std::cout << "Wait for scenario runner connection.\n";
+			runtimeParameter.scenarioRunner.doesTick = true;
+			std::cout << "Carla Scenario Runner does tick.\n";
+		}
+		else if (parameter == "-sl" || parameter == "--setlevel") {
+			runtimeParameter.scenarioRunner.doesTickSL = true;
+			std::cout << "Wait for scenario runner connection SetLevel Mode.\n";
 		}
 		else if (parameter == "-a" || parameter == "--async") {
 			runtimeParameter.sync = false;
@@ -219,8 +223,8 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 
 	carla->doStep();
 
-	if (runtimeParameter.scenarioRunnerDoesTick) {
-		std::cout << "Waiting for connetion of scenario runner." << std::endl;
+	if (runtimeParameter.scenarioRunner.doesTickSL) {
+		std::cout << "Waiting for connetion of scenario runner (SL)." << std::endl;
 		smphSignalSRToCosima.acquire();
 		//data could be changed by a new map loaded by the scenario runner
 		carla->loadWorld();
@@ -242,27 +246,21 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 	}
 
 	sensorViewConfiger->trySpawnSensors(sensorViewer);
+	sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
 
-	if (runtimeParameter.scenarioRunnerDoesTick) {
+	double timestep = runtimeParameter.deltaSeconds;
+
+	if (runtimeParameter.scenarioRunner.doesTickSL) {
 		//Cosima has computed timestep
 		smphSignalCosimaToSR.release();
 		//wait for Scenario Runner
 		smphSignalSRToCosima.acquire();
-
-		//update changes in carla
-		sensorViewer->fetchActorsFromCarla();
-		response->set_value(runtimeParameter.deltaSeconds);
+	} else if (!runtimeParameter.scenarioRunner.doesTick) {
+		//independent mode without scenario runner does trigger doStep
+		timestep = carla->doStep();
 	}
-	else
-	{
-		//independent mode without scenario runner
-		auto timestep = carla->doStep();
-		sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
-		//update changes in carla
-		sensorViewer->fetchActorsFromCarla();
-		response->set_value(timestep);
-	}
-
+	sensorViewer->fetchActorsFromCarla();
+	response->set_value(timestep);
 	return grpc::Status::OK;
 }
 

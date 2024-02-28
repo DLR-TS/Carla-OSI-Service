@@ -105,7 +105,15 @@ additional_parameter: "-sr"
 additional_parameter: "--scenariorunner"
 ```
 
-Waiting for connection of the Scenariorunner.
+Carla Scenario Runner does tick and sets step size.
+The configured stepsize in this config is not used.
+
+```
+additional_parameter: "-sl"
+additional_parameter: "--setlevel"
+```
+
+This enables TrafficCommand Message receving from Carla Scenario Runner.
 
 ```
 additional_parameter: "-a"
