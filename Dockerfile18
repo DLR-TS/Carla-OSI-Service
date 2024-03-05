@@ -1,11 +1,6 @@
-FROM ubuntu:18.04 as carla_osi_service_builder
+FROM ostar:core_builder as carla_osi_service_builder
 MAINTAINER frank.baumgarten@dlr.de
-
-ENV DEBIAN_FRONTEND=noninteractive MAKEFLAGS="-j$(nproc)"
-RUN apt-get update && apt-get install -y build-essential python3-pip git libtbb2 && rm -rf /var/lib/apt/lists/*
-
-RUN python3 -m pip install --upgrade pip
-RUN pip3 install cmake==3.28.1 conan==1.59.0
+#build image ostar:core_builder with Dockerfile4OstarCore
 
 RUN mkdir carlaosiservice && mkdir carlaosiservice/build
 WORKDIR /carlaosiservice/build
