@@ -434,6 +434,7 @@ Sensor CARLA_OSI_client::toSensorDescriptionInternal(const CoSiMa::rpc::OSISenso
 
 	Sensor sensor;
 	sensor.prefixed_fmu_variable_name = sensorViewConfiguration.prefixed_fmu_variable_name();
+	sensor.parent = sensorViewConfiguration.parent_name();
 	sensor.sensorViewConfiguration.mutable_mounting_position()->CopyFrom(sensorViewConfiguration.sensor_mounting_position());
 
 	if (sensorViewConfiguration.sensor_type() == "generic") {

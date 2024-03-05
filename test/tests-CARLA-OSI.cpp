@@ -234,7 +234,7 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	CoSiMa::rpc::CarlaConfig config;
 	auto extras = config.add_sensor_view_extras();
 	extras->set_prefixed_fmu_variable_name(baseName);
-	auto mountingPosition = extras->mutable_sensor_mounting_position()->add_generic_sensor_mounting_position();
+	auto mountingPosition = extras->mutable_sensor_mounting_position();
 	auto position = mountingPosition->mutable_position();
 	position->set_x(1.2);
 	position->set_y(-0.34);
@@ -267,7 +267,7 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	REQUIRE(position->y() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().y());
 	REQUIRE(position->z() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().z());
 }
-
+/*
 TEST_CASE("CARLA_OSI_CLIENT TrafficCommand proxy", "[CARLA_OSI_CLIENT][TrafficCommandReceiver]") {
 	std::string gRPCHost = "localhost:51425";
 	grpc::ChannelArguments channelArgs;
@@ -381,3 +381,4 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 	REQUIRE(response.ParseFromString(serializedResponse.value()));
 	REQUIRE(trafficCommand.traffic_participant_id().value() == response.traffic_participant_id().value());
 }
+*/

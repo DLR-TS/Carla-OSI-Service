@@ -1,5 +1,5 @@
 FROM ubuntu:20.04 as carla_osi_service_builder
-MAINTAINER frank.baumgarten@dlr.de
+LABEL maintainer="frank.baumgarten@dlr.de"
 
 ENV DEBIAN_FRONTEND=noninteractive MAKEFLAGS="-j$(nproc)"
 RUN apt-get update && apt-get install -y cmake build-essential pip git && rm -rf /var/lib/apt/lists/*

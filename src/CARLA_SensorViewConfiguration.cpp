@@ -64,10 +64,25 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 	}
 
 	carla::ActorId actorId;
-	if (!getActorIdFromName(runtimeParameter.ego, actorId)) {//actor is not spawned yet
-		return false;
+	std::string parentActorName = "";
+	carla::client::Actor* parent = nullptr;
+
+	if (sensor.parent != "world" && sensor.parent != "World") {
+		if (sensor.parent == "") {
+			parentActorName = runtimeParameter.ego;
+		}
+		else {
+			parentActorName = sensor.parent;
+		}
+
+		if (!getActorIdFromName(parentActorName, actorId)) {//actor is not spawned yet
+			return false;
+		}
+		parent = carla->world->GetActor(actorId).get();
 	}
-	carla::client::Actor* parent = carla->world->GetActor(actorId).get();
+	else if (runtimeParameter.verbose) {
+		std::cout << "Spawn sensor as a static sensor in world." << std::endl;
+	}
 
 	std::string sensorType = matchSensorType(sensor.type, sensor.prefixed_fmu_variable_name);
 	carla::SharedPtr<carla::client::BlueprintLibrary> blueprintLibrary = carla->world->GetBlueprintLibrary();
@@ -80,7 +95,7 @@ bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorView
 
 	auto actor = carla->world->TrySpawnActor(sensorBP, transform, parent);
 	if (actor == nullptr) {
-		std::cerr << "Could not spawn sensor and attach to actor. Actor Id: " << actorId
+		std::cerr << "Could not spawn sensor. Attach to actor with Actor Id: " << actorId
 			<< " SensorBP: " << (sensorBP).GetId() << std::endl;
 		return false;
 	}

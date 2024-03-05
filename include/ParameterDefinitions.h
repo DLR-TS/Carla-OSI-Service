@@ -52,6 +52,7 @@ struct Sensor {
     SENSORTYPES type;
     osi3::SensorViewConfiguration sensorViewConfiguration;
     std::string prefixed_fmu_variable_name;
+	std::string parent;
     uint64_t id;
 	bool spawned = false;
 };

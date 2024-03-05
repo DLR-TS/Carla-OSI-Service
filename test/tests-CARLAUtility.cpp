@@ -60,7 +60,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
-			std::unique_ptr<osi3::Orientation3d> orientation = carla_osi::geometry::toOSI(rotation);
+			std::unique_ptr<osi3::Orientation3d> orientation = Geometry::getInstance()->toOSI(rotation);
 			REQUIRE(M_PI_4 == orientation->pitch());
 			REQUIRE(M_PI_2 == orientation->yaw());
 			REQUIRE(M_PI == orientation->roll());
@@ -68,7 +68,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 
 		SECTION("Location") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
-			std::unique_ptr<osi3::Vector3d> position = carla_osi::geometry::toOSI(location);
+			std::unique_ptr<osi3::Vector3d> position = Geometry::getInstance()->toOSI(location);
 			REQUIRE(1.2f == position->x());
 			REQUIRE(-3.4f == position->y());
 			REQUIRE(5.6f == position->z());
@@ -78,7 +78,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::Rotation rotation(45, -90, 180);
 			carla::geom::Transform transform(location, rotation);
-			std::unique_ptr<osi3::MountingPosition> mountingPosition = carla_osi::geometry::toOSI(transform);
+			std::unique_ptr<osi3::MountingPosition> mountingPosition = Geometry::getInstance()->toOSI(transform);
 			auto position = mountingPosition->position();
 			auto orientation = mountingPosition->orientation();
 			REQUIRE(1.2f == position.x());
@@ -92,7 +92,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 		SECTION("BoundingBox") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::BoundingBox boundingBox(location, carla::geom::Vector3D(1.f, 2.f, 4.f));
-			auto osiBB = carla_osi::geometry::toOSI(boundingBox);
+			auto osiBB = Geometry::getInstance()->toOSI(boundingBox);
 			REQUIRE(1.2f == osiBB.second->x());
 			REQUIRE(-3.4f == osiBB.second->y());
 			REQUIRE(5.6f == osiBB.second->z());
@@ -155,7 +155,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			orientation.set_pitch(M_PI_4);
 			orientation.set_yaw(M_PI_2);
 			orientation.set_roll(M_PI - M_PI_4);
-			carla::geom::Rotation rotation = carla_osi::geometry::toCarla(orientation);
+			carla::geom::Rotation rotation = Geometry::getInstance()->toCarla(orientation);
 			REQUIRE(45.f == rotation.pitch);
 			REQUIRE(-90.f == rotation.yaw);
 			REQUIRE(135.f == rotation.roll);
@@ -166,7 +166,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			position.set_x(0.1);
 			position.set_y(2.3);
 			position.set_z(4.5);
-			carla::geom::Location location = carla_osi::geometry::toCarla(position);
+			carla::geom::Location location = Geometry::getInstance()->toCarla(position);
 			REQUIRE(0.1f == location.x);
 			REQUIRE(-2.3f == location.y);
 			REQUIRE(4.5f == location.z);
@@ -181,7 +181,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			dimension.set_length(8.);
 			dimension.set_width(4.);
 			dimension.set_height(10.);
-			carla::geom::BoundingBox boundingBox = carla_osi::geometry::toCarla(dimension, position);
+			carla::geom::BoundingBox boundingBox = Geometry::getInstance()->toCarla(dimension, position);
 			REQUIRE(0.1f == boundingBox.location.x);
 			REQUIRE(-2.3f == boundingBox.location.y);
 			REQUIRE(4.5f == boundingBox.location.z);

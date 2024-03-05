@@ -1,5 +1,5 @@
 FROM ostar:core_builder as carla_osi_service_builder
-MAINTAINER frank.baumgarten@dlr.de
+LABEL maintainer="frank.baumgarten@dlr.de"
 #build image ostar:core_builder with Dockerfile4OstarCore
 
 RUN mkdir carlaosiservice && mkdir carlaosiservice/build
