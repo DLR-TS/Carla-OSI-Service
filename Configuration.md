@@ -51,30 +51,44 @@ Additional fields with option --mapnetwork:
 * sensor_view.global_ground_truth.lane_boundary.right_lane_boundary_id
 
 Additional fields with camera sensor:
-* sensor_view.camera_sensor_view.image_data
-* sensor_view.camera_sensor_view.view_configuration.channel_format
+* sensor_view.camera_sensor_view.view_configuration.sensor_id
+* sensor_view.camera_sensor_view.view_configuration.mounting_position
 * sensor_view.camera_sensor_view.view_configuration.field_of_view_horizontal
 * sensor_view.camera_sensor_view.view_configuration.field_of_view_vertical
 * sensor_view.camera_sensor_view.view_configuration.number_of_pixels_horizontal
 * sensor_view.camera_sensor_view.view_configuration.set_number_of_pixels_vertical
-* sensor_view.camera_sensor_view.view_configuration.sensor_id
-* sensor_view.camera_sensor_view.view_configuration.mounting_position
+* sensor_view.camera_sensor_view.view_configuration.channel_format (onyl CHANNEL_FORMAT_RGB_U8_LIN)
+* sensor_view.camera_sensor_view.image_data
 
 Additional fields with lidar sensor:
-* sensor_view.lidar_sensor_view.view_configuration.emitter_frequency
-* sensor_view.lidar_sensor_view.view_configuration.field_of_view_horizontal
-* sensor_view.lidar_sensor_view.view_configuration.field_of_view_vertical
-* sensor_view.lidar_sensor_view.view_configuration.max_number_of_interactions
-* sensor_view.lidar_sensor_view.view_configuration.num_of_pixels
 * sensor_view.lidar_sensor_view.view_configuration.sensor_id
 * sensor_view.lidar_sensor_view.view_configuration.mounting_position
+* sensor_view.lidar_sensor_view.view_configuration.field_of_view_horizontal
+* sensor_view.lidar_sensor_view.view_configuration.field_of_view_vertical
+* sensor_view.lidar_sensor_view.view_configuration.number_of_rays_horizontal
+* sensor_view.lidar_sensor_view.view_configuration.number_of_rays_vertical
+* sensor_view.lidar_sensor_view.view_configuration.max_number_of_interactions
+* sensor_view.lidar_sensor_view.view_configuration.num_of_pixels
+* sensor_view.lidar_sensor_view.view_configuration.emitter_frequency
+* sensor_view.lidar_sensor_view.reflection
+* sensor_view.lidar_sensor_view.reflection.signal_strength
+* sensor_view.lidar_sensor_view.reflection.time_of_flight (simple model)
+* sensor_view.lidar_sensor_view.reflection.normal_to_surface
 
 Additional fields with radar sensor:
-* sensor_view.radar_sensor_view.view_configuration.field_of_view_horizontal
-* sensor_view.radar_sensor_view.view_configuration.field_of_view_vertical
-* sensor_view.radar_sensor_view.view_configuration.max_number_of_interactions
 * sensor_view.radar_sensor_view.view_configuration.sensor_id
 * sensor_view.radar_sensor_view.view_configuration.mounting_position
+* sensor_view.radar_sensor_view.view_configuration.field_of_view_horizontal
+* sensor_view.radar_sensor_view.view_configuration.field_of_view_vertical
+* sensor_view.radar_sensor_view.view_configuration.number_of_rays_horizontal
+* sensor_view.radar_sensor_view.view_configuration.number_of_rays_vertical
+* sensor_view.radar_sensor_view.view_configuration.max_number_of_interactions (1)
+* sensor_view.radar_sensor_view.view_configuration.emitter_frequency
+* sensor_view.radar_sensor_view.reflection
+* sensor_view.radar_sensor_view.reflection.horizontal_angle
+* sensor_view.radar_sensor_view.reflection.vertical_angle
+* sensor_view.radar_sensor_view.reflection.time_of_flight (simple model)
+* sensor_view.radar_sensor_view.reflection.signal_strenght (simple model)
 
 ### Interpreted Fields in OSI3 TrafficUpdate
 

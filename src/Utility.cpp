@@ -281,6 +281,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	config->set_field_of_view_vertical(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
+	config->set_samples_per_pixel(1);
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	//TODO calculate sensor position in vehicle coordinates
@@ -326,7 +327,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	double vFov;
 	if (upperFov && lowerFov) {
 		//upper and lower field of view are given in degree
-		vFov = (upperFov - lowerFov) * M_PI / 180.0;
+		vFov = upperFov - lowerFov;
 	}
 	uint32_t numPixels{0};//OSI field uses uint32_t
 	for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
@@ -338,8 +339,8 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	auto config = lidarSensorView->mutable_view_configuration();
 	
 	config->set_emitter_frequency(rotationFrequency);
-	config->set_field_of_view_vertical(vFov);
-	config->set_field_of_view_horizontal(horizontalFoV);
+	config->set_field_of_view_vertical(vFov * M_PI / 180.0);
+	config->set_field_of_view_horizontal(horizontalFoV * M_PI / 180.0);
 	config->set_max_number_of_interactions(1);
 
 	//TODO OSI expects a constant number of pixels per message, but Carla only reports new values of the angle sweeped during the last frame
@@ -356,15 +357,24 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	for (const carla::sensor::data::LidarDetection& singlemeasure : *measurement)
 	{
 		auto* reflection = lidarSensorView->add_reflection();
-		reflection->set_signal_strength(10 * range / singlemeasure.intensity);//TODO check if signal strength estimation makes sense
+		reflection->set_signal_strength(singlemeasure.intensity);
 		double distance = std::sqrt((double) singlemeasure.point.x * (double)singlemeasure.point.x
 			+ (double) singlemeasure.point.y * (double) singlemeasure.point.y
 			+ (double) singlemeasure.point.z * (double) singlemeasure.point.z);
 		reflection->set_time_of_flight((2 * distance) / 2.99792458e8);//double distance / lightspeed in m/s
 		//reflection->set_doppler_shift(0);//TODO doppler shift calculation set doppler shift
-		//reflection->set_allocated_normal_to_surface();//TODO normal to surface
+		osi3::Vector3d* normalToSurface = new osi3::Vector3d;
+		normalToSurface->set_x(singlemeasure.point.x);
+		normalToSurface->set_y(singlemeasure.point.y);
+		normalToSurface->set_z(singlemeasure.point.z);
+		reflection->set_allocated_normal_to_surface(normalToSurface);
 		//reflection->set_allocated_object_id();//TODO object id
+		//horizontal.insert(singlemeasure.);
+		//vertical.insert(singlemeasure.);
 	}
+
+	//config->set_number_of_rays_horizontal((uint32_t)horizontal.size());
+	//config->set_number_of_rays_vertical((uint32_t)vertical.size());
 
 	return lidarSensorView;
 }
