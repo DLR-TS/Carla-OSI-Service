@@ -8,14 +8,14 @@ OSIVehicleID TrafficCommander::getHeroId() {
             auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
 			OSIVehicleID spawnedVehicleID = vehicleIsSpawned(vehicleActor);
 			if (spawnedVehicleID) {
-				if (runtimeParameter.ego == std::to_string(spawnedVehicleID)) {
+				if (runtimeParameter->ego == std::to_string(spawnedVehicleID)) {
 					return spawnedVehicleID;
 				}
 			}
             //if not spawned by Carla OSI Service the id of Carla object is used
             for (auto& attribute : vehicleActor->GetAttributes()) {
 				if ("role_name" == attribute.GetId()) {
-					if (runtimeParameter.ego == attribute.GetValue()) {
+					if (runtimeParameter->ego == attribute.GetValue()) {
 						return carla_osi::id_mapping::getOSIActorId(vehicleActor).release()->value();
 					}
 				}

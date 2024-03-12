@@ -18,8 +18,8 @@ struct spawnedActors {
 
 class CARLAInterface{
 
-    RuntimeParameter runtimeParameter;
-	
+	std::shared_ptr<RuntimeParameter> runtimeParameter;
+
 	//settings are applied for 1 day
 	std::chrono::duration<int> settingsDuration{ 60 * 60 * 24 };// 86400s
 
@@ -42,7 +42,7 @@ public:
 	* parameters set by start of program
 	* \return Success status.
 	*/
-    int initialise(RuntimeParameter& runtimeParams);
+    int initialise(std::shared_ptr<RuntimeParameter> runtimeParams);
 
 	/**
 	* Load the world from carla (world and map)

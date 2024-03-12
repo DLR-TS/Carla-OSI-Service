@@ -1,8 +1,8 @@
 #include "CARLA_TrafficUpdate.h"
 
-void TrafficUpdater::initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla) {
+void TrafficUpdater::initialise(std::shared_ptr<RuntimeParameter> runtimeParams, std::shared_ptr<CARLAInterface> carla) {
 	CARLAModule::initialise(runtimeParams, carla);
-	if (runtimeParameter.replay.enabled) {
+	if (runtimeParameter->replay.enabled) {
 		saveBoundingBoxesOfAvailableVehicles();
 	}
 }
@@ -23,13 +23,13 @@ void TrafficUpdater::saveBoundingBoxesOfAvailableVehicles() {
 		auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(temp_actor);
 		auto bbox = vehicleActor->GetBoundingBox();
 		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
-		if (runtimeParameter.verbose) {
+		if (runtimeParameter->verbose) {
 			std::cout << "bbox: " << vehicle.GetId() << " Length:" << bbox.extent.x*2 << " Width:" << bbox.extent.y*2 << " Height:" << bbox.extent.z*2 << std::endl;
 		}
 		carla->world->Tick(carla->client->GetTimeout());
 		temp_actor->Destroy();
 	}
-	if (runtimeParameter.verbose) {
+	if (runtimeParameter->verbose) {
 		std::cout << "Number of possible vehicle bounding boxes: " << replayVehicleBoundingBoxes.size() << std::endl;
 	}
 }
@@ -51,7 +51,7 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 #endif
 		auto actor = carla->world->GetActor(actorId);
 		bool spawned = false;
-		if (runtimeParameter.replay.enabled) {
+		if (runtimeParameter->replay.enabled) {
 			std::tie(spawned, actor) = spawnVehicleIfNeeded(update, actorId);
 		}
 		if (actor == nullptr) {
@@ -107,9 +107,9 @@ std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVe
 }
 
 std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& update){
-	if (!runtimeParameter.replay.spawnCarByName.empty()){
+	if (!runtimeParameter->replay.spawnCarByName.empty()){
 		//name set by commandline parameter
-		return runtimeParameter.replay.spawnCarByName;
+		return runtimeParameter->replay.spawnCarByName;
 	} else if (!update.model_reference().empty()) {
 		//name set by TrafficUpdate message
 		return std::string(update.model_reference().c_str());
@@ -117,13 +117,13 @@ std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& updat
 		//name set by best matching size of vehicle
 		return CarlaUtility::findBestMatchingCarToSpawn(
 			update.base().dimension(), replayVehicleBoundingBoxes,
-			runtimeParameter.replay.weightLength_X, runtimeParameter.replay.weightWidth_Y, runtimeParameter.replay.weightHeight_Z);
+			runtimeParameter->replay.weightLength_X, runtimeParameter->replay.weightWidth_Y, runtimeParameter->replay.weightHeight_Z);
 	}
 }
 
 carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObject& update){
 	auto position = Geometry::getInstance()->toCarla(update.base().position());
-	position.z = runtimeParameter.replay.spawnHeight_Z;
+	position.z = runtimeParameter->replay.spawnHeight_Z;
 
 	auto optionalPoint = carla->world->GroundProjection(position);
 	if (optionalPoint) {
@@ -178,7 +178,7 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 			case 1://linear fall per timestep
 				//on flat road looks like an overloaded vehicle
 				position.z = position.z - 0.01f;
-				//position.z -= 0.5 * 9.81 * runtimeParameter.deltaSeconds * runtimeParameter.deltaSeconds;
+				//position.z -= 0.5 * 9.81 * runtimeParameter->deltaSeconds * runtimeParameter->deltaSeconds;
 			break;
 			case 2://fall per timestep with g = 9.81
 			GravityEntry gravityEntry;
@@ -188,8 +188,8 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 				} else {
 					gravityEntry.fallingSteps = 1;
 				}
-				float currentTime = runtimeParameter.deltaSeconds * gravityEntry.fallingSteps;
-				float beforeTime = runtimeParameter.deltaSeconds * gravityEntry.fallingSteps - 1; //is 0 if not falling in last timestep
+				float currentTime = runtimeParameter->deltaSeconds * gravityEntry.fallingSteps;
+				float beforeTime = runtimeParameter->deltaSeconds * gravityEntry.fallingSteps - 1; //is 0 if not falling in last timestep
 				float distance = float(0.5 * (9.81 * currentTime * currentTime) - (9.81 * beforeTime * beforeTime));
 				position.z -= distance;
 				gravityEntry.lastPosition = position.z;
@@ -201,11 +201,11 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 		//do not set pitch an roll of vehicles in asynchronous mode
 		//these would break the visualization
 		//Generally you should not set any positions in an asychronous simulation, since the physics will go crazy because of artificial high accelerations
-		if (!runtimeParameter.sync) {
+		if (!runtimeParameter->sync) {
 			orientation.pitch = actor->GetTransform().rotation.pitch;
 			orientation.roll = actor->GetTransform().rotation.roll;
 		}
-		if (runtimeParameter.verbose) {
+		if (runtimeParameter->verbose) {
 			std::cout << "Apply position: " << position.x << ", " << position.y  << ", " << position.z << ", Yaw: " << orientation.yaw << std::endl;
 		}
 		actor->SetTransform(carla::geom::Transform(position, orientation));

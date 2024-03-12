@@ -8,6 +8,7 @@
 #include <mutex>
 
 #include "boost/bimap.hpp"
+#include "carla/sensor/data/SemanticLidarMeasurement.h"
 
 #include "CARLA_GroundTruth.h"
 
@@ -31,7 +32,7 @@ public:
     std::unique_ptr<GroundTruthCreator> groundTruthCreator = std::make_unique<GroundTruthCreator>();
 	std::map<std::string, std::shared_ptr<osi3::SensorView>> sensorCache;
 
-    virtual void initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla) override {
+    virtual void initialise(std::shared_ptr<RuntimeParameter> runtimeParams, std::shared_ptr<CARLAInterface> carla) override {
         this->runtimeParameter = runtimeParams;
         this->carla = carla;
         groundTruthCreator->initialise(runtimeParams, carla);
@@ -56,7 +57,7 @@ public:
 	/**
 	* Callback function for all Carla sensors
 	*/
-	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, std::string index);
+	void sensorEventAction(carla::SharedPtr<carla::client::Sensor> source, carla::SharedPtr<carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration sensorConfig);
 };
 
 #endif //!CARLASENSORVIEW_H

@@ -25,7 +25,7 @@ class TrafficUpdater : public CARLAModule {
 
 public:
 
-	virtual void initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla) override;
+	virtual void initialise(std::shared_ptr<RuntimeParameter> runtimeParams, std::shared_ptr<CARLAInterface> carla) override;
 
 	/**
 	Read traffic update message from traffic participant and update CARLA actor accordingly

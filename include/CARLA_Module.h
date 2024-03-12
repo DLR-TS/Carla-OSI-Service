@@ -2,8 +2,8 @@
 @authors German Aerospace Center: Björn Bahn
 */
 
-#ifndef CARLAGMODULE_H
-#define CARLAGMODULE_H
+#ifndef CARLAMODULE_H
+#define CARLAMODULE_H
 
 #include "CARLA_Interface.h"
 #include "Utility.h"
@@ -21,7 +21,7 @@ private:
 
 protected:
 	std::shared_ptr<CARLAInterface> carla;
-    RuntimeParameter runtimeParameter;
+    std::shared_ptr<RuntimeParameter> runtimeParameter;
 
     /*
 	Checks if vehicle is spawned by Carla_OSI_Service
@@ -71,10 +71,10 @@ protected:
 	}
 
 public:
-    virtual void initialise(RuntimeParameter& runtimeParams, std::shared_ptr<CARLAInterface> carla){
+    virtual void initialise(std::shared_ptr<RuntimeParameter> runtimeParams, std::shared_ptr<CARLAInterface> carla){
         this->runtimeParameter = runtimeParams;
         this->carla = carla;
     }
 
 };
-#endif //!CARLAGMODULE_H
+#endif //!CARLAMODULE_H

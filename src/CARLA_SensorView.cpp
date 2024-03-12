@@ -17,13 +17,13 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 	//TODO move this code to somewhere else
 	/*auto iter = sensorMountingPositionMap.find(varName);
 	if (sensorMountingPositionMap.end() != iter) {
-		if (runtimeParameter.verbose)
+		if (runtimeParameter->verbose)
 		{
 			std::cout << "Searched successfully for sensor " << varName << " Copy mounting position to sensorview message." << std::endl;
 		}
 		copyMountingPositions(iter->second, sensorView);
 	}
-	else if (runtimeParameter.verbose)
+	else if (runtimeParameter->verbose)
 	{
 		std::cout << "No sensor found with name: " << varName << " Can not set mounting position.\n";
 		if (sensorMountingPositionMap.size() != 0) {
@@ -53,7 +53,7 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}
 
-	if (runtimeParameter.verbose) {
+	if (runtimeParameter->verbose) {
 		std::cout << sensorView->DebugString() << std::endl;
 	}
 	return sensorView;
@@ -63,7 +63,7 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 {
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
-	if (runtimeParameter.verbose) {
+	if (runtimeParameter->verbose) {
 		for(auto& s: sensorCache) {
 			std::cout << "SensorCache: " << s.first << std::endl;
 		}
@@ -115,13 +115,15 @@ void SensorViewer::fetchActorsFromCarla() {
 						actorRole2IDMap.insert(value);
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
-						if (runtimeParameter.carlaSensors && !isSpawnedActorId(addedActor) && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
+						if (runtimeParameter->carlaSensors && !isSpawnedActorId(addedActor) && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
 							std::cout << "Add already spawned sensor in Carla"  << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
 							std::string index =  "OSMPSensorView" + sensorCache.size();
 							std::cout << "Sensorview can be requested by base_name: " << index << std::endl;
+							OSTARSensorConfiguration sensorConfig;
+							sensorConfig.prefixed_fmu_variable_name = index;
 							sensorCache.emplace(index, nullptr);
-							sensor->Listen([this, sensor, index](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, index); });
+							sensor->Listen([this, sensor, sensorConfig](carla::SharedPtr<carla::sensor::SensorData> sensorData) {sensorEventAction(sensor, sensorData, sensorConfig); });
 						}
 					}
 					break;
@@ -131,7 +133,7 @@ void SensorViewer::fetchActorsFromCarla() {
 	}
 }
 
-void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, std::string index)
+void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sensor, carla::SharedPtr<carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration sensorConfig)
 {
 	if (!carla->world) {
 		// Local world object has been destroyed and thus probably also the CARLA OSI interface, but client is still sending
@@ -144,6 +146,11 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 		return;
 	}
 
+	if (sensorConfig.prefixed_fmu_variable_name == "") {
+		std::cerr << __FUNCTION__ << ": received event without a name to save the data to." << std::endl;
+		return;
+	}
+
 	std::unique_ptr<osi3::SensorView> sensorView = std::make_unique<osi3::SensorView>();
 
 	auto typeID = sensor->GetTypeId();
@@ -152,36 +159,36 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 
 	if (0 == sensorType.rfind("camera.rgb", 0))
 	{
-		if (runtimeParameter.carlasensortypes.find(CAMERA) == runtimeParameter.carlasensortypes.end()) {
+		if (runtimeParameter->carlasensortypes.find(CAMERA) == runtimeParameter->carlasensortypes.end()) {
 			return;
 		}
 		auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
-		auto cameraSensorView = CarlaUtility::toOSICamera(sensor, image);
+		auto cameraSensorView = CarlaUtility::toOSICamera(sensor, image, sensorConfig);
 		sensorView->mutable_camera_sensor_view()->AddAllocated(cameraSensorView);
 	}
 	else if (0 == sensorType.rfind("lidar.ray_cast", 0))
 	{
-		if (runtimeParameter.carlasensortypes.find(LIDAR) == runtimeParameter.carlasensortypes.end()) {
+		if (runtimeParameter->carlasensortypes.find(LIDAR) == runtimeParameter->carlasensortypes.end()) {
 			return;
 		}
 		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
-		auto lidarSensorView = CarlaUtility::toOSILidar(sensor, measurement);
+		auto lidarSensorView = CarlaUtility::toOSILidar(sensor, measurement, sensorConfig);
 		sensorView->mutable_lidar_sensor_view()->AddAllocated(lidarSensorView);
 	}
 	else if (0 == sensorType.rfind("other.radar", 0))
 	{
-		if (runtimeParameter.carlasensortypes.find(RADAR) == runtimeParameter.carlasensortypes.end()) {
+		if (runtimeParameter->carlasensortypes.find(RADAR) == runtimeParameter->carlasensortypes.end()) {
 			return;
 		}
 		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
-		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement);
+		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement, sensorConfig);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
-	else if (runtimeParameter.verbose) {
+	else if (runtimeParameter->verbose) {
 		std::cerr << "SensorEventAction called for unsupported sensor type" << std::endl;
 	}
-	sensorCache[index] = std::move(sensorView);
-	if (runtimeParameter.verbose) {
-		std::cout << "Update " << sensorType << " with index " << index << "." << std::endl;
+	sensorCache[sensorConfig.prefixed_fmu_variable_name] = std::move(sensorView);
+	if (runtimeParameter->verbose) {
+		std::cout << "Update " << sensorType << " with index " << sensorConfig.prefixed_fmu_variable_name << "." << std::endl;
 	}
 }

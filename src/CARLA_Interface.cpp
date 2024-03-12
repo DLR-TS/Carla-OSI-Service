@@ -1,12 +1,12 @@
 #include "CARLA_Interface.h"
 
-int CARLAInterface::initialise(RuntimeParameter& runtimeParams) {
+int CARLAInterface::initialise(std::shared_ptr<RuntimeParameter> runtimeParams) {
 	this->runtimeParameter = runtimeParams;
 
 	try {
 		//connect
-		this->client = std::make_unique<carla::client::Client>(runtimeParams.carlaHost, runtimeParams.carlaPort);
-		this->client->SetTimeout(std::chrono::duration<double>(runtimeParams.transactionTimeout));
+		this->client = std::make_unique<carla::client::Client>(runtimeParams->carlaHost, runtimeParams->carlaPort);
+		this->client->SetTimeout(std::chrono::duration<double>(runtimeParams->transactionTimeout));
 
 		loadWorld();
 		applyWorldSettings();
@@ -24,42 +24,43 @@ void CARLAInterface::loadWorld() {
 }
 
 void CARLAInterface::applyWorldSettings() {
-	if (runtimeParameter.scenarioRunner.doesTick) {
+	if (runtimeParameter->scenarioRunner.doesTick) {
 		std::cout << "No settings applied because scenario runner should be active." << std::endl;
+		runtimeParameter->deltaSeconds = (float)world->GetSettings().fixed_delta_seconds.value();
 		return;
 	}
 	auto settings = world->GetSettings();
 	//set sync or async operational mode
-	settings.synchronous_mode = runtimeParameter.sync;
+	settings.synchronous_mode = runtimeParameter->sync;
 
 	if (settings.fixed_delta_seconds.has_value() &&
-		settings.fixed_delta_seconds.value() == runtimeParameter.deltaSeconds &&
+		settings.fixed_delta_seconds.value() == runtimeParameter->deltaSeconds &&
 		settings.synchronous_mode) {
-		if (runtimeParameter.verbose) {
+		if (runtimeParameter->verbose) {
 			std::cout << "Settings of Carla Server are already correct and do not need to be changed" << std::endl;
 		}
 		return;
 	}
-	settings.fixed_delta_seconds = runtimeParameter.deltaSeconds;
+	settings.fixed_delta_seconds = runtimeParameter->deltaSeconds;
 	settings.synchronous_mode = true;
 	this->world->ApplySettings(settings, settingsDuration);
 }
 
 void CARLAInterface::resetWorldSettings() {
-	if (runtimeParameter.scenarioRunner.doesTick) {
+	if (runtimeParameter->scenarioRunner.doesTick) {
 		std::cout << "No settings resetted because scenario runner should be active." << std::endl;
 		return;
 	}
 	auto settings = world->GetSettings();
 	settings.synchronous_mode = false;
 	this->world->ApplySettings(settings, settingsDuration);
-	if (runtimeParameter.verbose) {
+	if (runtimeParameter->verbose) {
 		std::cout << "Reset CARLA World Settings." << std::endl;
 	}
 }
 
 double CARLAInterface::doStep() {
-	if (runtimeParameter.verbose) {
+	if (runtimeParameter->verbose) {
 		std::cout << "Do Step" << std::endl;
 	}
 	if (!world) {
@@ -67,7 +68,7 @@ double CARLAInterface::doStep() {
 		throw std::exception();
 	}
 	//tick not needed if in asynchronous mode
-	if (runtimeParameter.sync) {
+	if (runtimeParameter->sync) {
 		//Length of simulationed tick is set in applyWorldSettings()
 		world->Tick(client->GetTimeout());
 	}

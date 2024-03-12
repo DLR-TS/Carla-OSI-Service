@@ -48,7 +48,7 @@ enum SENSORTYPES
 	CAMERA
 };
 
-struct Sensor {
+struct OSTARSensorConfiguration {
     SENSORTYPES type;
     osi3::SensorViewConfiguration sensorViewConfiguration;
     std::string prefixed_fmu_variable_name;

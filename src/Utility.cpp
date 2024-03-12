@@ -237,7 +237,8 @@ std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtilit
 	return lightState;
 }
 
-osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::data::Image> image)
+osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor,
+	const carla::SharedPtr<const carla::sensor::data::Image> image, const OSTARSensorConfiguration& sensorConfig)
 {
 	//Contains RGBA uint8 values
 	if (!image) return nullptr;
@@ -292,7 +293,8 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	return cameraSensorView;
 }
 
-osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
+osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor,
+	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
 	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::LidarMeasurement>(sensorData);
 	double rotationFrequency, upperFov, lowerFov, range, horizontalFoV, sensorTick;
@@ -334,11 +336,16 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 		numPixels += measurement->GetPointCount(i);
 	}
 
+	double senderHz = OSTAR_LIDAR_DEFAULT_HZ;
+	if (sensorConfig.sensorViewConfiguration.lidar_sensor_view_configuration().size()
+		&& sensorConfig.sensorViewConfiguration.lidar_sensor_view_configuration(0).has_emitter_frequency())
+		senderHz = sensorConfig.sensorViewConfiguration.lidar_sensor_view_configuration(0).emitter_frequency();
+
 	osi3::LidarSensorView* lidarSensorView = new osi3::LidarSensorView();
 
 	auto config = lidarSensorView->mutable_view_configuration();
 	
-	config->set_emitter_frequency(rotationFrequency);
+	config->set_emitter_frequency(senderHz);
 	config->set_field_of_view_vertical(vFov * M_PI / 180.0);
 	config->set_field_of_view_horizontal(horizontalFoV * M_PI / 180.0);
 	config->set_max_number_of_interactions(1);
@@ -361,8 +368,9 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 		double distance = std::sqrt((double) singlemeasure.point.x * (double)singlemeasure.point.x
 			+ (double) singlemeasure.point.y * (double) singlemeasure.point.y
 			+ (double) singlemeasure.point.z * (double) singlemeasure.point.z);
-		reflection->set_time_of_flight((2 * distance) / 2.99792458e8);//double distance / lightspeed in m/s
-		//reflection->set_doppler_shift(0);//TODO doppler shift calculation set doppler shift
+		reflection->set_time_of_flight((2 * distance) / OSTAR_LIGHT_SPEED);//double distance / lightspeed in m/s
+		//double receiverHz = senderHz * (OSTAR_LIGHT_SPEED + singlemeasure.velocity) / (OSTAR_LIGHT_SPEED - singlemeasure.velocity);
+		//reflection->set_doppler_shift(receiverHz - senderHz);
 		osi3::Vector3d* normalToSurface = new osi3::Vector3d;
 		normalToSurface->set_x(singlemeasure.point.x);
 		normalToSurface->set_y(singlemeasure.point.y);
@@ -379,7 +387,8 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	return lidarSensorView;
 }
 
-osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
+osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor,
+	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
 	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::RadarMeasurement>(sensorData);
 	double hFov, vFov, range, sensorTick;
@@ -403,6 +412,11 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 		}
 	}
 
+	double senderHz = OSTAR_RADAR_DEFAULT_HZ;
+	if (sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration().size()
+		&& sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration(0).has_emitter_frequency())
+		senderHz = sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration(0).emitter_frequency();
+
 	auto radarSensorview = new osi3::RadarSensorView();
 	
 	auto config = radarSensorview->mutable_view_configuration();
@@ -410,7 +424,7 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 	config->set_field_of_view_horizontal(hFov);
 	config->set_field_of_view_vertical(vFov);
 	config->set_max_number_of_interactions(1);
-	config->set_emitter_frequency(pointsPerSecond);// Hz to Hz -> no conversion
+	config->set_emitter_frequency(senderHz);// Hz to Hz -> no conversion
 
 	//TODO number of rays (horizontal/vertical)
 	//TODO rx and tx antenna diagrams
@@ -422,15 +436,15 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 	//config->set_allocated_mounting_position_rmse(rmse)
 
 	std::unordered_set<float> horizontal, vertical;
-
 	for (const auto& singlemeasure : *measurement)
 	{
 		auto* reflection = radarSensorview->add_reflection();
 		reflection->set_source_horizontal_angle(singlemeasure.azimuth);//rad to rad -> no conversion
 		reflection->set_source_vertical_angle(singlemeasure.altitude);//rad to rad -> no conversion
-		//reflection->set_doppler_shift(0);//TODO doppler shift calculation
+		double receiverHz = senderHz * (OSTAR_LIGHT_SPEED + singlemeasure.velocity) / (OSTAR_LIGHT_SPEED - singlemeasure.velocity);
+		reflection->set_doppler_shift(receiverHz - senderHz);
 		reflection->set_signal_strength(10 * range / singlemeasure.depth);//TODO check if signal strength estimation makes sense
-		reflection->set_time_of_flight((2 * singlemeasure.depth) / 2.99792458e8);//double distance / lightspeed in m/s
+		reflection->set_time_of_flight((2 * singlemeasure.depth) / OSTAR_LIGHT_SPEED);//double distance / lightspeed in m/s
 
 		horizontal.insert(singlemeasure.azimuth);
 		vertical.insert(singlemeasure.altitude);

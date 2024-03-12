@@ -16,7 +16,7 @@ void GroundTruthCreator::parseStationaryMapObjects()
 	auto filteredStationaryMapObjects = filterEnvironmentObjects();
 	for (auto& mapObject : filteredStationaryMapObjects) {
 		OSIStationaryObjects->AddAllocated(
-			CarlaUtility::toOSI(mapObject, runtimeParameter.verbose));
+			CarlaUtility::toOSI(mapObject, runtimeParameter->verbose));
 	}
 	auto OSITrafficSigns = staticMapTruth->mutable_traffic_sign();
 	auto signs = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::TrafficSigns);
@@ -27,7 +27,7 @@ void GroundTruthCreator::parseStationaryMapObjects()
 		OSITrafficSigns->AddAllocated(OSITrafficSign.release());
 	}
 
-	if (runtimeParameter.mapNetworkInGroundTruth) {
+	if (runtimeParameter->mapNetworkInGroundTruth) {
 		auto lanes = staticMapTruth->mutable_lane();
 		auto laneBoundaries = staticMapTruth->mutable_lane_boundary();
 		auto topology = carla->map->GetTopology();
@@ -214,7 +214,7 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 			OSIVehicleID spawnedVehicleID = vehicleIsSpawned(vehicleActor);
 			if (spawnedVehicleID) {
 				vehicle->mutable_id()->set_value(spawnedVehicleID);
-				if (runtimeParameter.ego == std::to_string(spawnedVehicleID)) {
+				if (runtimeParameter->ego == std::to_string(spawnedVehicleID)) {
 					groundTruth->mutable_host_vehicle_id()->set_value(spawnedVehicleID);
 				}
 			}
@@ -274,7 +274,7 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 					rearAxle->set_z(attribute.As<float>());
 				}
 				else if ("role_name" == attribute.GetId()) {
-					if (runtimeParameter.ego == attribute.GetValue()) {
+					if (runtimeParameter->ego == attribute.GetValue()) {
 						groundTruth->mutable_host_vehicle_id()->set_value(vehicle->id().value());
 					}
 				}
@@ -282,7 +282,7 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 			// parse vehicle lights
 			classification->set_allocated_light_state(CarlaUtility::toOSI(vehicleActor->GetLightState()).release());
 
-			if (runtimeParameter.verbose) {
+			if (runtimeParameter->verbose) {
 				std::cout << "OSI-Dimensions: " << vehicle->base().dimension().length() << " " << vehicle->base().dimension().width() << " " << vehicle->base().dimension().height()
 					<< " OSI-Position: " << vehicle->base().position().x() << " " << vehicle->base().position().y() << " " << vehicle->base().position().z()
 					<< " OSI-Rotation: " << vehicle->base().orientation().roll() << " " << vehicle->base().orientation().pitch() << " " << vehicle->base().orientation().yaw()
@@ -325,7 +325,7 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 			}
 		}*/
 		else {
-			if (runtimeParameter.verbose)
+			if (runtimeParameter->verbose)
 				std::cout << typeID << " not parsed to groundtruth." << std::endl;
 		}
 	}
@@ -341,10 +341,10 @@ std::vector<carla::rpc::EnvironmentObject> GroundTruthCreator::filterEnvironment
 	std::vector<carla::rpc::EnvironmentObject> props{};
 	std::vector<carla::rpc::EnvironmentObject> filteredprops{};
 
-	if (runtimeParameter.options.None) {
+	if (runtimeParameter->options.None) {
 		return props;
 	}
-	if (runtimeParameter.options.Any) {
+	if (runtimeParameter->options.Any) {
 		props = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
 	}
 	else {
@@ -356,68 +356,68 @@ std::vector<carla::rpc::EnvironmentObject> GroundTruthCreator::filterEnvironment
 		//carla::rpc::CityObjectLabel::TrafficLight is handled at an other point
 		//carla::rpc::CityObjectLabel::Dynamic is not a static object
 
-		if (runtimeParameter.options.Buildings)
+		if (runtimeParameter->options.Buildings)
 		{
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Buildings);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Fences) {
+		if (runtimeParameter->options.Fences) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Fences);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Other) {
+		if (runtimeParameter->options.Other) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Other);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Poles) {
+		if (runtimeParameter->options.Poles) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Poles);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.RoadLines) {
+		if (runtimeParameter->options.RoadLines) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RoadLines);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Roads) {
+		if (runtimeParameter->options.Roads) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Roads);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Sidewalks) {
+		if (runtimeParameter->options.Sidewalks) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Sidewalks);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Vegetation) {
+		if (runtimeParameter->options.Vegetation) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Vegetation);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Walls) {
+		if (runtimeParameter->options.Walls) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Walls);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Ground) {
+		if (runtimeParameter->options.Ground) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Ground);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Bridge) {
+		if (runtimeParameter->options.Bridge) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Bridge);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.RailTrack) {
+		if (runtimeParameter->options.RailTrack) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::RailTrack);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.GuardRail) {
+		if (runtimeParameter->options.GuardRail) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::GuardRail);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Static) {
+		if (runtimeParameter->options.Static) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Static);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Water) {
+		if (runtimeParameter->options.Water) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
-		if (runtimeParameter.options.Terrain) {
+		if (runtimeParameter->options.Terrain) {
 			auto buildings = carla->world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Water);
 			props.insert(props.end(), buildings.begin(), buildings.end());
 		}
@@ -426,15 +426,15 @@ std::vector<carla::rpc::EnvironmentObject> GroundTruthCreator::filterEnvironment
 	for (auto& prop : props) {
 		//do not parse the CameraActor spawned by Carla and all actors containing Planes
 		if (prop.name.find("CameraActor") == 0 || prop.name.find("Plane") != std::string::npos) {
-			if (runtimeParameter.verbose)
+			if (runtimeParameter->verbose)
 				std::cout << "Not parsing " << prop.name << "\n";
 			continue;
 		}
 
 		//do only parse actors in filter set by user per runtime parameter
-		if (runtimeParameter.filter) {
-			if (prop.name.find(runtimeParameter.filterString) == std::string::npos) {
-				if (runtimeParameter.verbose)
+		if (runtimeParameter->filter) {
+			if (prop.name.find(runtimeParameter->filterString) == std::string::npos) {
+				if (runtimeParameter->verbose)
 					std::cout << "Not parsing " << prop.name << "\n";
 				continue;
 			}

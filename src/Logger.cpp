@@ -5,9 +5,9 @@ void Logger::writeLog(std::shared_ptr<const osi3::GroundTruth> groundTruth) {
 	std::string separator = ",";
 
 	if (!logFile.is_open()) {
-		logFile.open(runtimeParameter.logFileName);
-		if (runtimeParameter.verbose) {
-			std::cout << "Write to " << runtimeParameter.logFileName << std::endl;
+		logFile.open(runtimeParameter->logFileName);
+		if (runtimeParameter->verbose) {
+			std::cout << "Write to " << runtimeParameter->logFileName << std::endl;
 		}
 		std::string header = "Timestamp" + separator + "Actor_ID" + separator +
 			"Actor_x" + separator + "Actor_y" + separator + "Actor_heading\n";

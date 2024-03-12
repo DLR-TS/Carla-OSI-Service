@@ -57,7 +57,7 @@ Additional fields with camera sensor:
 * sensor_view.camera_sensor_view.view_configuration.field_of_view_vertical
 * sensor_view.camera_sensor_view.view_configuration.number_of_pixels_horizontal
 * sensor_view.camera_sensor_view.view_configuration.set_number_of_pixels_vertical
-* sensor_view.camera_sensor_view.view_configuration.channel_format (onyl CHANNEL_FORMAT_RGB_U8_LIN)
+* sensor_view.camera_sensor_view.view_configuration.channel_format (only CHANNEL_FORMAT_RGB_U8_LIN)
 * sensor_view.camera_sensor_view.image_data
 
 Additional fields with lidar sensor:

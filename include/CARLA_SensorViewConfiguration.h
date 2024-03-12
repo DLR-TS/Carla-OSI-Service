@@ -20,13 +20,13 @@ public:
 	They need an answer in form of a osi3::sensorviewconfiguration before the simulation starts.
 	It is possible, that the sensors can not be spawned instantly, since the ego vehicle itself might be spawned later.
 	*/
-    std::vector<Sensor> sensorsByFMU;
+    std::vector<OSTARSensorConfiguration> sensorsByFMU;
 	/**
 	Theses sensors are defined by the configuration file in CoSiMa.
 	They do not need an answer in form of a osi3::sensorviewconfiguration.
 	It is possible, that the sensors can not be spawned instantly, since the ego vehicle itself might be spawned later.
 	*/
-	std::vector<Sensor> sensorsByUser;
+	std::vector<OSTARSensorConfiguration> sensorsByUser;
 	/**
 	If any sensors are defined and not yet spawned, try to spawn them.
 	*/
@@ -45,7 +45,7 @@ public:
 
 private:
 
-	bool trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const Sensor& sensor);
+	bool trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const OSTARSensorConfiguration& sensorConfig);
 
 	bool getActorIdFromName(const std::string& roleName, carla::ActorId& actorId);
 
@@ -55,8 +55,8 @@ private:
 	*/
 	bool addSensorIdToStorage(const carla::ActorId& vehicle, const carla::ActorId& sensorId);
 
-	void configureBP(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
-	void configureBPCamera(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
-	void configureBPLidar(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
-	void configureBPRadar(carla::client::ActorBlueprint& sensorBP, const Sensor& sensor);
+	void configureBP(carla::client::ActorBlueprint& sensorBP, const OSTARSensorConfiguration& sensorConfig);
+	void configureBPCamera(carla::client::ActorBlueprint& sensorBP, const OSTARSensorConfiguration& sensorConfig);
+	void configureBPLidar(carla::client::ActorBlueprint& sensorBP, const OSTARSensorConfiguration& sensorConfig);
+	void configureBPRadar(carla::client::ActorBlueprint& sensorBP, const OSTARSensorConfiguration& sensorConfig);
 };

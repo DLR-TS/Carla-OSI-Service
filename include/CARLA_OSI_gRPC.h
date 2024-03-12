@@ -46,7 +46,7 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	Semaphore smphSignalCosimaToSR;
 	Semaphore smphSignalSRToCosima;
 
-	RuntimeParameter runtimeParameter;
+	std::shared_ptr<RuntimeParameter> runtimeParameter;
 
 	//thread to release Carla from step mode in async mode if simulation stopped.
 	std::unique_ptr<std::thread> watchdog_thread;
@@ -119,12 +119,12 @@ private:
 	/**
 	From FMU to internal sensor description format
 	*/
-	Sensor toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration);
+	OSTARSensorConfiguration toSensorDescriptionInternal(osi3::SensorViewConfiguration& sensorViewConfiguration);
 
 	/**
 	From CoSiMa Configuration to internal sensor description format
 	*/
-	Sensor toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration);
+	OSTARSensorConfiguration toSensorDescriptionInternal(const CoSiMa::rpc::OSISensorViewExtras& sensorViewConfiguration);
 };
 
 #endif //!CARLAOSIGRPC_H

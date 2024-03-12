@@ -24,6 +24,14 @@
 #include <boost/gil/extension/io/png.hpp>
 
 #include "carla_osi/TrafficSignals.h"
+#include "ParameterDefinitions.h"
+
+//light speed in m/s
+const double OSTAR_LIGHT_SPEED = 2.99792458e8;
+//77 GHz
+const double OSTAR_RADAR_DEFAULT_HZ = 77e09;
+//equals 905 nm wavelength
+const double OSTAR_LIDAR_DEFAULT_HZ = 331262384530387;
 
 namespace CarlaUtility {
 
@@ -41,9 +49,12 @@ namespace CarlaUtility {
 
 	osi3::MovingObject_VehicleClassification_Type ParseVehicleType(const std::string& typeName);
 
-	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::data::Image> image);
-	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
-	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData);
+	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor,
+		const carla::SharedPtr<const carla::sensor::data::Image> image, const OSTARSensorConfiguration& sensorConfig);
+	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor,
+		const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig);
+	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor,
+		const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig);
 
 	carla::SharedPtr<carla::client::Vehicle> getParentVehicle(const carla::SharedPtr<const carla::client::Actor> actor);
 	std::unique_ptr<osi3::Timestamp> parseTimestamp(const carla::client::Timestamp& carlaTime);
