@@ -46,7 +46,7 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	Semaphore smphSignalCosimaToSR;
 	Semaphore smphSignalSRToCosima;
 
-	std::shared_ptr<RuntimeParameter> runtimeParameter;
+	std::shared_ptr<RuntimeParameter> runtimeParameter = std::make_shared<RuntimeParameter>();
 
 	//thread to release Carla from step mode in async mode if simulation stopped.
 	std::unique_ptr<std::thread> watchdog_thread;
