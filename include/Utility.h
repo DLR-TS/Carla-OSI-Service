@@ -13,6 +13,7 @@
 #include <carla/image/ImageView.h>
 #include <carla/rpc/VehicleLightState.h>
 #include <carla/sensor/data/Image.h>
+#include <carla/sensor/data/SemanticLidarMeasurement.h>
 #include <carla/sensor/data/LidarMeasurement.h>
 #include <carla/sensor/data/RadarMeasurement.h>
 #include <carla/sensor/data/LidarData.h>
@@ -50,7 +51,7 @@ namespace CarlaUtility {
 	osi3::MovingObject_VehicleClassification_Type ParseVehicleType(const std::string& typeName);
 
 	osi3::CameraSensorView* toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor,
-		const carla::SharedPtr<const carla::sensor::data::Image> image, const OSTARSensorConfiguration& sensorConfig);
+		const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig);
 	osi3::LidarSensorView* toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor,
 		const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig);
 	osi3::RadarSensorView* toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor,

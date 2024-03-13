@@ -238,8 +238,9 @@ std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtilit
 }
 
 osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor,
-	const carla::SharedPtr<const carla::sensor::data::Image> image, const OSTARSensorConfiguration& sensorConfig)
+	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
+	auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
 	//Contains RGBA uint8 values
 	if (!image) return nullptr;
 	auto height = image->GetHeight();
@@ -296,7 +297,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor,
 	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
-	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::LidarMeasurement>(sensorData);
+	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::SemanticLidarMeasurement>(sensorData);
 	double rotationFrequency, upperFov, lowerFov, range, horizontalFoV, sensorTick;
 	int pointsPerSecond, channels;
 	auto attributes = sensor->GetAttributes();
@@ -361,22 +362,26 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	//config->set_allocated_mounting_position_rmse(rmse)
 
 	std::unordered_set<float> horizontal, vertical;
-	for (const carla::sensor::data::LidarDetection& singlemeasure : *measurement)
+	for (const carla::sensor::data::SemanticLidarDetection& singlemeasure : *measurement)
 	{
 		auto* reflection = lidarSensorView->add_reflection();
-		reflection->set_signal_strength(singlemeasure.intensity);
+		//TODO reflection->set_signal_strength(singlemeasure.intensity);
 		double distance = std::sqrt((double) singlemeasure.point.x * (double)singlemeasure.point.x
 			+ (double) singlemeasure.point.y * (double) singlemeasure.point.y
 			+ (double) singlemeasure.point.z * (double) singlemeasure.point.z);
 		reflection->set_time_of_flight((2 * distance) / OSTAR_LIGHT_SPEED);//double distance / lightspeed in m/s
 		//double receiverHz = senderHz * (OSTAR_LIGHT_SPEED + singlemeasure.velocity) / (OSTAR_LIGHT_SPEED - singlemeasure.velocity);
 		//reflection->set_doppler_shift(receiverHz - senderHz);
-		osi3::Vector3d* normalToSurface = new osi3::Vector3d;
-		normalToSurface->set_x(singlemeasure.point.x);
-		normalToSurface->set_y(singlemeasure.point.y);
-		normalToSurface->set_z(singlemeasure.point.z);
-		reflection->set_allocated_normal_to_surface(normalToSurface);
-		//reflection->set_allocated_object_id();//TODO object id
+
+		//TODO singlemeasure.cos_inc_angle;
+		//osi3::Vector3d* normalToSurface = new osi3::Vector3d;
+		//normalToSurface->set_x(singlemeasure.point.x);
+		//normalToSurface->set_y(singlemeasure.point.y);
+		//normalToSurface->set_z(singlemeasure.point.z);
+		//reflection->set_allocated_normal_to_surface(normalToSurface);
+		osi3::Identifier* identifier = new osi3::Identifier();
+		identifier->set_value(singlemeasure.object_idx);
+		reflection->set_allocated_object_id(identifier);
 		//horizontal.insert(singlemeasure.);
 		//vertical.insert(singlemeasure.);
 	}

@@ -162,17 +162,15 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 		if (runtimeParameter->carlasensortypes.find(CAMERA) == runtimeParameter->carlasensortypes.end()) {
 			return;
 		}
-		auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
-		auto cameraSensorView = CarlaUtility::toOSICamera(sensor, image, sensorConfig);
+		auto cameraSensorView = CarlaUtility::toOSICamera(sensor, sensorData, sensorConfig);
 		sensorView->mutable_camera_sensor_view()->AddAllocated(cameraSensorView);
 	}
-	else if (0 == sensorType.rfind("lidar.ray_cast", 0))
+	else if (0 == sensorType.rfind("lidar.ray_cast_semantic", 0))
 	{
 		if (runtimeParameter->carlasensortypes.find(LIDAR) == runtimeParameter->carlasensortypes.end()) {
 			return;
 		}
-		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::LidarMeasurement>(sensorData);
-		auto lidarSensorView = CarlaUtility::toOSILidar(sensor, measurement, sensorConfig);
+		auto lidarSensorView = CarlaUtility::toOSILidar(sensor, sensorData, sensorConfig);
 		sensorView->mutable_lidar_sensor_view()->AddAllocated(lidarSensorView);
 	}
 	else if (0 == sensorType.rfind("other.radar", 0))
@@ -180,8 +178,7 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 		if (runtimeParameter->carlasensortypes.find(RADAR) == runtimeParameter->carlasensortypes.end()) {
 			return;
 		}
-		auto measurement = boost::dynamic_pointer_cast<carla::sensor::data::RadarMeasurement>(sensorData);
-		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, measurement, sensorConfig);
+		auto radarSensorView = CarlaUtility::toOSIRadar(sensor, sensorData, sensorConfig);
 		sensorView->mutable_radar_sensor_view()->AddAllocated(radarSensorView);
 	}
 	else if (runtimeParameter->verbose) {
