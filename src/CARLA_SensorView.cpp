@@ -147,7 +147,7 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 	}
 
 	if (sensorConfig.prefixed_fmu_variable_name == "") {
-		std::cerr << __FUNCTION__ << ": received event without a name to save the data to." << std::endl;
+		std::cerr << __FUNCTION__ << ": received event without a name to save the data to. Sensor: " << sensor->GetTypeId() << std::endl;
 		return;
 	}
 

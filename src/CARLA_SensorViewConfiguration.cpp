@@ -45,14 +45,14 @@ std::shared_ptr<osi3::SensorViewConfiguration> SensorViewConfiger::getLastSensor
 }
 
 void SensorViewConfiger::trySpawnSensors(std::shared_ptr<SensorViewer> sensorViewer) {
-	for (auto& sensor : sensorsByFMU) {
-		if (!sensor.spawned) {
-			sensor.spawned = trySpawnSensor(sensorViewer, sensor);
+	for (auto& sensorConfig : sensorsByFMU) {
+		if (!sensorConfig.spawned) {
+			sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
 		}
 	}
-	for (auto& sensor : sensorsByUser) {
-		if (!sensor.spawned) {
-			sensor.spawned = trySpawnSensor(sensorViewer, sensor);
+	for (auto& sensorConfig : sensorsByUser) {
+		if (!sensorConfig.spawned) {
+			sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
 		}
 	}
 }

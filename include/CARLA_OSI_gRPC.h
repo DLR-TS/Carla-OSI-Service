@@ -115,6 +115,7 @@ private:
 	static void watchdog(CARLA_OSI_client* client);
 	bool watchdogInitDone = false;
 	bool watchdogDoStepCalled = true;
+	int sensorCounter = 0;
 
 	/**
 	From FMU to internal sensor description format

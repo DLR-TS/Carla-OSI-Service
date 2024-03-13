@@ -284,12 +284,7 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 
 	std::shared_ptr<const grpc::protobuf::Message> message;
 
-	//Test for a specific message type by name and try to retrieve it using the CARLA OSI interface
-	if (std::string::npos != base_name.rfind("OSMPSensorViewGroundTruth", 0)) {
-		//OSMPSensorViewGroundTruth is not a OSMP variable prefix but used as a special name to retrieve a ground truth message as part of sensor view
-		message = sensorViewer->getSensorViewGroundTruth(base_name);
-	}
-	else if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
+	if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
 		message = sensorViewConfiger->getLastSensorViewConfiguration();
 	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
@@ -318,13 +313,12 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	// Variables from other fmus are saved and exchanged here!
 	if (runtimeParameter->verbose)
 	{
-		std::cout << "Look up message in map." << std::endl;
+		std::cout << "Look up message in map. If not found, return generic SensorView message with GroundTruth data." << std::endl;
 	}
 	auto iter = varName2MessageMap.find(base_name);
 	if (iter != varName2MessageMap.end()) {
 		return iter->second;
-	}
-	else {
+	} else {
 		//generic sensor
 		message = sensorViewer->getSensorViewGroundTruth(base_name);
 		return message->SerializeAsString();
@@ -352,7 +346,11 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 			return -1;
 		}
 		//return value will be added to request of SensorView
-		sensorViewConfiger->sensorsByFMU.push_back(toSensorDescriptionInternal(sensorViewConfiguration));
+		OSTARSensorConfiguration sensorConfig = toSensorDescriptionInternal(sensorViewConfiguration);
+		//Generic sensors can not be spawned. Requesting any undefined message will return a generic sensormessage.
+		if (sensorConfig.type != SENSORTYPES::GENERIC) {
+			sensorViewConfiger->sensorsByFMU.push_back(sensorConfig);
+		}
 		return 0;
 	}
 	else {
@@ -399,6 +397,7 @@ OSTARSensorConfiguration CARLA_OSI_client::toSensorDescriptionInternal(osi3::Sen
 	OSTARSensorConfiguration sensor;
 	sensor.sensorViewConfiguration.CopyFrom(sensorViewConfiguration);
 	sensor.id = sensorViewConfiguration.sensor_id().value();
+	sensor.prefixed_fmu_variable_name = "OSMPSensorView[" + std::to_string(sensorCounter++) + "]";
 
 	//save all mounting bositions in base. Only one sensor possible
 	if (sensorViewConfiguration.radar_sensor_view_configuration_size()) {
