@@ -240,7 +240,7 @@ std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtilit
 osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor,
 	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
-	auto image = boost::dynamic_pointer_cast<carla::sensor::data::Image>(sensorData);
+	auto image = boost::dynamic_pointer_cast<const carla::sensor::data::Image>(sensorData);
 	//Contains RGBA uint8 values
 	if (!image) return nullptr;
 	auto height = image->GetHeight();
