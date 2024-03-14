@@ -14,7 +14,7 @@ void TrafficUpdater::saveBoundingBoxesOfAvailableVehicles() {
 		auto temp_actor = carla->world->TrySpawnActor(vehicle, transform);
 		if (temp_actor == nullptr) {//map has object near 0 0 z
 			carla::geom::Location location_alternative(0, 0, 10000);
-			transform = carla::geom::Transform(location_alternative, carla::geom::Rotation(0,0,0));
+			transform = carla::geom::Transform(location_alternative, carla::geom::Rotation(0, 0, 0));
 			temp_actor = carla->world->TrySpawnActor(vehicle, transform);
 			if (temp_actor == nullptr) {
 				std::cerr << "Can not spawn vehicle. Tried two locations with x,y,z: 0,0,0 and 0,0,10000" << std::endl;
@@ -24,7 +24,7 @@ void TrafficUpdater::saveBoundingBoxesOfAvailableVehicles() {
 		auto bbox = vehicleActor->GetBoundingBox();
 		replayVehicleBoundingBoxes.emplace_back(vehicle.GetId(), bbox.extent);
 		if (runtimeParameter->verbose) {
-			std::cout << "bbox: " << vehicle.GetId() << " Length:" << bbox.extent.x*2 << " Width:" << bbox.extent.y*2 << " Height:" << bbox.extent.z*2 << std::endl;
+			std::cout << "bbox: " << vehicle.GetId() << " Length:" << bbox.extent.x * 2 << " Width:" << bbox.extent.y * 2 << " Height:" << bbox.extent.z * 2 << std::endl;
 		}
 		carla->world->Tick(carla->client->GetTimeout());
 		temp_actor->Destroy();
@@ -67,26 +67,28 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 	return 0;
 }
 
-void TrafficUpdater::removeSpawnedVehiclesIfNotUpdated(std::vector<uint32_t>& listOfUpdatedVehicles){
-    auto it = carla->spawnedVehiclesByCarlaOSIService.begin();
-    while (it != carla->spawnedVehiclesByCarlaOSIService.end()) {
+void TrafficUpdater::removeSpawnedVehiclesIfNotUpdated(std::vector<uint32_t>& listOfUpdatedVehicles) {
+	auto it = carla->spawnedVehiclesByCarlaOSIService.begin();
+	while (it != carla->spawnedVehiclesByCarlaOSIService.end()) {
 
-        if (std::find(listOfUpdatedVehicles.begin(), listOfUpdatedVehicles.end(), it->first) == listOfUpdatedVehicles.end()) {
+		if (std::find(listOfUpdatedVehicles.begin(), listOfUpdatedVehicles.end(), it->first) == listOfUpdatedVehicles.end()) {
 			std::cout << "No update for vehicle: " << unsigned(it->first) << " Will stop the display of this vehicle." << std::endl;
 			deleteSpawnedVehiclesWithSensors(it->first, it->second);
-            it = carla->spawnedVehiclesByCarlaOSIService.erase(it);
-        } else {
-            ++it;
-        }
-    }
+			it = carla->spawnedVehiclesByCarlaOSIService.erase(it);
+		}
+		else {
+			++it;
+		}
+	}
 }
 
 std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVehicleIfNeeded(const osi3::MovingObject& update, carla::ActorId& actorID) {
 	auto spawndVehicleID = carla->spawnedVehiclesByCarlaOSIService.find(update.id().value());
 
 	if (spawndVehicleID != carla->spawnedVehiclesByCarlaOSIService.end()) {
-		return {false, carla->world->GetActor(spawndVehicleID->second.vehicle)};
-	} else {
+		return { false, carla->world->GetActor(spawndVehicleID->second.vehicle) };
+	}
+	else {
 		std::string vehicleName = determineVehicleName(update);
 		carla::geom::Transform transform = determineTransform(update);
 		//Never try to merge the following two lines of code!
@@ -102,18 +104,20 @@ std::tuple<bool, carla::SharedPtr<carla::client::Actor>> TrafficUpdater::spawnVe
 		spawnedActors vehicle;
 		vehicle.vehicle = actor->GetId();
 		carla->spawnedVehiclesByCarlaOSIService.emplace(update.id().value(), vehicle);
-		return {true, actor};
+		return { true, actor };
 	}
 }
 
-std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& update){
-	if (!runtimeParameter->replay.spawnCarByName.empty()){
+std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& update) {
+	if (!runtimeParameter->replay.spawnCarByName.empty()) {
 		//name set by commandline parameter
 		return runtimeParameter->replay.spawnCarByName;
-	} else if (!update.model_reference().empty()) {
+	}
+	else if (!update.model_reference().empty()) {
 		//name set by TrafficUpdate message
 		return std::string(update.model_reference().c_str());
-	} else {
+	}
+	else {
 		//name set by best matching size of vehicle
 		return CarlaUtility::findBestMatchingCarToSpawn(
 			update.base().dimension(), replayVehicleBoundingBoxes,
@@ -121,7 +125,7 @@ std::string TrafficUpdater::determineVehicleName(const osi3::MovingObject& updat
 	}
 }
 
-carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObject& update){
+carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObject& update) {
 	auto position = Geometry::getInstance()->toCarla(update.base().position());
 	position.z = runtimeParameter->replay.spawnHeight_Z;
 
@@ -130,12 +134,13 @@ carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObje
 		carla::rpc::LabelledPoint point = *optionalPoint;
 		position = point._location;
 		position.z += 0.05f;//spawn needs to be a little bit higher
-	} else {
+	}
+	else {
 		std::cout << "No Ground Position!" << std::endl;
 	}
 
 	auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
-	std::cout << "Spawn vehicle at position: " << position.x << ", " << position.y  << ", " << position.z << std::endl;
+	std::cout << "Spawn vehicle at position: " << position.x << ", " << position.y << ", " << position.z << std::endl;
 	return carla::geom::Transform(position, orientation);
 }
 
@@ -153,39 +158,40 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 		//std::cout << "location z:" << position.z << std::endl;
 
 		int gravity_mode = 1;
-		switch (gravity_mode){
-			case 0:
+		switch (gravity_mode) {
+		case 0:
 			//sometimes vehicles stay airborne at slope
 			//this is most likely an effect of the start of the projection
 			//Problem: Projection starts inside the vehicle and the underbody
 			//Encountered problems on trying to solve these problems:
 			//- setting the startpoint under the vehicle results in possibility for startpoint under the street
-			{
-				float ground_z = 0;
-				if (position.z != 0) {//condition at beginning of simulation
-					auto optionalPoint = carla->world->GroundProjection(positionProjectionStart);
-					if (optionalPoint) {
-						carla::rpc::LabelledPoint point = *optionalPoint;
-						ground_z = point._location.z;
-						//std::cout << "label: 0 None, 21 Dynamic, 7 TrafficLight, 10 Terrain: " << unsigned(point._label) << std::endl;
-					}
+		{
+			float ground_z = 0;
+			if (position.z != 0) {//condition at beginning of simulation
+				auto optionalPoint = carla->world->GroundProjection(positionProjectionStart);
+				if (optionalPoint) {
+					carla::rpc::LabelledPoint point = *optionalPoint;
+					ground_z = point._location.z;
+					//std::cout << "label: 0 None, 21 Dynamic, 7 TrafficLight, 10 Terrain: " << unsigned(point._label) << std::endl;
 				}
-				if (ground_z != position.z) {
-					position.z = ground_z;
-				}
-			break;
 			}
-			case 1://linear fall per timestep
-				//on flat road looks like an overloaded vehicle
-				position.z = position.z - 0.01f;
-				//position.z -= 0.5 * 9.81 * runtimeParameter->deltaSeconds * runtimeParameter->deltaSeconds;
+			if (ground_z != position.z) {
+				position.z = ground_z;
+			}
 			break;
-			case 2://fall per timestep with g = 9.81
+		}
+		case 1://linear fall per timestep
+			//on flat road looks like an overloaded vehicle
+			position.z = position.z - 0.01f;
+			//position.z -= 0.5 * 9.81 * runtimeParameter->deltaSeconds * runtimeParameter->deltaSeconds;
+			break;
+		case 2://fall per timestep with g = 9.81
 			GravityEntry gravityEntry;
 			if (auto search = desiredHeight.find(actorId); search != desiredHeight.end()) {
 				if (position.z == search->second.lastPosition) {//exact falling
 					gravityEntry.fallingSteps = search->second.fallingSteps + 1;
-				} else {
+				}
+				else {
 					gravityEntry.fallingSteps = 1;
 				}
 				float currentTime = runtimeParameter->deltaSeconds * gravityEntry.fallingSteps;
@@ -206,7 +212,7 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 			orientation.roll = actor->GetTransform().rotation.roll;
 		}
 		if (runtimeParameter->verbose) {
-			std::cout << "Apply position: " << position.x << ", " << position.y  << ", " << position.z << ", Yaw: " << orientation.yaw << std::endl;
+			std::cout << "Apply position: " << position.x << ", " << position.y << ", " << position.z << ", Yaw: " << orientation.yaw << std::endl;
 		}
 		actor->SetTransform(carla::geom::Transform(position, orientation));
 	}

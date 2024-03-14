@@ -8,7 +8,7 @@
 #include "CARLA_Interface.h"
 #include "Utility.h"
 
-class CARLAModule{
+class CARLAModule {
 private:
 	bool isNumeric(const std::string& str) {
 		for (char c : str) {
@@ -21,20 +21,20 @@ private:
 
 protected:
 	std::shared_ptr<CARLAInterface> carla;
-    std::shared_ptr<RuntimeParameter> runtimeParameter;
+	std::shared_ptr<RuntimeParameter> runtimeParameter;
 
-    /*
+	/*
 	Checks if vehicle is spawned by Carla_OSI_Service
 	return 0 if not
 	*/
 	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
-        for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
-            if (spawnedVehicle.second.vehicle == vehicle->GetId()) {
-                return spawnedVehicle.first;
-            }
-        }
-        return 0;
-    }
+		for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
+			if (spawnedVehicle.second.vehicle == vehicle->GetId()) {
+				return spawnedVehicle.first;
+			}
+		}
+		return 0;
+	}
 
 	/*
 	Checks if roleName is a self spawned vehicle.
@@ -71,10 +71,10 @@ protected:
 	}
 
 public:
-    virtual void initialise(std::shared_ptr<RuntimeParameter> runtimeParams, std::shared_ptr<CARLAInterface> carla){
-        this->runtimeParameter = runtimeParams;
-        this->carla = carla;
-    }
+	virtual void initialise(std::shared_ptr<RuntimeParameter> runtimeParams, std::shared_ptr<CARLAInterface> carla) {
+		this->runtimeParameter = runtimeParams;
+		this->carla = carla;
+	}
 
 };
 #endif //!CARLAMODULE_H

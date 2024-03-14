@@ -11,6 +11,7 @@ ${CMAKE_CURRENT_LIST_DIR}/CARLA_SensorView.cpp
 ${CMAKE_CURRENT_LIST_DIR}/CARLA_SensorViewConfiguration.cpp
 ${CMAKE_CURRENT_LIST_DIR}/Logger.cpp
 ${CMAKE_CURRENT_LIST_DIR}/Utility.cpp
+${CMAKE_CURRENT_LIST_DIR}/MessageCache.cpp
 
 PARENT_SCOPE
 )

@@ -253,9 +253,9 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	//Boost GIL image view for color conversion
 	const carla::sensor::data::ImageTmpl<carla::sensor::data::Color>& ref = *image;
 	const boost::gil::bgra8c_view_t rgbaView = carla::image::ImageView::MakeView(ref);
-		/*=boost::gil::interleaved_view(width,
-		height, reinterpret_cast<boost::gil::rgba8c_ptr_t>(image->data()),
-		sizeof(carla::sensor::data::Image::value_type)  * width);*/
+	/*=boost::gil::interleaved_view(width,
+	height, reinterpret_cast<boost::gil::rgba8c_ptr_t>(image->data()),
+	sizeof(carla::sensor::data::Image::value_type)  * width);*/
 
 	//Buffer for RGB raw image
 	boost::gil::rgb8_ptr_t rgb = new boost::gil::rgb8_pixel_t[image->size()];
@@ -332,7 +332,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 		//upper and lower field of view are given in degree
 		vFov = upperFov - lowerFov;
 	}
-	uint32_t numPixels{0};//OSI field uses uint32_t
+	uint32_t numPixels{ 0 };//OSI field uses uint32_t
 	for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
 		numPixels += measurement->GetPointCount(i);
 	}
@@ -345,7 +345,7 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	osi3::LidarSensorView* lidarSensorView = new osi3::LidarSensorView();
 
 	auto config = lidarSensorView->mutable_view_configuration();
-	
+
 	config->set_emitter_frequency(senderHz);
 	config->set_field_of_view_vertical(vFov * M_PI / 180.0);
 	config->set_field_of_view_horizontal(horizontalFoV * M_PI / 180.0);
@@ -366,9 +366,9 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 	{
 		auto* reflection = lidarSensorView->add_reflection();
 		//TODO reflection->set_signal_strength(singlemeasure.intensity);
-		double distance = std::sqrt((double) singlemeasure.point.x * (double)singlemeasure.point.x
-			+ (double) singlemeasure.point.y * (double) singlemeasure.point.y
-			+ (double) singlemeasure.point.z * (double) singlemeasure.point.z);
+		double distance = std::sqrt((double)singlemeasure.point.x * (double)singlemeasure.point.x
+			+ (double)singlemeasure.point.y * (double)singlemeasure.point.y
+			+ (double)singlemeasure.point.z * (double)singlemeasure.point.z);
 		reflection->set_time_of_flight((2 * distance) / OSTAR_LIGHT_SPEED);//double distance / lightspeed in m/s
 		//double receiverHz = senderHz * (OSTAR_LIGHT_SPEED + singlemeasure.velocity) / (OSTAR_LIGHT_SPEED - singlemeasure.velocity);
 		//reflection->set_doppler_shift(receiverHz - senderHz);
@@ -423,7 +423,7 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 		senderHz = sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration(0).emitter_frequency();
 
 	auto radarSensorview = new osi3::RadarSensorView();
-	
+
 	auto config = radarSensorview->mutable_view_configuration();
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 	config->set_field_of_view_horizontal(hFov);
@@ -716,7 +716,7 @@ std::unique_ptr<osi3::Timestamp> CarlaUtility::parseTimestamp(const carla::clien
 
 std::string CarlaUtility::findBestMatchingCarToSpawn(const osi3::Dimension3d& dimension,
 	const std::vector<std::tuple<std::string, carla::geom::Vector3D>>& replayVehicleBoundingBoxes,
-	double& weightLength_X, double& weightWidth_Y, double& weightHeight_Z){
+	double& weightLength_X, double& weightWidth_Y, double& weightHeight_Z) {
 
 	size_t minDiffVehicleIndex = 0;
 

@@ -44,74 +44,20 @@ std::shared_ptr<osi3::SensorViewConfiguration> SensorViewConfiger::getLastSensor
 	return appliedSensorConfig;
 }
 
-void SensorViewConfiger::trySpawnSensors(std::shared_ptr<SensorViewer> sensorViewer) {
-	for (auto& sensorConfig : sensorsByFMU) {
-		if (!sensorConfig.spawned) {
-			sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
-		}
-	}
+const osi3::MountingPosition SensorViewConfiger::getMountingPositionOfAnyGenericSensor() {
 	for (auto& sensorConfig : sensorsByUser) {
-		if (!sensorConfig.spawned) {
-			sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
+		if (sensorConfig.type == SENSORTYPES::GENERIC
+			&& sensorConfig.sensorViewConfiguration.has_mounting_position()) {
+			return sensorConfig.sensorViewConfiguration.mounting_position();
 		}
 	}
-}
-
-bool SensorViewConfiger::trySpawnSensor(std::shared_ptr<SensorViewer> sensorViewer, const OSTARSensorConfiguration& sensorConfig) {
-	if (sensorConfig.type == SENSORTYPES::GENERIC) {
-		//no specific geometrical sensor can be spawned. information will be provided by a (subset of) groundtruth.
-		return false;
-	}
-
-	carla::ActorId actorId;
-	std::string parentActorName = "";
-	carla::client::Actor* parent = nullptr;
-
-	if (sensorConfig.parent != "world" && sensorConfig.parent != "World") {
-		if (sensorConfig.parent == "") {
-			parentActorName = runtimeParameter->ego;
+	for (auto& sensorConfig : sensorsByFMU) {
+		if (sensorConfig.type == SENSORTYPES::GENERIC
+			&& sensorConfig.sensorViewConfiguration.has_mounting_position()) {
+			return sensorConfig.sensorViewConfiguration.mounting_position();
 		}
-		else {
-			parentActorName = sensorConfig.parent;
-		}
-
-		if (!getActorIdFromName(parentActorName, actorId)) {//actor is not spawned yet
-			return false;
-		}
-		parent = carla->world->GetActor(actorId).get();
 	}
-	else if (runtimeParameter->verbose) {
-		std::cout << "Spawn sensor as a static sensor in world." << std::endl;
-	}
-
-	std::string sensorType = matchSensorType(sensorConfig.type, sensorConfig.prefixed_fmu_variable_name);
-	carla::SharedPtr<carla::client::BlueprintLibrary> blueprintLibrary = carla->world->GetBlueprintLibrary();
-	auto bp = blueprintLibrary->Find(sensorType);
-	carla::client::ActorBlueprint sensorBP = (carla::client::ActorBlueprint) *bp;
-
-	configureBP(sensorBP, sensorConfig);
-
-	carla::geom::Transform transform = Geometry::getInstance()->toCarla(sensorConfig.sensorViewConfiguration.mounting_position());
-
-	auto actor = carla->world->TrySpawnActor(sensorBP, transform, parent);
-	if (actor == nullptr) {
-		std::cerr << "Could not spawn sensor. Attach to actor with Actor Id: " << actorId
-			<< " SensorBP: " << (sensorBP).GetId() << std::endl;
-		return false;
-	}
-	auto sensorActor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
-	if (!addSensorIdToStorage(actorId, sensorActor->GetId())) {
-		carla->spawnedSensorsOnExternalSpawnedVehicles.push_back(sensorActor->GetId());
-	}
-
-	sensorViewer->sensorCache.emplace(sensorConfig.prefixed_fmu_variable_name, nullptr);
-	sensorActor->Listen(
-		[this, sensorViewer, sensorActor, sensorConfig]
-	(carla::SharedPtr<carla::sensor::SensorData> sensorData) {
-		sensorViewer->sensorEventAction(sensorActor, sensorData, sensorConfig);
-	}
-	);
-	return true;
+	return osi3::MountingPosition();
 }
 
 void SensorViewConfiger::configureBP(carla::client::ActorBlueprint& sensorBP, const OSTARSensorConfiguration& sensorConfig) {
@@ -195,7 +141,7 @@ bool SensorViewConfiger::getActorIdFromName(const std::string& roleName, carla::
 	if (isSpawnedId(roleName, actorId)) {
 		return true;
 	}
-	
+
 	//if not spawned by Carla-OSI-Service, check all actors with role_name attribute
 
 	auto worldActors = carla->world->GetActors();

@@ -92,7 +92,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter->replay.weightWidth_Y = std::stod(config->runtimeparameter(++i));
 			runtimeParameter->replay.weightHeight_Z = std::stod(config->runtimeparameter(++i));
 			std::cout << "Replay mode active. Similarity weights are: " << runtimeParameter->replay.weightLength_X << ", "
-				 << runtimeParameter->replay.weightWidth_Y << ", " << runtimeParameter->replay.weightHeight_Z << std::endl;
+				<< runtimeParameter->replay.weightWidth_Y << ", " << runtimeParameter->replay.weightHeight_Z << std::endl;
 		}
 		else if (parameter == "-replaySpawnCarByName") {
 			runtimeParameter->replay.enabled = true;
@@ -105,7 +105,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 			runtimeParameter->replay.mapOffset.Y = std::stod(config->runtimeparameter(++i));
 			Geometry::getInstance()->setOffset(runtimeParameter->replay.mapOffset);
 			std::cout << "Replay mode active. Map offsets are: " << runtimeParameter->replay.mapOffset.X << ", "
-				 << runtimeParameter->replay.mapOffset.Y << std::endl;
+				<< runtimeParameter->replay.mapOffset.Y << std::endl;
 		}
 		else if (parameter == "-replayOutputUTM") {
 			runtimeParameter->replay.enabled = true;
@@ -177,7 +177,7 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 		}
 		else if (parameter == "--carlahost") {
 			runtimeParameter->carlaHost = config->runtimeparameter(++i);
-			std::cout << "Carla host: " << runtimeParameter->carlaHost  << "\n";
+			std::cout << "Carla host: " << runtimeParameter->carlaHost << "\n";
 		}
 		else if (parameter == "--carlaport") {
 			runtimeParameter->carlaPort = std::stoi(config->runtimeparameter(++i));
@@ -209,16 +209,15 @@ grpc::Status CARLA_OSI_client::SetConfig(grpc::ServerContext* context, const CoS
 	}
 	//check for sensors configured by cosima configuration
 	for (auto& sensorViewExtra : config->sensor_view_extras()) {
-		sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
+		sensorViewer->sensorViewConfiger->sensorsByUser.push_back(toSensorDescriptionInternal(sensorViewExtra));
 	}
 
 	response->set_value(carla->initialise(runtimeParameter));
 	trafficUpdater->initialise(runtimeParameter, carla);
 	sensorViewer->initialise(runtimeParameter, carla);
-	sensorViewConfiger->initialise(runtimeParameter, carla);
 	logger->initialise(runtimeParameter, carla);
 
-	sensorViewConfiger->trySpawnSensors(sensorViewer);
+	sensorViewer->trySpawnSensors();
 	sensorViewer->groundTruthCreator->parseStationaryMapObjects();
 
 	carla->doStep();
@@ -245,7 +244,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		logger->writeLog(sensorViewer->groundTruthCreator->getLatestGroundTruth());
 	}
 
-	sensorViewConfiger->trySpawnSensors(sensorViewer);
+	sensorViewer->trySpawnSensors();
 	sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
 
 	double timestep = runtimeParameter->deltaSeconds;
@@ -255,7 +254,8 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 		smphSignalCosimaToSR.release();
 		//wait for Scenario Runner
 		smphSignalSRToCosima.acquire();
-	} else if (!runtimeParameter->scenarioRunner.doesTick) {
+	}
+	else if (!runtimeParameter->scenarioRunner.doesTick) {
 		//independent mode without scenario runner does trigger doStep
 		timestep = carla->doStep();
 	}
@@ -282,46 +282,41 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		std::cout << "Get " << base_name << std::endl;
 	}
 
+	//Message from other parts of the simlation are requested
+	std::string messageString = messageCache.getMessage(base_name, runtimeParameter->verbose);
+	if (!messageString.empty()) {
+		return messageString;
+	}
+
 	std::shared_ptr<const grpc::protobuf::Message> message;
 
+	//Messages with special values, which the simulator provides
 	if (std::string::npos != base_name.rfind("OSMPSensorViewConfiguration", 0)) {
-		message = sensorViewConfiger->getLastSensorViewConfiguration();
+		message = sensorViewer->sensorViewConfiger->getLastSensorViewConfiguration();
 	}
 	else if (std::string::npos != base_name.rfind("OSMPGroundTruth", 0)) {
-		// OSMPGroundTruthInit
 		message = sensorViewer->groundTruthCreator->getLatestGroundTruth();
 	}
 	else if (std::string::npos != base_name.rfind("OSMPTrafficCommand", 0)) {
-		// OSMPTrafficCommand
 		//set hero ID in traffic command message
 		if (trafficCommandForEgoVehicle == nullptr) {
-			std::cout << "No OSMPTrafficCommand available. Use -sr parameter to enable scenario runner listener." << std::endl;
-		} else {
+			std::cout << "No OSMPTrafficCommand available. Use -sl parameter to enable scenario runner listener." << std::endl;
+		}
+		else {
 			message = trafficCommandForEgoVehicle;
 		}
-	} else {
-		// OSMPSensorView by spawned sensor
+	}
+	else {
+		// OSMPSensorView of different kinds
 		message = sensorViewer->getSensorView(base_name);
 	}
 
-	// if the CARLA OSI interface did provide a message, return its string serialization;
 	if (message) {
 		return message->SerializeAsString();
 	}
-
-	// Try lookup in variable cache, else return empty string
-	// Variables from other fmus are saved and exchanged here!
-	if (runtimeParameter->verbose)
-	{
-		std::cout << "Look up message in map. If not found, return generic SensorView message with GroundTruth data." << std::endl;
-	}
-	auto iter = varName2MessageMap.find(base_name);
-	if (iter != varName2MessageMap.end()) {
-		return iter->second;
-	} else {
-		//generic sensor
-		message = sensorViewer->getSensorViewGroundTruth(base_name);
-		return message->SerializeAsString();
+	else {
+		std::cerr << __FUNCTION__ << "Error, no message could be created with: " << base_name << std::endl;
+		return "";
 	}
 }
 
@@ -347,15 +342,12 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 		}
 		//return value will be added to request of SensorView
 		OSTARSensorConfiguration sensorConfig = toSensorDescriptionInternal(sensorViewConfiguration);
-		//Generic sensors can not be spawned. Requesting any undefined message will return a generic sensormessage.
-		if (sensorConfig.type != SENSORTYPES::GENERIC) {
-			sensorViewConfiger->sensorsByFMU.push_back(sensorConfig);
-		}
+		sensorViewer->sensorViewConfiger->sensorsByFMU.push_back(sensorConfig);
 		return 0;
 	}
 	else {
 		//Cache unmapped messages so they can be retrieved from CoSiMa as input for other fmus.
-		varName2MessageMap[base_name] = message;
+		messageCache.setMessage(base_name, message, runtimeParameter->verbose);
 		return 0;
 	}
 }

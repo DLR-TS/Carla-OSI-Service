@@ -1,43 +1,21 @@
 #include "CARLA_SensorView.h"
 
 std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const std::string& varName) {
-	// create empty sensor view
+
 	auto sensorView = std::make_shared<osi3::SensorView>();
-	// create empty ground truth as part of sensor view
 	auto groundTruth = sensorView->mutable_global_ground_truth();
-	// copy latest ground truth into previously created ground truth
-	groundTruth->MergeFrom(*groundTruthCreator->getLatestGroundTruth());
+
+	auto latestgt = groundTruthCreator->getLatestGroundTruth();
+	groundTruth->CopyFrom(*latestgt);
 
 	//host_vehicle_id
 	if (groundTruth->has_host_vehicle_id()) {
 		sensorView->mutable_host_vehicle_id()->set_value(groundTruth->host_vehicle_id().value());
 	}
 
-	// if defined, set sensor mounting positions
-	//TODO move this code to somewhere else
-	/*auto iter = sensorMountingPositionMap.find(varName);
-	if (sensorMountingPositionMap.end() != iter) {
-		if (runtimeParameter->verbose)
-		{
-			std::cout << "Searched successfully for sensor " << varName << " Copy mounting position to sensorview message." << std::endl;
-		}
-		copyMountingPositions(iter->second, sensorView);
-	}
-	else if (runtimeParameter->verbose)
-	{
-		std::cout << "No sensor found with name: " << varName << " Can not set mounting position.\n";
-		if (sensorMountingPositionMap.size() != 0) {
-			std::cout << "Available sensors are: ";
-			for (auto& positions : sensorMountingPositionMap) {
-				std::cout << positions.first << " ";
-			}
-			std::cout << std::endl;
-		}
-		else {
-			std::cout << "No sensor positions are configured!" << std::endl;
-		}
-	}
-	*/
+	// if any, set sensor mounting positions
+	osi3::MountingPosition ms = sensorViewConfiger->getMountingPositionOfAnyGenericSensor();
+	sensorView->mutable_mounting_position()->CopyFrom(ms);
 
 	// find or generate id for the named sensor
 	auto id = sensorIds.find(varName);
@@ -64,19 +42,27 @@ std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::s
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
 	if (runtimeParameter->verbose) {
-		for(auto& s: sensorCache) {
+		for (auto& s : sensorCache) {
 			std::cout << "SensorCache: " << s.first << std::endl;
 		}
 	}
 
 	auto iter = sensorCache.find(sensorName);
 	if (iter == sensorCache.end() || iter->second == nullptr) {
-		return nullptr;
+		if (runtimeParameter->verbose) {
+			std::cout << __FUNCTION__ << "No sensorview by carla sensors. Use generic sensor view." << std::endl;
+		}
+		return getSensorViewGroundTruth(sensorName);
 	}
-	iter->second->mutable_global_ground_truth()->MergeFrom(*groundTruthCreator->getLatestGroundTruth());
-	iter->second->mutable_timestamp()->CopyFrom(iter->second->global_ground_truth().timestamp());
-	iter->second->mutable_host_vehicle_id()->CopyFrom(iter->second->global_ground_truth().host_vehicle_id());
-	return iter->second;
+
+	std::shared_ptr<osi3::SensorView> sv = iter->second;
+	auto gt = sv->mutable_global_ground_truth();
+	auto latestgt = groundTruthCreator->getLatestGroundTruth();
+	gt->CopyFrom(*latestgt);
+
+	sv->mutable_timestamp()->CopyFrom(latestgt->timestamp());
+	sv->mutable_host_vehicle_id()->CopyFrom(latestgt->host_vehicle_id());
+	return sv;
 }
 
 void SensorViewer::fetchActorsFromCarla() {
@@ -116,9 +102,9 @@ void SensorViewer::fetchActorsFromCarla() {
 
 						// if actor is of type sensor, add sensor update listener to receive latest sensor data
 						if (runtimeParameter->carlaSensors && !isSpawnedActorId(addedActor) && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
-							std::cout << "Add already spawned sensor in Carla"  << actor->GetTypeId() << std::endl;
+							std::cout << "Add already spawned sensor in Carla" << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
-							std::string index =  "OSMPSensorView" + sensorCache.size();
+							std::string index = "OSMPSensorView" + sensorCache.size();
 							std::cout << "Sensorview can be requested by base_name: " << index << std::endl;
 							OSTARSensorConfiguration sensorConfig;
 							sensorConfig.prefixed_fmu_variable_name = index;
@@ -188,4 +174,74 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 	if (runtimeParameter->verbose) {
 		std::cout << "Update " << sensorType << " with index " << sensorConfig.prefixed_fmu_variable_name << "." << std::endl;
 	}
+}
+
+void SensorViewer::trySpawnSensors() {
+	for (auto& sensorConfig : sensorViewConfiger->sensorsByFMU) {
+		if (!sensorConfig.spawned) {
+			//sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
+		}
+	}
+	for (auto& sensorConfig : sensorViewConfiger->sensorsByUser) {
+		if (!sensorConfig.spawned) {
+			//sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
+		}
+	}
+}
+
+bool SensorViewer::trySpawnSensor(const OSTARSensorConfiguration& sensorConfig) {
+	if (sensorConfig.type == SENSORTYPES::GENERIC) {
+		//no specific geometrical sensor can be spawned. information will be provided by a (subset of) groundtruth.
+		return false;
+	}
+
+	carla::ActorId actorId;
+	std::string parentActorName = "";
+	carla::client::Actor* parent = nullptr;
+
+	if (sensorConfig.parent != "world" && sensorConfig.parent != "World") {
+		if (sensorConfig.parent == "") {
+			parentActorName = runtimeParameter->ego;
+		}
+		else {
+			parentActorName = sensorConfig.parent;
+		}
+
+		if (!sensorViewConfiger->getActorIdFromName(parentActorName, actorId)) {//actor is not spawned yet
+			return false;
+		}
+		parent = carla->world->GetActor(actorId).get();
+	}
+	else if (runtimeParameter->verbose) {
+		std::cout << "Spawn sensor as a static sensor in world." << std::endl;
+	}
+
+	std::string sensorType = sensorViewConfiger->matchSensorType(sensorConfig.type, sensorConfig.prefixed_fmu_variable_name);
+	carla::SharedPtr<carla::client::BlueprintLibrary> blueprintLibrary = carla->world->GetBlueprintLibrary();
+	auto bp = blueprintLibrary->Find(sensorType);
+	carla::client::ActorBlueprint sensorBP = (carla::client::ActorBlueprint) *bp;
+
+	sensorViewConfiger->configureBP(sensorBP, sensorConfig);
+
+	carla::geom::Transform transform = Geometry::getInstance()->toCarla(sensorConfig.sensorViewConfiguration.mounting_position());
+
+	auto actor = carla->world->TrySpawnActor(sensorBP, transform, parent);
+	if (actor == nullptr) {
+		std::cerr << "Could not spawn sensor. Attach to actor with Actor Id: " << actorId
+			<< " SensorBP: " << (sensorBP).GetId() << std::endl;
+		return false;
+	}
+	auto sensorActor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
+	if (!sensorViewConfiger->addSensorIdToStorage(actorId, sensorActor->GetId())) {
+		carla->spawnedSensorsOnExternalSpawnedVehicles.push_back(sensorActor->GetId());
+	}
+
+	sensorCache.emplace(sensorConfig.prefixed_fmu_variable_name, nullptr);
+	sensorActor->Listen(
+		[this, sensorActor, sensorConfig]
+	(carla::SharedPtr<carla::sensor::SensorData> sensorData) {
+		sensorEventAction(sensorActor, sensorData, sensorConfig);
+	}
+	);
+	return true;
 }

@@ -30,10 +30,10 @@ error "Missing the <filesystem> header."
 
 #include "Semaphore.h"
 #include "Logger.h"
+#include "MessageCache.h"
 #include "CARLA_TrafficUpdate.h"
 #include "CARLA_SensorView.h"
 #include "CARLA_TrafficCommand.h"
-#include "CARLA_SensorViewConfiguration.h"
 #include "carla_osi/Identifiers.h"
 #include "ScenarioRunner/TrafficCommandReceiver.h"
 
@@ -61,12 +61,9 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 	std::shared_ptr<CARLAInterface> carla = std::make_shared<CARLAInterface>();
 	std::unique_ptr<TrafficUpdater> trafficUpdater = std::make_unique<TrafficUpdater>();
 	std::shared_ptr<SensorViewer> sensorViewer = std::make_shared<SensorViewer>();
-	std::unique_ptr<SensorViewConfiger> sensorViewConfiger = std::make_unique<SensorViewConfiger>();
 	std::unique_ptr<TrafficCommander> trafficCommander = std::make_unique<TrafficCommander>();
 	std::unique_ptr<Logger> logger = std::make_unique<Logger>();
-
-	// contains OSI messages (values) for variable names (keys). Can be used for output->input chaining without translating a message into Carla's world first if no corresponding role_name is present
-	std::map<std::string, std::string> varName2MessageMap; //important!
+	MessageCache messageCache;
 
 #pragma endregion fields for the Carla OSI Interface
 
