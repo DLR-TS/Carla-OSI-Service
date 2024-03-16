@@ -179,12 +179,12 @@ void SensorViewer::sensorEventAction(carla::SharedPtr<carla::client::Sensor> sen
 void SensorViewer::trySpawnSensors() {
 	for (auto& sensorConfig : sensorViewConfiger->sensorsByFMU) {
 		if (!sensorConfig.spawned) {
-			//sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
+			sensorConfig.spawned = trySpawnSensor(sensorConfig);
 		}
 	}
 	for (auto& sensorConfig : sensorViewConfiger->sensorsByUser) {
 		if (!sensorConfig.spawned) {
-			//sensorConfig.spawned = trySpawnSensor(sensorViewer, sensorConfig);
+			sensorConfig.spawned = trySpawnSensor(sensorConfig);
 		}
 	}
 }
