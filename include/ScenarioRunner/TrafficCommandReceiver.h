@@ -1,5 +1,5 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef TRAFFICCOMMANDRECEIVER_H

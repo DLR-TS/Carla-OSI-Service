@@ -1,24 +1,25 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef TRAFFICSIGNALS_H
 #define TRAFFICSIGNALS_H
 
+#include <tuple>
+
 #include <carla/client/Map.h>
 #include <carla/client/TrafficSign.h>
-#include <carla/client/TrafficLight.h>
-#include <carla/geom/BoundingBox.h>
-//#include <carla/rpc/TrafficLightHead.h>
 
-#include <osi_common.pb.h>
 #include <osi_trafficlight.pb.h>
 #include <osi_trafficsign.pb.h>
+
+#include "carla_osi/Identifiers.h"
+#include "carla_osi/Geometry.h"
 
 namespace carla_osi::traffic_signals {
 
 	/// Translate given carla traffic sign actor to a corresponding osi traffic sign.
-	std::unique_ptr<osi3::TrafficSign> getOSITrafficSign(const carla::SharedPtr<const carla::client::TrafficSign> actor,
+	std::unique_ptr<osi3::TrafficSign> getOSITrafficSign(carla::rpc::EnvironmentObject &sign/*const carla::SharedPtr<const carla::client::TrafficSign> actor,
 		//const carla::SharedPtr<const carla::client::Map> map,//map is used to determine affected lanes
 		const carla::geom::BoundingBox& bbox/*, const pugi::xml_document& xodr*/);
 	

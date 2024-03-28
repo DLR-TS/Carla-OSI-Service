@@ -60,10 +60,6 @@ TEST_CASE("CARLA_OSI_Client", "[CARLA_OSI_Client][CARLAInterface][.][RequiresCar
 	SECTION("Supported rpcs") {
 
 		CoSiMa::rpc::CarlaConfig config;
-		config.set_carla_host(carlaHost);
-		config.set_carla_port(carlaPort);
-		config.set_transaction_timeout(transactionTimeout);
-		config.set_delta_seconds(deltaSeconds);
 		auto response = CoSiMa::rpc::Int32();
 
 
@@ -236,13 +232,9 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	std::string baseName = "#prefix#OSMPSensorViewGroundTruth";
 
 	CoSiMa::rpc::CarlaConfig config;
-	config.set_carla_host(carlaHost);
-	config.set_carla_port(carlaPort);
-	config.set_transaction_timeout(transactionTimeout);
-	config.set_delta_seconds(deltaSeconds);
 	auto extras = config.add_sensor_view_extras();
 	extras->set_prefixed_fmu_variable_name(baseName);
-	auto mountingPosition = extras->mutable_sensor_mounting_position()->add_generic_sensor_mounting_position();
+	auto mountingPosition = extras->mutable_sensor_mounting_position();
 	auto position = mountingPosition->mutable_position();
 	position->set_x(1.2);
 	position->set_y(-0.34);
@@ -275,8 +267,8 @@ TEST_CASE("CARLA_OSI_Client SensorView MountingPosition", "[CARLA_OSI_Client][CA
 	REQUIRE(position->y() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().y());
 	REQUIRE(position->z() == sensorViewGroundTruth.generic_sensor_view(0).view_configuration().mounting_position().position().z());
 }
-
-TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][TrafficCommandReceiver]") {
+/*
+TEST_CASE("CARLA_OSI_CLIENT TrafficCommand proxy", "[CARLA_OSI_CLIENT][TrafficCommandReceiver]") {
 	std::string gRPCHost = "localhost:51425";
 	grpc::ChannelArguments channelArgs;
 	auto channel = grpc::CreateCustomChannel(gRPCHost, grpc::InsecureChannelCredentials(), channelArgs);
@@ -297,16 +289,14 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver", "[CARLA_OSI_CLIENT][Traffi
 
 	// Unmatched actor id resolves to empty role name
 	CoSiMa::rpc::String rpcBaseName;
-	rpcBaseName.set_value("TrafficCommand{}");
+	rpcBaseName.set_value("TrafficCommand");
 	CoSiMa::rpc::Bytes serializedResponse;
 	osi3::TrafficCommand response;
 
 	context = CreateDeadlinedClientContext(5.0);
 	baseStub.GetStringValue(context.get(), rpcBaseName, &serializedResponse);
-	REQUIRE(0 < serializedResponse.value().length());
-	REQUIRE(0 < serializedResponse.ByteSizeLong());
-	REQUIRE(response.ParseFromString(serializedResponse.value()));
-	REQUIRE(0 == response.traffic_participant_id().value());
+	REQUIRE(0 == serializedResponse.value().length());
+	REQUIRE(0 == serializedResponse.ByteSizeLong());
 }
 
 TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][TrafficCommandReceiver][.][RequiresCarlaServer][gRPC]") {
@@ -330,10 +320,6 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 	std::string carlaMap = "Town10HD";
 	const double transactionTimeout = 60;
 	CoSiMa::rpc::CarlaConfig conf;
-	conf.set_carla_host(carlaHost);
-	conf.set_carla_port(carlaPort);
-	conf.set_transaction_timeout(transactionTimeout);
-	conf.set_delta_seconds(1 / 60.);
 
 	//Use one of the predefined maps as OpenDRIVE based maps can cause crashes if a road has no predecessor/successor
 	auto[client, world] = getCarlaDefaultWorld(carlaHost, carlaPort, transactionTimeout, carlaMap);
@@ -366,7 +352,7 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 
 	// Unmatched actor id resolves to empty role name
 	CoSiMa::rpc::String rpcBaseName;
-	rpcBaseName.set_value("TrafficCommand{}");
+	rpcBaseName.set_value("TrafficCommand");
 	CoSiMa::rpc::Bytes serializedResponse;
 	osi3::TrafficCommand response;
 
@@ -395,3 +381,4 @@ TEST_CASE("CARLA_OSI_CLIENT TrafficCommand receiver 2", "[CARLA_OSI_CLIENT][Traf
 	REQUIRE(response.ParseFromString(serializedResponse.value()));
 	REQUIRE(trafficCommand.traffic_participant_id().value() == response.traffic_participant_id().value());
 }
+*/

@@ -5,8 +5,9 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	osi3::BaseStationary* base = prop->mutable_base();
 	osi3::StationaryObject_Classification* classification = prop->mutable_classification();
 
-	auto[dimension, position] = carla_osi::geometry::toOSI(environmentObject.bounding_box);
-	
+	auto dimpos = Geometry::getInstance()->toOSI(environmentObject.bounding_box);
+	auto& dimension = std::get<0>(dimpos);
+
 	if (!verbose && dimension->length() * dimension->width() * dimension->height() >= 1000) {
 		std::cout << "Large volume of stationary object detected. Name: " << environmentObject.name << std::endl;
 	}
@@ -20,8 +21,8 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	}
 
 	base->set_allocated_dimension(dimension.release());
-	base->set_allocated_position(carla_osi::geometry::toOSI(environmentObject.transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(environmentObject.transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(environmentObject.transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(environmentObject.transform.rotation).release());
 
 	switch (environmentObject.type)
 	{
@@ -73,11 +74,10 @@ osi3::StationaryObject* CarlaUtility::toOSI(const carla::rpc::EnvironmentObject&
 	}
 
 	prop->set_allocated_id(carla_osi::id_mapping::toOSI(environmentObject.id).release());
-	
+
 	prop->set_model_reference(environmentObject.name);
 	return prop;
 }
-
 
 std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::SharedPtr<const carla::client::Actor> actor)
 {
@@ -85,8 +85,8 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	auto transform = actor->GetTransform();
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	// but bounding boxes only exist for Vehicle and Walker specializations
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(transform.rotation).release());
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -99,12 +99,13 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	//TODO verify relation of bouding box origin and actor.GetLocation() for Walkers
 	auto bbox = actor->GetBoundingBox();
 	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
-	auto[dimension, location] = carla_osi::geometry::toOSI(actor->GetBoundingBox());
+	auto dimpos = Geometry::getInstance()->toOSI(actor->GetBoundingBox());
+	auto& dimension = std::get<0>(dimpos);
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations - assume bbox is not rotated
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(transform.rotation).release());
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
 }
@@ -116,13 +117,14 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving(const carla::Sha
 	// transform.location might not match the bounding box center if bounding box is not located at origin (in local coordinates)
 	auto bbox = actor->GetBoundingBox();
 	// parse bounding box to dimension field of base - there is no generic way to retrieve an actor's bounding box in carla_osi::geometry::toOSI
-	auto[dimension, location] = carla_osi::geometry::toOSI(bbox);
+	auto dimpos = Geometry::getInstance()->toOSI(bbox);
+	auto& dimension = std::get<0>(dimpos);
 	base->set_allocated_dimension(dimension.release());
 	transform.location += bbox.location;
 	//TODO libCarla_client has no arithmetics for rotations, but
 	// vehicle bounding boxes shouldn't be rotated
-	base->set_allocated_position(carla_osi::geometry::toOSI(transform.location).release());
-	base->set_allocated_orientation(carla_osi::geometry::toOSI(transform.rotation).release());
+	base->set_allocated_position(Geometry::getInstance()->toOSI(transform.location).release());
+	base->set_allocated_orientation(Geometry::getInstance()->toOSI(transform.rotation).release());
 
 
 	return CarlaUtility::toOSIBaseMoving_common(actor, std::move(base));
@@ -138,10 +140,10 @@ std::unique_ptr<osi3::BaseMoving> CarlaUtility::toOSIBaseMoving_common(const car
 
 	// velocity and acceleration as part of ground truth are given in global coordinate system
 	//TODO reference frame of actor velocity is not documented might be local and has to be transformed
-	base->set_allocated_velocity(carla_osi::geometry::toOSI(actor->GetVelocity()).release());
-	base->set_allocated_acceleration(carla_osi::geometry::toOSI(actor->GetAcceleration()).release());
+	base->set_allocated_velocity(Geometry::getInstance()->toOSIVelocity(actor->GetVelocity()).release());
+	base->set_allocated_acceleration(Geometry::getInstance()->toOSIVelocity(actor->GetAcceleration()).release());
 	auto angularVelocity = actor->GetAngularVelocity();//Carla uses Vector3d instead of Rotation as type
-	base->set_allocated_orientation_rate(carla_osi::geometry::toOSI(
+	base->set_allocated_orientation_rate(Geometry::getInstance()->toOSI(
 		carla::geom::Rotation(angularVelocity.y, angularVelocity.z, angularVelocity.x)).release());
 
 	//TODO Carla has no rotational acceleration
@@ -235,10 +237,11 @@ std::unique_ptr<osi3::MovingObject_VehicleClassification_LightState> CarlaUtilit
 	return lightState;
 }
 
-osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
+osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const carla::client::Sensor> sensor,
+	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
-	//Contains RGBA uint8 values
 	auto image = boost::dynamic_pointer_cast<const carla::sensor::data::Image>(sensorData);
+	//Contains RGBA uint8 values
 	if (!image) return nullptr;
 	auto height = image->GetHeight();
 	auto width = image->GetWidth();
@@ -250,9 +253,9 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	//Boost GIL image view for color conversion
 	const carla::sensor::data::ImageTmpl<carla::sensor::data::Color>& ref = *image;
 	const boost::gil::bgra8c_view_t rgbaView = carla::image::ImageView::MakeView(ref);
-		/*=boost::gil::interleaved_view(width,
-		height, reinterpret_cast<boost::gil::rgba8c_ptr_t>(image->data()),
-		sizeof(carla::sensor::data::Image::value_type)  * width);*/
+	/*=boost::gil::interleaved_view(width,
+	height, reinterpret_cast<boost::gil::rgba8c_ptr_t>(image->data()),
+	sizeof(carla::sensor::data::Image::value_type)  * width);*/
 
 	//Buffer for RGB raw image
 	boost::gil::rgb8_ptr_t rgb = new boost::gil::rgb8_pixel_t[image->size()];
@@ -265,7 +268,7 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	boost::gil::copy_and_convert_pixels(rgbaView, rgbView);
 
 	//Debug
-	boost::gil::write_view("CARLA_camera_image.png", rgbView, boost::gil::png_tag());
+	//boost::gil::write_view("CARLA_camera_image_" + std::to_string(rand()) + ".png", rgbView, boost::gil::png_tag());
 
 	// Fill OSI CameraSensorView Message
 	osi3::CameraSensorView* cameraSensorView = new osi3::CameraSensorView();
@@ -277,26 +280,26 @@ osi3::CameraSensorView* CarlaUtility::toOSICamera(const carla::SharedPtr<const c
 	auto fov = image->GetFOVAngle() * M_PI / 180.0;
 	config->set_field_of_view_horizontal(fov);
 	// guess vertical fov based on aspect ratio
-	config->set_field_of_view_horizontal(fov / aspect);
+	config->set_field_of_view_vertical(fov / aspect);
 	config->set_number_of_pixels_horizontal(width);
 	config->set_number_of_pixels_vertical(height);
+	config->set_samples_per_pixel(1);
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
 	//TODO calculate sensor position in vehicle coordinates
-	config->set_allocated_mounting_position(carla_osi::geometry::toOSI(sensor->GetTransform()).release());
+	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
 	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
-
 
 	return cameraSensorView;
 }
 
-osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
+osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const carla::client::Sensor> sensor,
+	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
-	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::LidarMeasurement>(sensorData);
-	std::optional<double> rotationFrequency;
-	std::optional<double> upperFov;
-	std::optional<double> lowerFov;
+	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::SemanticLidarMeasurement>(sensorData);
+	double rotationFrequency, upperFov, lowerFov, range, horizontalFoV, sensorTick;
+	int pointsPerSecond, channels;
 	auto attributes = sensor->GetAttributes();
 	for (auto attribute : attributes) {
 		if ("rotation_frequency" == attribute.GetId()) {
@@ -306,55 +309,95 @@ osi3::LidarSensorView* CarlaUtility::toOSILidar(const carla::SharedPtr<const car
 			upperFov = std::stod(attribute.GetValue());
 		}
 		else if ("lower_fov" == attribute.GetId()) {
-			upperFov = std::stod(attribute.GetValue());
+			lowerFov = std::stod(attribute.GetValue());
+		}
+		else if ("horizontal_fov" == attribute.GetId()) {
+			horizontalFoV = std::stod(attribute.GetValue());
+		}
+		else if ("range" == attribute.GetId()) {
+			range = std::stod(attribute.GetValue());
+		}
+		else if ("sensor_tick" == attribute.GetId()) {
+			sensorTick = std::stod(attribute.GetValue());
+		}
+		else if ("points_per_second" == attribute.GetId()) {
+			pointsPerSecond = std::stoi(attribute.GetValue());
+		}
+		else if ("channels" == attribute.GetId()) {
+			channels = std::stoi(attribute.GetValue());
 		}
 	}
-	std::optional<double> vFov;
+	double vFov;
 	if (upperFov && lowerFov) {
 		//upper and lower field of view are given in degree
-		vFov = (upperFov.value() - lowerFov.value()) * M_PI / 180.0;
+		vFov = upperFov - lowerFov;
 	}
-	uint32_t numPixels{0};//OSI field uses uint32_t
-	if (measurement != nullptr) {
-		for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
-			numPixels += measurement->GetPointCount(i);
-		}
+	uint32_t numPixels{ 0 };//OSI field uses uint32_t
+	for (size_t i = 0; i < measurement->GetChannelCount(); i++) {
+		numPixels += measurement->GetPointCount(i);
 	}
 
-	//TODO find translation from Carla point cloud to OSI Reflections. OSI uses signal strength, time of flight, doppler shift and normal to surface as measurements instead of simple hit point positions.
-	//TODO Maybe use the osi3::FeatureData-based osi3::LidarDetection instead of a osi3::SensorView, which is similar to Carla's Lidar output
+	double senderHz = OSTAR_LIDAR_DEFAULT_HZ;
+	if (sensorConfig.sensorViewConfiguration.lidar_sensor_view_configuration().size()
+		&& sensorConfig.sensorViewConfiguration.lidar_sensor_view_configuration(0).has_emitter_frequency())
+		senderHz = sensorConfig.sensorViewConfiguration.lidar_sensor_view_configuration(0).emitter_frequency();
 
 	osi3::LidarSensorView* lidarSensorView = new osi3::LidarSensorView();
 
 	auto config = lidarSensorView->mutable_view_configuration();
-	//TODO get lidar directions
-	//config->add_directions()
-	if (rotationFrequency) {
-		config->set_emitter_frequency(rotationFrequency.value());
-	}
-	if (vFov) {
-		config->set_field_of_view_vertical(vFov.value());
-	}
-	config->set_field_of_view_horizontal(M_PI * 2);
-	config->set_max_number_of_interactions(1);
 
-	//TODO calculate sensor position in vehicle coordinates, that is relative to the vehicles rear
-	//config->set_allocated_mounting_position(position)
-	//config->set_allocated_mounting_position_rmse(rmse)
+	config->set_emitter_frequency(senderHz);
+	config->set_field_of_view_vertical(vFov * M_PI / 180.0);
+	config->set_field_of_view_horizontal(horizontalFoV * M_PI / 180.0);
+	config->set_max_number_of_interactions(1);
 
 	//TODO OSI expects a constant number of pixels per message, but Carla only reports new values of the angle sweeped during the last frame
 	config->set_num_of_pixels(numPixels);
 	//TODO number of rays (horizontal/vertical) of lidar
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
 
+	//TODO calculate sensor position in vehicle coordinates
+	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
+	// not given in CARLA
+	//config->set_allocated_mounting_position_rmse(rmse)
+
+	std::unordered_set<float> horizontal, vertical;
+	for (const carla::sensor::data::SemanticLidarDetection& singlemeasure : *measurement)
+	{
+		auto* reflection = lidarSensorView->add_reflection();
+		//TODO reflection->set_signal_strength(singlemeasure.intensity);
+		double distance = std::sqrt((double)singlemeasure.point.x * (double)singlemeasure.point.x
+			+ (double)singlemeasure.point.y * (double)singlemeasure.point.y
+			+ (double)singlemeasure.point.z * (double)singlemeasure.point.z);
+		reflection->set_time_of_flight((2 * distance) / OSTAR_LIGHT_SPEED);//double distance / lightspeed in m/s
+		//double receiverHz = senderHz * (OSTAR_LIGHT_SPEED + singlemeasure.velocity) / (OSTAR_LIGHT_SPEED - singlemeasure.velocity);
+		//reflection->set_doppler_shift(receiverHz - senderHz);
+
+		//TODO singlemeasure.cos_inc_angle;
+		//osi3::Vector3d* normalToSurface = new osi3::Vector3d;
+		//normalToSurface->set_x(singlemeasure.point.x);
+		//normalToSurface->set_y(singlemeasure.point.y);
+		//normalToSurface->set_z(singlemeasure.point.z);
+		//reflection->set_allocated_normal_to_surface(normalToSurface);
+		osi3::Identifier* identifier = new osi3::Identifier();
+		identifier->set_value(singlemeasure.object_idx);
+		reflection->set_allocated_object_id(identifier);
+		//horizontal.insert(singlemeasure.);
+		//vertical.insert(singlemeasure.);
+	}
+
+	//config->set_number_of_rays_horizontal((uint32_t)horizontal.size());
+	//config->set_number_of_rays_vertical((uint32_t)vertical.size());
+
 	return lidarSensorView;
 }
 
-osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor, const carla::SharedPtr<const carla::sensor::SensorData> sensorData)
+osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const carla::client::Sensor> sensor,
+	const carla::SharedPtr<const carla::sensor::SensorData> sensorData, const OSTARSensorConfiguration& sensorConfig)
 {
 	auto measurement = boost::dynamic_pointer_cast<const carla::sensor::data::RadarMeasurement>(sensorData);
-	std::optional<double> hFov;
-	std::optional<double> vFov;
+	double hFov, vFov, range, sensorTick;
+	int pointsPerSecond;
 	auto attributes = sensor->GetAttributes();
 	for (auto attribute : attributes) {
 		if ("horizontal_fov" == attribute.GetId()) {
@@ -363,27 +406,57 @@ osi3::RadarSensorView* CarlaUtility::toOSIRadar(const carla::SharedPtr<const car
 		else if ("vertical_fov" == attribute.GetId()) {
 			vFov = std::stod(attribute.GetValue());
 		}
+		else if ("range" == attribute.GetId()) {
+			range = std::stod(attribute.GetValue());
+		}
+		else if ("sensor_tick" == attribute.GetId()) {
+			sensorTick = std::stod(attribute.GetValue());
+		}
+		else if ("points_per_second" == attribute.GetId()) {
+			pointsPerSecond = std::stoi(attribute.GetValue());
+		}
 	}
+
+	double senderHz = OSTAR_RADAR_DEFAULT_HZ;
+	if (sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration().size()
+		&& sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration(0).has_emitter_frequency())
+		senderHz = sensorConfig.sensorViewConfiguration.radar_sensor_view_configuration(0).emitter_frequency();
 
 	auto radarSensorview = new osi3::RadarSensorView();
 
-	//TODO find translation from Carla point cloud to OSI Reflections. OSI uses signal strength, time of flight, doppler shift and source vertical and horizontal angle as measurements instead of simple hit point positions.
-	//TODO Maybe use the osi3::FeatureData-based osi3::RadarDetection instead of a osi3::SensorView, which is similar to Carla's Radar output
-
 	auto config = radarSensorview->mutable_view_configuration();
 	config->set_allocated_sensor_id(carla_osi::id_mapping::getOSIActorId(sensor).release());
-	if (hFov) {
-		config->set_field_of_view_horizontal(hFov.value());
-	}
-	if (vFov) {
-		config->set_field_of_view_vertical(vFov.value());
-	}
+	config->set_field_of_view_horizontal(hFov);
+	config->set_field_of_view_vertical(vFov);
 	config->set_max_number_of_interactions(1);
+	config->set_emitter_frequency(senderHz);// Hz to Hz -> no conversion
+
 	//TODO number of rays (horizontal/vertical)
 	//TODO rx and tx antenna diagrams
 	//TODO calculate sensor position in vehicle coordinates, that is relative to the vehicles rear
-	//config->set_allocated_mounting_position(position)
+
+	//TODO calculate sensor position in vehicle coordinates
+	config->set_allocated_mounting_position(Geometry::getInstance()->toOSI(sensor->GetTransform()).release());
+	// not given in CARLA
 	//config->set_allocated_mounting_position_rmse(rmse)
+
+	std::unordered_set<float> horizontal, vertical;
+	for (const auto& singlemeasure : *measurement)
+	{
+		auto* reflection = radarSensorview->add_reflection();
+		reflection->set_source_horizontal_angle(singlemeasure.azimuth);//rad to rad -> no conversion
+		reflection->set_source_vertical_angle(singlemeasure.altitude);//rad to rad -> no conversion
+		double receiverHz = senderHz * (OSTAR_LIGHT_SPEED + singlemeasure.velocity) / (OSTAR_LIGHT_SPEED - singlemeasure.velocity);
+		reflection->set_doppler_shift(receiverHz - senderHz);
+		reflection->set_signal_strength(10 * range / singlemeasure.depth);//TODO check if signal strength estimation makes sense
+		reflection->set_time_of_flight((2 * singlemeasure.depth) / OSTAR_LIGHT_SPEED);//double distance / lightspeed in m/s
+
+		horizontal.insert(singlemeasure.azimuth);
+		vertical.insert(singlemeasure.altitude);
+	}
+
+	config->set_number_of_rays_horizontal((uint32_t)horizontal.size());
+	config->set_number_of_rays_vertical((uint32_t)vertical.size());
 
 	return radarSensorview;
 }
@@ -631,3 +704,51 @@ osi3::MovingObject_VehicleClassification_Type CarlaUtility::ParseVehicleType(con
 	return osi3::MovingObject_VehicleClassification_Type_TYPE_UNKNOWN;
 }
 
+std::unique_ptr<osi3::Timestamp> CarlaUtility::parseTimestamp(const carla::client::Timestamp& carlaTime)
+{
+	std::unique_ptr<osi3::Timestamp> osiTime = std::make_unique<osi3::Timestamp>();
+	double intPart;
+	double fractional = std::modf(carlaTime.elapsed_seconds, &intPart);
+	osiTime->set_seconds(google::protobuf::int64(intPart));
+	osiTime->set_nanos(google::protobuf::uint32(fractional *1e9));
+	return osiTime;
+}
+
+std::string CarlaUtility::findBestMatchingCarToSpawn(const osi3::Dimension3d& dimension,
+	const std::vector<std::tuple<std::string, carla::geom::Vector3D>>& replayVehicleBoundingBoxes,
+	double& weightLength_X, double& weightWidth_Y, double& weightHeight_Z) {
+
+	size_t minDiffVehicleIndex = 0;
+
+	double minTotalDiff = DBL_MAX;
+	double minTotalDiffLength = 0, minTotalDiffWidth = 0, minTotalDiffHeight = 0;
+
+	for (int i = 0; i < replayVehicleBoundingBoxes.size(); i++) {
+		auto& boundingBox = std::get<1>(replayVehicleBoundingBoxes[i]);
+
+		double diffLength = dimension.length() - (2 * boundingBox.x);
+		double diffWidth = dimension.width() - (2 * boundingBox.y);
+		double diffHeight = dimension.height() - (2 * boundingBox.z);
+
+		double sumDiff = weightLength_X * std::abs(diffLength);
+		sumDiff += weightWidth_Y * std::abs(diffWidth);
+		sumDiff += weightHeight_Z * std::abs(diffHeight);
+
+		if (sumDiff < minTotalDiff) {
+			minDiffVehicleIndex = i;
+			minTotalDiff = sumDiff;
+
+			minTotalDiffLength = diffLength;
+			minTotalDiffWidth = diffWidth;
+			minTotalDiffHeight = diffHeight;
+		}
+	}
+
+	std::cout << "Search for vehicle with length: " << dimension.length() << ", width: " << dimension.width()
+		<< ", height: " << dimension.height()
+		<< " Spawn vehicle with length: " << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).x * 2
+		<< ", width:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).y * 2
+		<< ", height:" << std::get<1>(replayVehicleBoundingBoxes[minDiffVehicleIndex]).z * 2 << std::endl;
+
+	return std::get<0>(replayVehicleBoundingBoxes[minDiffVehicleIndex]);
+}

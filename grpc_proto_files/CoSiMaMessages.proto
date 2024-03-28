@@ -1,11 +1,10 @@
 syntax = "proto3";
-//TODO fix import; see TODO near message Empty
 //import "google/protobuf/empty.proto";
 
 package CoSiMa.rpc;
 
-// replacement for "google/protobuf/Empty.proto", because it's compiled content is not found (error C2039: "descriptor_table_google_2fprotobuf_2fEmpty_2eproto": Ist kein Element von "`global namespace'")
-//TODO find out why "google/protobuf/Empty.proto" cannot be found and use it instead
+//replacement for "google/protobuf/empty.proto", because it's compiled content is not found (error C2039: "descriptor_table_google_2fprotobuf_2fEmpty_2eproto": Ist kein Element von "`global namespace'")
+//find out why "google/protobuf/empty.proto" cannot be found and use it instead
 message Empty {
 	// empty by design
 }

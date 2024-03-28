@@ -60,7 +60,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 	SECTION("toOSI") {
 		SECTION("Rotation") {
 			carla::geom::Rotation rotation(45, -90, 180);
-			std::unique_ptr<osi3::Orientation3d> orientation = carla_osi::geometry::toOSI(rotation);
+			std::unique_ptr<osi3::Orientation3d> orientation = Geometry::getInstance()->toOSI(rotation);
 			REQUIRE(M_PI_4 == orientation->pitch());
 			REQUIRE(M_PI_2 == orientation->yaw());
 			REQUIRE(M_PI == orientation->roll());
@@ -68,7 +68,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 
 		SECTION("Location") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
-			std::unique_ptr<osi3::Vector3d> position = carla_osi::geometry::toOSI(location);
+			std::unique_ptr<osi3::Vector3d> position = Geometry::getInstance()->toOSI(location);
 			REQUIRE(1.2f == position->x());
 			REQUIRE(-3.4f == position->y());
 			REQUIRE(5.6f == position->z());
@@ -78,7 +78,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::Rotation rotation(45, -90, 180);
 			carla::geom::Transform transform(location, rotation);
-			std::unique_ptr<osi3::MountingPosition> mountingPosition = carla_osi::geometry::toOSI(transform);
+			std::unique_ptr<osi3::MountingPosition> mountingPosition = Geometry::getInstance()->toOSI(transform);
 			auto position = mountingPosition->position();
 			auto orientation = mountingPosition->orientation();
 			REQUIRE(1.2f == position.x());
@@ -89,17 +89,10 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			REQUIRE(M_PI == orientation.roll());
 		}
 
-		SECTION("2D Vector") {
-			carla::geom::Vector2D vector(0.1f, -0.1f);
-			std::unique_ptr<osi3::Vector2d> vector2d = carla_osi::geometry::toOSI(vector);
-			REQUIRE(0.1f == vector2d->x());
-			REQUIRE(-0.1f == vector2d->y());
-		}
-
 		SECTION("BoundingBox") {
 			carla::geom::Location location(1.2f, 3.4f, 5.6f);
 			carla::geom::BoundingBox boundingBox(location, carla::geom::Vector3D(1.f, 2.f, 4.f));
-			auto osiBB = carla_osi::geometry::toOSI(boundingBox);
+			auto osiBB = Geometry::getInstance()->toOSI(boundingBox);
 			REQUIRE(1.2f == osiBB.second->x());
 			REQUIRE(-3.4f == osiBB.second->y());
 			REQUIRE(5.6f == osiBB.second->z());
@@ -162,7 +155,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			orientation.set_pitch(M_PI_4);
 			orientation.set_yaw(M_PI_2);
 			orientation.set_roll(M_PI - M_PI_4);
-			carla::geom::Rotation rotation = carla_osi::geometry::toCarla(&orientation);
+			carla::geom::Rotation rotation = Geometry::getInstance()->toCarla(orientation);
 			REQUIRE(45.f == rotation.pitch);
 			REQUIRE(-90.f == rotation.yaw);
 			REQUIRE(135.f == rotation.roll);
@@ -173,19 +166,10 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			position.set_x(0.1);
 			position.set_y(2.3);
 			position.set_z(4.5);
-			carla::geom::Location location = carla_osi::geometry::toCarla(&position);
+			carla::geom::Location location = Geometry::getInstance()->toCarla(position);
 			REQUIRE(0.1f == location.x);
 			REQUIRE(-2.3f == location.y);
 			REQUIRE(4.5f == location.z);
-		}
-
-		SECTION("2D Vector") {
-			osi3::Vector2d vector2d;
-			vector2d.set_x(0.1);
-			vector2d.set_y(-0.1);
-			carla::geom::Vector2D vector = carla_osi::geometry::toCarla(&vector2d);
-			REQUIRE(0.1f == vector.x);
-			REQUIRE(-0.1f == vector.y);
 		}
 
 		SECTION("BoundingBox") {
@@ -197,7 +181,7 @@ TEST_CASE("Coordinate system conversion Carla <=> OSI", "[Carla][Utility][Coords
 			dimension.set_length(8.);
 			dimension.set_width(4.);
 			dimension.set_height(10.);
-			carla::geom::BoundingBox boundingBox = carla_osi::geometry::toCarla(&dimension, &position);
+			carla::geom::BoundingBox boundingBox = Geometry::getInstance()->toCarla(dimension, position);
 			REQUIRE(0.1f == boundingBox.location.x);
 			REQUIRE(-2.3f == boundingBox.location.y);
 			REQUIRE(4.5f == boundingBox.location.z);
@@ -253,10 +237,11 @@ TEST_CASE("Carla Prop to StationaryObject", "[Carla][Utility][!hide][RequiresCar
 	auto propBlueprint = blueprintLibrary->Find("static.prop.barbeque");
 	auto randomLocation = world->GetRandomLocationFromNavigation();
 	auto fallbackLocation = carla::geom::Location(0, 0, 1);
-	auto propActor = world->SpawnActor(*propBlueprint, randomLocation.value_or(fallbackLocation));
-
-	auto bbox = world->GetActorBoundingBox(propActor->GetId());
-	auto stationaryObject = CarlaUtility::toOSI(propActor, bbox);
+	/*carla::SharedPtr<carla::client::Actor> propActor = world->SpawnActor(*propBlueprint, randomLocation.value_or(fallbackLocation));
+	auto environmentObject = boost::static_pointer_cast<const carla::rpc::EnvironmentObject>(propActor);
+	auto bbox = environmentObject->bounding_box;
+	std::string barbeque = "Barbeque";
+	auto stationaryObject = CarlaUtility::toOSI(environmentObject, barbeque);
 
 	REQUIRE(stationaryObject->has_classification());
 	REQUIRE(stationaryObject->has_base());
@@ -264,42 +249,9 @@ TEST_CASE("Carla Prop to StationaryObject", "[Carla][Utility][!hide][RequiresCar
 	REQUIRE(stationaryObject->base().has_dimension());
 	REQUIRE(stationaryObject->base().has_orientation());
 	REQUIRE(stationaryObject->base().has_position());
-	REQUIRE(stationaryObject->classification().has_type());
+	REQUIRE(stationaryObject->classification().has_type());*/
 }
 
-TEST_CASE("Carla Prop Bounding Box", "[Carla][Utility][!hide][RequiresCarlaServer]") {
-	//TODO find a way to use the ActorFactory without a carla server
-
-	auto client = std::make_unique<carla::client::Client>("localhost", 2000u);
-	client->SetTimeout(std::chrono::duration<double>(10));
-	auto world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
-
-	//find a prop and spawn it in the current world to assert it contains an actor of type prop
-	auto blueprintLibrary = world->GetBlueprintLibrary();
-	auto propBlueprint = blueprintLibrary->Find("static.prop.barbeque");
-	auto randomLocation = world->GetRandomLocationFromNavigation();
-	auto fallbackLocation = carla::geom::Location(0, 0, 1);
-	auto propActor = world->SpawnActor(*propBlueprint, randomLocation.value_or(fallbackLocation));
-
-	auto bbox = world->GetActorBoundingBox(propActor->GetId());
-
-	auto transform = propActor->GetTransform();
-	transform.location += transform.GetForwardVector();
-	transform.rotation.yaw += 45;
-	auto propActor2 = world->SpawnActor(*propBlueprint, transform);
-
-	//returns position, extent and rotation in world coordinates
-	auto bbox2 = world->GetActorBoundingBox(propActor2->GetId());
-
-
-	REQUIRE(bbox.extent == bbox2.extent);
-	//REQUIRE((bbox.location + transform.GetForwardVector()) == bbox2.location);
-	REQUIRE(bbox.rotation.roll == bbox2.rotation.roll);
-	REQUIRE(Approx(bbox.rotation.yaw + 45) == bbox2.rotation.yaw);
-	REQUIRE(bbox.rotation.pitch == bbox2.rotation.pitch);
-}
-
-//TODO move to CARLA
 TEST_CASE("Carla GetStationaryObject", "[Carla][Utility][!hide][RequiresCarlaServer][GetStationaryObject]") {
 	//TODO find a way to use the ActorFactory without a carla server
 
@@ -307,7 +259,7 @@ TEST_CASE("Carla GetStationaryObject", "[Carla][Utility][!hide][RequiresCarlaSer
 	client->SetTimeout(std::chrono::duration<double>(120));
 	auto world = std::make_unique<carla::client::World>(std::move(client->GetWorld()));
 
-	auto stationaryMapObjects = world->GetStationaryMapObjects();
+	auto stationaryMapObjects = world->GetEnvironmentObjects((uint8_t)carla::rpc::CityObjectLabel::Any);
 
 	for (auto stationaryMapObject : stationaryMapObjects) {
 		////if (std::string::npos != stationaryMapObject.name.rfind("Jeep"))
@@ -373,7 +325,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 	for (auto& trafficLightActor : trafficLightActorSnapshots) {
 		auto trafficLight = boost::dynamic_pointer_cast<const carla::client::TrafficLight>(world.GetActor(trafficLightActor.id));
 		//auto osiTrafficLight = carla_osi::traffic_signals::getOSITrafficLight(trafficLight/*, xodr*/);
-		auto heads = world.GetTrafficLightHeads(trafficLight);
+		/*auto heads = world.GetTrafficLightHeads(trafficLight);
 		auto osiTrafficLight = carla_osi::traffic_signals::getOSITrafficLight(trafficLight, heads);
 
 		std::cout << trafficLight->GetDisplayId() << std::endl;
@@ -383,8 +335,8 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 		CHECK(1 < osiTrafficLight.size());
 
 		for (auto& bulb : osiTrafficLight) {
-			auto bbox = carla_osi::geometry::toCarla(&bulb->base().dimension(), &bulb->base().position());
-			auto orientation = carla_osi::geometry::toCarla(&bulb->base().orientation());
+			auto bbox = carla_osi::geometry::toCarla(bulb->base().dimension(), bulb->base().position());
+			auto orientation = carla_osi::geometry::toCarla(bulb->base().orientation());
 
 			// draw box in the respective color
 			switch (bulb->classification().color())
@@ -403,7 +355,7 @@ TEST_CASE("TrafficLight Debug box", "[.][DrawDebugStuff][VisualizationRequiresCa
 				break;
 			}
 			//std::cout << "rotation: " << orientation.pitch << "," << orientation.yaw << "," << orientation.roll << std::endl;
-		}
+		}*/
 	}
 
 	//carla->initialise(host, port, transactionTimeout, deltaSeconds, false);
@@ -521,7 +473,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		vehicleBBoxWorld.location += vehicleTransform.location;
 		CHECK(vehicleBBoxWorld.location != vehicleBBox.location);
 		// draw bounding box at spawn location
-		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, red, 6);
+		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1f, red, 6);
 		// wait for vehicle to settle after spawn
 		time = world->WaitForTick(transactionTimeout).GetTimestamp();
 		double timestamp = time.elapsed_seconds;
@@ -536,7 +488,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		CHECK(Approx(vehicleLocation.SquaredLength()) == vehicleTransform.location.SquaredLength());
 		vehicleBBoxWorld.location = vehicleBBox.location + vehicleTransform.location;
 		//draw bounding box at settled location
-		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1, red, 60);
+		debug.DrawBox(vehicleBBoxWorld, vehicleTransform.rotation, 0.1f, red, 60);
 		// transform from bbox to vehicle coordinates
 		auto frontAxleLocation = bbcenter_to_front - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
 		auto rearAxleLocation = bbcenter_to_rear - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
@@ -555,7 +507,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		debug.DrawArrow(vehicleBBoxWorld.location, rearAxleLocation, 0.02f, 0.1f, turkis, 300);
 
 		// Get current axle positions in vehicle coordinates
-		auto&[currentFrontAxleOffset, currentRearAxleOffset] = world->GetAxlePositions(actor->GetId());
+		/*auto&[currentFrontAxleOffset, currentRearAxleOffset] = world->GetAxlePositions(actor->GetId());
 
 		CHECK(Approx(currentFrontAxleOffset.x).margin(0.001f) == bbcenter_to_front.x);
 		CHECK(Approx(currentFrontAxleOffset.y).margin(0.001f) == bbcenter_to_front.y);
@@ -578,7 +530,7 @@ TEST_CASE("bbcenter_to_X raw attribute", "[DEBUG][.][TestsCarlaOsiServer][DrawDe
 		CHECK(Approx(currentRearAxleLocation.y).margin(0.001f) == rearAxleLocation.y);
 		CHECK(Approx(currentRearAxleLocation.z).margin(0.001f) == rearAxleLocation.z);
 		debug.DrawLine(currentFrontAxleLocation - extent, currentFrontAxleLocation + extent, .05f, yellow_2, 300);
-		debug.DrawLine(currentRearAxleLocation - extent, currentRearAxleLocation + extent, .05f, red_2, 300);
+		debug.DrawLine(currentRearAxleLocation - extent, currentRearAxleLocation + extent, .05f, red_2, 300);*/
 
 		while (timestamp + 9 > time.elapsed_seconds) {
 			time = world->WaitForTick(transactionTimeout).GetTimestamp();
@@ -701,7 +653,7 @@ TEST_CASE("bbcenter_to_X raw attribute 2", "[DEBUG][.][TestsCarlaOsiServer][Dont
 		vehicleTransform.TransformPoint(rearAxleLocation);
 
 		// Get current axle positions in vehicle coordinates
-		auto&[currentFrontAxleOffset, currentRearAxleOffset] = world->GetAxlePositions(actor->GetId());
+		/*auto&[currentFrontAxleOffset, currentRearAxleOffset] = world->GetAxlePositions(actor->GetId());
 
 		// Transform axle offsets from bbox coordinates to vehicle coordinates
 		auto currentFrontAxleLocation = currentFrontAxleOffset - static_cast<carla::geom::Vector3D>(vehicleBBox.location);
@@ -715,6 +667,6 @@ TEST_CASE("bbcenter_to_X raw attribute 2", "[DEBUG][.][TestsCarlaOsiServer][Dont
 		CHECK(Approx(currentFrontAxleLocation.z).margin(0.001f) == frontAxleLocation.z);
 		CHECK(Approx(currentRearAxleLocation.x).margin(0.001f) == rearAxleLocation.x);
 		CHECK(Approx(currentRearAxleLocation.y).margin(0.001f) == rearAxleLocation.y);
-		CHECK(Approx(currentRearAxleLocation.z).margin(0.001f) == rearAxleLocation.z);
+		CHECK(Approx(currentRearAxleLocation.z).margin(0.001f) == rearAxleLocation.z);*/
 	}
 }

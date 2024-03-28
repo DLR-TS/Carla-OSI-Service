@@ -1,20 +1,20 @@
-﻿# CMakeList.txt: CMake-Projektdatei der obersten Ebene.
-#
-cmake_minimum_required (VERSION 3.12)
-message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
-
+﻿cmake_minimum_required (VERSION 3.12)
 project ("CARLA OSI Service" CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+message("Running with CMake Version ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}.${CMAKE_PATCH_VERSION}")
+
+if (NOT DEFINED CMAKE_CXX_STANDARD)
+	set(CMAKE_CXX_STANDARD 17)
+endif()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(MSVC)
- option(DONT_FORCE_STATIC_LIBS "Building dynamic libraries fails for some targets because of incompatabilities in dependencies (protobuf, see FetchGRPC.cmake) and thus static lib's are enforced. Enable this option to abide CMAKE's BUILD_SHARED_LIBS variable" OFF)
- if(NOT DONT_FORCE_STATIC_LIBS)
- set(BUILD_SHARED_LIBS false)
- message("Forcing the use of static libraries as building dynamic libraries fails for some targets using MSVC because of incompatabilities in some dependencies. Enable DONT_FORCE_STATIC_LIBS to unforce this behaviour")
- endif(NOT DONT_FORCE_STATIC_LIBS)
+	option(DONT_FORCE_STATIC_LIBS "Building dynamic libraries fails for some targets because of incompatabilities in dependencies (protobuf, see FetchGRPC.cmake) and thus static lib's are enforced. Enable this option to abide CMAKE's BUILD_SHARED_LIBS variable" OFF)
+	if(NOT DONT_FORCE_STATIC_LIBS)
+		set(BUILD_SHARED_LIBS false)
+		message("Forcing the use of static libraries as building dynamic libraries fails for some targets using MSVC because of incompatabilities in some dependencies. Enable DONT_FORCE_STATIC_LIBS to unforce this behaviour")
+	endif(NOT DONT_FORCE_STATIC_LIBS)
 endif(MSVC)
 
 option(GIT_SUBMODULE "Check submodules during build" OFF)
@@ -44,7 +44,7 @@ include(${CMAKE_BINARY_DIR}/conan.cmake)
 conan_cmake_run(CONANFILE conanfile.txt
                 BASIC_SETUP CMAKE_TARGETS
                 BUILD missing)
-                
+
 # include conan packages for protobuf, catch2, fakeit ...
 include(${CMAKE_CURRENT_BINARY_DIR}/conanbuildinfo.cmake)
 
@@ -166,8 +166,9 @@ add_library(CARLA_OSI_ScenarioRunner_Lib "${CMAKE_CURRENT_SOURCE_DIR}/src/Scenar
 target_link_libraries(CARLA_OSI_ScenarioRunner_Lib PUBLIC CARLA_OSI_ScenarioRunner_gRPC_Lib)
 target_include_directories(CARLA_OSI_ScenarioRunner_Lib BEFORE PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
-# gRPC service logic library, separated from CARLA_OSI_Service to be testalble with catch2
-add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp" "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
+# gRPC service logic library, separated from CARLA_OSI_Service to be testable with catch2
+add_library(CARLA_OSI_gRPC_ServiceLib "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_gRPC.cpp"
+                                      "${CMAKE_CURRENT_LIST_DIR}/include/CARLA_OSI_gRPC.h")
 target_link_libraries(CARLA_OSI_gRPC_ServiceLib PUBLIC CARLA_OSI_gRPC_Lib CARLA_OSI_Lib CARLA_OSI_ScenarioRunner_Lib)
 target_include_directories(CARLA_OSI_gRPC_Lib BEFORE PUBLIC ${CMAKE_CURRENT_LIST_DIR}/include ${CMAKE_BINARY_DIR}/gens)
 
@@ -181,7 +182,11 @@ include(Catch)
 catch_discover_tests(Test_CARLA_OSI)
 
 add_executable (CARLA_OSI_Service "${CMAKE_CURRENT_LIST_DIR}/src/CARLA_OSI_Service.cpp")
+if (${CMAKE_CXX_STANDARD} LESS 17)
+target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_Lib stdc++fs)
+else()
 target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_Lib)
+endif()
 target_include_directories(CARLA_OSI_Service PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include/)
 target_link_libraries(CARLA_OSI_Service PUBLIC CARLA_OSI_gRPC_ServiceLib)
 # public include of target CARLA_OSI_gRPC_Lib is supposed to propagate, but is missing...
