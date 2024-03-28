@@ -18,7 +18,7 @@ The complete list of inputs and outputs can be found [here](https://github.com/D
 
 ## Linux
 
-install [conan 1.x](https://conan.io/)
+Install [conan](https://conan.io/) 1.x. Conan 2 not yet supported!
 
 in root folder:
 ```sh
