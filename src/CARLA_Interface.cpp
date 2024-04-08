@@ -21,6 +21,7 @@ int CARLAInterface::initialise(std::shared_ptr<RuntimeParameter> runtimeParams) 
 void CARLAInterface::loadWorld() {
 	this->world = std::make_unique<carla::client::World>(std::move(this->client->GetWorld()));
 	this->map = world->GetMap();
+	this->client->GetInstanceTM().SetOSMMode(true);
 }
 
 void CARLAInterface::applyWorldSettings() {
