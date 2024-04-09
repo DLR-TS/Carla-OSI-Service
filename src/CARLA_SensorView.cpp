@@ -104,7 +104,7 @@ void SensorViewer::fetchActorsFromCarla() {
 						if (runtimeParameter->carlaSensors && !isSpawnedActorId(addedActor) && 0 == actor->GetTypeId().rfind("sensor.", 0)) {
 							std::cout << "Add already spawned sensor in Carla" << actor->GetTypeId() << std::endl;
 							auto sensor = boost::dynamic_pointer_cast<carla::client::Sensor>(actor);
-							std::string index = "OSMPSensorView" + sensorCache.size();
+							std::string index = "OSMPSensorView" + std::to_string(sensorCache.size());
 							std::cout << "Sensorview can be requested by base_name: " << index << std::endl;
 							OSTARSensorConfiguration sensorConfig;
 							sensorConfig.prefixed_fmu_variable_name = index;

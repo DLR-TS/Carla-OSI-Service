@@ -221,6 +221,8 @@ Enable input of specific sensors in Carla.
 Use "OSMPSensorView0" for first sensor to get the input.
 The number increase for every added sensor in the simulation.
 Use this only, if the sensor can not be spawned via OSTAR and is spawned by Carla itself or an other tool.
+Each new sensor generates a log beginning with: "Sensorview can be requested by base_name: ".
+Use this base_name in the configuration file for CoSiMa as an input for sensor models.
 
 ```
 additional_parameter: "--cityobjectlabel label"
