@@ -1,16 +1,12 @@
 /**
-@authors German Aerospace Center: Nils Wendorff, Björn Bahn, Danny Behnecke
+@authors German Aerospace Center: Nils Wendorff, BjÃ¶rn Bahn, Danny Behnecke
 */
 
 #ifndef LANES_H
 #define LANES_H
 
-#include <carla/client/Junction.h>
 #include <carla/client/Map.h>
-#include <carla/road/RoadTypes.h>
-#include <carla/trafficmanager/SimpleWaypoint.h>
 
-#include <osi_common.pb.h>
 #include <osi_lane.pb.h>
 #include <osi_roadmarking.pb.h>
 
