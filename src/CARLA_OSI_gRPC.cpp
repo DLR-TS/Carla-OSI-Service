@@ -306,7 +306,7 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 			message = trafficCommandForEgoVehicle;
 		}
 	}
-	else {
+	else if (std::string::npos != base_name.rfind("OSMP", 0) || std::string::npos != base_name.rfind("OSI", 0)) {
 		// OSMPSensorView of different kinds
 		message = sensorViewer->getSensorView(base_name);
 	}
@@ -315,7 +315,7 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		return message->SerializeAsString();
 	}
 	else {
-		std::cerr << __FUNCTION__ << "Error, no message could be created with: " << base_name << std::endl;
+		//default value shall not be overriden
 		return "";
 	}
 }
