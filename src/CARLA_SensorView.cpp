@@ -37,7 +37,7 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 	return sensorView;
 }
 
-std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::string& sensorName)
+std::shared_ptr<osi3::SensorView> SensorViewer::getSensorView(const std::string& sensorName)
 {
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);

@@ -308,7 +308,9 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 	}
 	else if (std::string::npos != base_name.rfind("OSMP", 0) || std::string::npos != base_name.rfind("OSI", 0)) {
 		// OSMPSensorView of different kinds
-		message = sensorViewer->getSensorView(base_name);
+		auto sv = sensorViewer->getSensorView(base_name);
+		sv->mutable_host_vehicle_data()->CopyFrom(messageCache.getVehicleState(sv->host_vehicle_id().value(), runtimeParameter->verbose));
+		message = sv;
 	}
 
 	if (message) {
@@ -332,6 +334,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 			return -1;
 		}
 		trafficUpdater->receiveTrafficUpdate(trafficUpdate);
+		messageCache.setVehicleStates(trafficUpdate, runtimeParameter->verbose);
 		return 0;
 	}
 	else if (std::string::npos != base_name.find("OSMPSensorViewConfigurationRequest")) {

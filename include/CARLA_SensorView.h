@@ -51,7 +51,7 @@ public:
 	\param configured sensorname
 	\return The sensor's latest output as osi3::SensorView, or nullptr if no sensor with given name is found
 	*/
-	std::shared_ptr<const osi3::SensorView> getSensorView(const std::string& sensorName);
+	std::shared_ptr<osi3::SensorView> getSensorView(const std::string& sensorName);
 
 	/**
 	* Fetch the actors in carla and update cache.

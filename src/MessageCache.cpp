@@ -20,8 +20,37 @@ std::string MessageCache::getMessage(const std::string& key, bool verbose) {
 	else {
 		if (verbose)
 		{
-			std::cout << __FUNCTION__ << key << "No message found." << std::endl;
+			std::cout << __FUNCTION__ << key << "No generic message found." << std::endl;
 		}
 		return "";
+	}
+}
+
+void MessageCache::setVehicleStates(const osi3::TrafficUpdate& message, bool verbose) {
+	for (auto& state : message.internal_state()) {
+		uint64_t key = state.host_vehicle_id().value();
+		if (verbose)
+		{
+			std::cout << __FUNCTION__ << key << std::endl;
+		}
+		vehicleInternalStateMap[key] = state;
+	}
+}
+
+osi3::HostVehicleData MessageCache::getVehicleState(const uint64_t& key, bool verbose) {
+	auto iter = vehicleInternalStateMap.find(key);
+	if (iter != vehicleInternalStateMap.end()) {
+		if (verbose)
+		{
+			std::cout << __FUNCTION__ << key << std::endl;
+		}
+		return iter->second;
+	}
+	else {
+		if (verbose)
+		{
+			std::cout << __FUNCTION__ << key << "No host vehicle message found." << std::endl;
+		}
+		return osi3::HostVehicleData();
 	}
 }
