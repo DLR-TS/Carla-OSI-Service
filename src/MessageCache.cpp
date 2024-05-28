@@ -54,6 +54,6 @@ osi3::HostVehicleData MessageCache::getVehicleState(const uint64_t& key, bool ve
 		osi3::HostVehicleData hvd;
 		hvd.mutable_vehicle_powertrain()->set_pedal_position_acceleration(0);
 		hvd.mutable_vehicle_brake_system()->set_pedal_position_brake(0);
-		return osi3::HostVehicleData();
+		return hvd;
 	}
 }
