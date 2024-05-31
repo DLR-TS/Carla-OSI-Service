@@ -31,9 +31,6 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}
 
-	if (runtimeParameter->verbose) {
-		std::cout << sensorView->DebugString() << std::endl;
-	}
 	return sensorView;
 }
 
