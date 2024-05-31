@@ -246,6 +246,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 
 	sensorViewer->trySpawnSensors();
 	sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
+	trafficUpdater->deleteSpawnedVehiclesIfNoTrafficUpdateAvailable();
 
 	double timestep = runtimeParameter->deltaSeconds;
 
