@@ -1,6 +1,6 @@
-# OSTAR CARLA OSI Service
+# OSTAR CARLA-OSI-Service
 
-CARLA OSI Sercive is a part of [OSTAR](https://github.com/DLR-TS/OSTAR-Quickstart).
+CARLA-OSI-Sercive is a part of [OSTAR](https://github.com/DLR-TS/OSTAR-Quickstart).
 It connects OSTAR with [CARLA](https://github.com/carla-simulator/carla) and communicates via [ASAM OSI](https://www.asam.net/standards/detail/osi/) messages.
 
 # Installation Guide
