@@ -8,9 +8,21 @@ int main(int argc, char *argv[])
 	std::cout << "Current directory: " << fs::current_path() << "\n" << std::endl;
 
 	//Server address deliberately chosen to accept any connection
-	std::string serverAddress = "0.0.0.0:51425";
+	std::string server_address = "0.0.0.0:51425";
 
-	CARLA_OSI_client client(serverAddress);
+	for (int i = 1; i < argc; i++) {
+		const std::string parameter = std::string(argv[i]);
+		if (parameter.find(':') == std::string::npos)
+		{
+			//listen to messages from all ips
+			server_address = "0.0.0.0:" + parameter;
+		}
+		else {
+			server_address = parameter;
+		}
+	}
+
+	CARLA_OSI_client client(server_address);
 	client.StartServer();
 
 	return 0;
