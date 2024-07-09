@@ -6,8 +6,8 @@ OSIVehicleID TrafficCommander::getHeroId() {
 		auto typeID = actor->GetTypeId();
 		if (typeID.rfind("vehicle", 0) == 0) {
             auto vehicleActor = boost::static_pointer_cast<const carla::client::Vehicle>(actor);
-			OSIVehicleID spawnedVehicleID = vehicleIsSpawned(vehicleActor);
-			if (spawnedVehicleID) {
+			OSIVehicleID spawnedVehicleID;
+			if (vehicleIsSpawned(vehicleActor, spawnedVehicleID)) {
 				if (runtimeParameter->ego == std::to_string(spawnedVehicleID)) {
 					return spawnedVehicleID;
 				}

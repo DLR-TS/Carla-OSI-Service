@@ -49,8 +49,14 @@ osi3::HostVehicleData MessageCache::getVehicleState(const uint64_t& key, bool ve
 	else {
 		if (verbose)
 		{
-			std::cout << __FUNCTION__ << key << "No host vehicle message found." << std::endl;
+			std::cout << __FUNCTION__ << key << "No host vehicle message found. Create default message" << std::endl;
 		}
-		return osi3::HostVehicleData();
+		osi3::HostVehicleData hvd;
+		hvd.mutable_vehicle_powertrain()->set_pedal_position_acceleration(0);
+		hvd.mutable_vehicle_brake_system()->set_pedal_position_brake(0);
+		hvd.mutable_vehicle_motion()->mutable_velocity()->set_x(3);//3 m/s > 10 km/h Start
+		hvd.mutable_vehicle_motion()->mutable_velocity()->set_z(0);
+		hvd.mutable_vehicle_motion()->mutable_velocity()->set_y(0);
+		return hvd;
 	}
 }

@@ -34,6 +34,11 @@ public:
 	int receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate);
 
 	/**
+	Delete all spawned vehicles by Carla OSI Service if not updated by receiveTrafficUpdate since last time
+	*/
+	void deleteSpawnedVehiclesIfNoTrafficUpdateAvailable();
+
+	/**
 	Delete all spawned vehicles by Carla OSI Service
 	*/
 	void deleteSpawnedVehicles();
@@ -44,6 +49,8 @@ public:
 	void deleteSpawnedVehiclesWithSensors(const uint32_t& id, const spawnedActors& actors);
 
 private:
+	std::set<uint32_t> setOfUpdatedVehicles;
+
 	/**
 	Spawn all vehicle actors and save their bounding boxes for a most realistic playback of a scenario via trafficUpdate messages
 	*/
@@ -71,11 +78,6 @@ private:
 	Apply Traffic Update to existing vehicle in Carla
 	*/
 	void applyTrafficUpdateToActor(const osi3::MovingObject& update, carla::SharedPtr<carla::client::Actor> actor, const carla::ActorId actorId);
-
-	/**
-	Remove all spawned vehicles by TrafficUpdate if id is not in given list
-	*/
-	void removeSpawnedVehiclesIfNotUpdated(std::vector<uint32_t>& listOfUpdatedVehicles);
 };
 
 #endif //!CARLATRAFFICUPDATE_H

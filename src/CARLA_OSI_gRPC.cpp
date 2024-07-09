@@ -246,6 +246,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 
 	sensorViewer->trySpawnSensors();
 	sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
+	trafficUpdater->deleteSpawnedVehiclesIfNoTrafficUpdateAvailable();
 
 	double timestep = runtimeParameter->deltaSeconds;
 
@@ -310,6 +311,12 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 		// OSMPSensorView of different kinds
 		auto sv = sensorViewer->getSensorView(base_name);
 		sv->mutable_host_vehicle_data()->CopyFrom(messageCache.getVehicleState(sv->host_vehicle_id().value(), runtimeParameter->verbose));
+		sv->mutable_mounting_position()->mutable_position()->set_x(0);
+		sv->mutable_mounting_position()->mutable_position()->set_y(0);
+		sv->mutable_mounting_position()->mutable_position()->set_z(0);
+		sv->mutable_mounting_position()->mutable_orientation()->set_roll(0);
+		sv->mutable_mounting_position()->mutable_orientation()->set_pitch(0);
+		sv->mutable_mounting_position()->mutable_orientation()->set_yaw(0);
 		message = sv;
 	}
 

@@ -4,7 +4,7 @@ include(FetchContent)
 FetchContent_Declare(
   osi
   GIT_REPOSITORY https://github.com/OpenSimulationInterface/open-simulation-interface.git
-  GIT_TAG "v3.5.0"
+  GIT_TAG "v3.6.0"
   GIT_SHALLOW TRUE
   GIT_PROGRESS TRUE
 )
