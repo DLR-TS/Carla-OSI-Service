@@ -233,6 +233,7 @@ bool SensorViewer::trySpawnSensor(const OSTARSensorConfiguration& sensorConfig) 
 		carla->spawnedSensorsOnExternalSpawnedVehicles.push_back(sensorActor->GetId());
 	}
 
+	std::cout << "Spawned Sensor! Get its content with: " << sensorConfig.prefixed_fmu_variable_name << std::endl;
 	sensorCache.emplace(sensorConfig.prefixed_fmu_variable_name, nullptr);
 	sensorActor->Listen(
 		[this, sensorActor, sensorConfig]
