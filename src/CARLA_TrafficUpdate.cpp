@@ -54,7 +54,7 @@ int TrafficUpdater::receiveTrafficUpdate(osi3::TrafficUpdate& trafficUpdate) {
 			std::tie(spawned, actor) = spawnVehicleIfNeeded(update, actorId);
 		}
 		if (actor == nullptr) {
-			std::cout << "Actor not found! No position updates will be done!" << std::endl;
+			std::cout << "Actor not found! No position updates will be done! If you want to replay vehicles add -replay to the configuration." << std::endl;
 			return 0;
 		}
 		setOfUpdatedVehicles.emplace(uint32_t(update.id().value()));
@@ -133,7 +133,7 @@ carla::geom::Transform TrafficUpdater::determineTransform(const osi3::MovingObje
 	if (optionalPoint) {
 		carla::rpc::LabelledPoint point = *optionalPoint;
 		position = point._location;
-		position.z += 0.05f;//spawn needs to be a little bit higher
+		position.z += runtimeParameter->replay.spawnHeight_Z;
 	}
 	else {
 		std::cout << "No Ground Position!" << std::endl;
