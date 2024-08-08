@@ -220,7 +220,7 @@ bool SensorViewer::trySpawnSensor(const OSTARSensorConfiguration& sensorConfig) 
 
 	sensorViewConfiger->configureBP(sensorBP, sensorConfig);
 
-	carla::geom::Transform transform = Geometry::getInstance()->toCarla(sensorConfig.sensorViewConfiguration.mounting_position());
+	carla::geom::Transform transform = Geometry::getInstance()->toCarlaLocal(sensorConfig.sensorViewConfiguration.mounting_position());
 
 	auto actor = carla->world->TrySpawnActor(sensorBP, transform, parent);
 	if (actor == nullptr) {

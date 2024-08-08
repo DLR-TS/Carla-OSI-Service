@@ -60,6 +60,10 @@ carla::geom::Transform Geometry::toCarla(const osi3::MountingPosition& mountingP
 	return carla::geom::Transform(toCarla(mountingPosition.position()), toCarla(mountingPosition.orientation()));
 }
 
+carla::geom::Transform Geometry::toCarlaLocal(const osi3::MountingPosition& mountingPosition) {
+	return carla::geom::Transform(toCarlaLocal(mountingPosition.position()), toCarla(mountingPosition.orientation()));
+}
+
 carla::geom::Rotation Geometry::toCarla(const osi3::Orientation3d& orientation) {
 	// According to https://carla.readthedocs.io/en/0.9.9/python_api/#carlarotation, Carla/UE4 uses right-hand rotations except for yaw, even though the coordinate system is defined as left-handed.
 	// Iff the rotations are performed in the same order (//TODO could not find any information on this in UE4 documentation), only change of signage of yaw and conversion from radians to degree is needed.
@@ -76,8 +80,13 @@ carla::geom::BoundingBox Geometry::toCarla(const osi3::Dimension3d& dimension, c
 }
 
 carla::geom::Location Geometry::toCarla(const osi3::Vector3d& position) {
-	//flip y
+	//flip y with offset calculation
 	return carla::geom::Location((float)(position.x() - offset.X), (float)(-(position.y() - offset.Y)), (float)position.z());
+}
+
+carla::geom::Location Geometry::toCarlaLocal(const osi3::Vector3d& position) {
+	//flip y
+	return carla::geom::Location((float)position.x(), (float)-position.y(), (float)position.z());
 }
 
 carla::geom::Location Geometry::toCarlaVelocity(const osi3::Vector3d& position) {

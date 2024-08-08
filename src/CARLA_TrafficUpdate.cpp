@@ -149,7 +149,6 @@ void TrafficUpdater::applyTrafficUpdateToActor(const osi3::MovingObject& update,
 	//BASE
 	if (update.base().has_position() && update.base().has_orientation()) {
 		auto position = Geometry::getInstance()->toCarla(update.base().position());
-		auto position2 = Geometry::getInstance()->toCarla(update.base().position());
 		auto positionProjectionStart = Geometry::getInstance()->toCarla(update.base().position());
 		auto orientation = Geometry::getInstance()->toCarla(update.base().orientation());
 
