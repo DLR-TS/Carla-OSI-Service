@@ -25,15 +25,15 @@ protected:
 
 	/*
 	Checks if vehicle is spawned by Carla_OSI_Service
-	return 0 if not
 	*/
-	OSIVehicleID vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle) {
+	bool vehicleIsSpawned(boost::shared_ptr<const carla::client::Vehicle> vehicle, OSIVehicleID& osiVehicleID) {
 		for (auto& spawnedVehicle : carla->spawnedVehiclesByCarlaOSIService) {
 			if (spawnedVehicle.second.vehicle == vehicle->GetId()) {
-				return spawnedVehicle.first;
+				osiVehicleID = spawnedVehicle.first;
+				return true;
 			}
 		}
-		return 0;
+	return false;
 	}
 
 	/*

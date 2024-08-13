@@ -185,6 +185,7 @@ void GroundTruthCreator::parseStationaryMapObjects()
 			}
 			//lanes->Add(std::move(lane));
 			lanes->AddAllocated(lane.release());
+			laneBoundaries->MergeFrom(boundaries);
 		}
 		std::cout << "Finished parsing of topology" << std::endl;
 	}
@@ -211,8 +212,8 @@ std::shared_ptr<osi3::GroundTruth> GroundTruthCreator::parseWorldToGroundTruth()
 
 			vehicle->set_model_reference(vehicleActor->GetTypeId());
 			//if a vehicle is spawned by TrafficUpdate, then the ID from that OSI message shall be used, not the ID given by Carla when spawned.
-			OSIVehicleID spawnedVehicleID = vehicleIsSpawned(vehicleActor);
-			if (spawnedVehicleID) {
+			OSIVehicleID spawnedVehicleID;
+			if (vehicleIsSpawned(vehicleActor, spawnedVehicleID)) {
 				vehicle->mutable_id()->set_value(spawnedVehicleID);
 				if (runtimeParameter->ego == std::to_string(spawnedVehicleID)) {
 					groundTruth->mutable_host_vehicle_id()->set_value(spawnedVehicleID);

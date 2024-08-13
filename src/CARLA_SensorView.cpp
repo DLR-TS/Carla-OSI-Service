@@ -31,13 +31,10 @@ std::shared_ptr<osi3::SensorView> SensorViewer::getSensorViewGroundTruth(const s
 		sensorView->mutable_sensor_id()->set_value(sensorId.value);
 	}
 
-	if (runtimeParameter->verbose) {
-		std::cout << sensorView->DebugString() << std::endl;
-	}
 	return sensorView;
 }
 
-std::shared_ptr<const osi3::SensorView> SensorViewer::getSensorView(const std::string& sensorName)
+std::shared_ptr<osi3::SensorView> SensorViewer::getSensorView(const std::string& sensorName)
 {
 	// mutex scope: using a shared lock - read only access
 	std::unique_lock<std::mutex> lock(sensorCache_mutex);
@@ -223,7 +220,7 @@ bool SensorViewer::trySpawnSensor(const OSTARSensorConfiguration& sensorConfig) 
 
 	sensorViewConfiger->configureBP(sensorBP, sensorConfig);
 
-	carla::geom::Transform transform = Geometry::getInstance()->toCarla(sensorConfig.sensorViewConfiguration.mounting_position());
+	carla::geom::Transform transform = Geometry::getInstance()->toCarlaLocal(sensorConfig.sensorViewConfiguration.mounting_position());
 
 	auto actor = carla->world->TrySpawnActor(sensorBP, transform, parent);
 	if (actor == nullptr) {
@@ -236,6 +233,7 @@ bool SensorViewer::trySpawnSensor(const OSTARSensorConfiguration& sensorConfig) 
 		carla->spawnedSensorsOnExternalSpawnedVehicles.push_back(sensorActor->GetId());
 	}
 
+	std::cout << "Spawned Sensor! Get its content with: " << sensorConfig.prefixed_fmu_variable_name << std::endl;
 	sensorCache.emplace(sensorConfig.prefixed_fmu_variable_name, nullptr);
 	sensorActor->Listen(
 		[this, sensorActor, sensorConfig]

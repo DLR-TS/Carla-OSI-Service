@@ -73,10 +73,12 @@ class CARLA_OSI_client : public CoSiMa::rpc::CARLAInterface::Service, public CoS
 
 public:
 
-	CARLA_OSI_client(const std::string& server_address)
+	CARLA_OSI_client(const std::string& server_address, bool verbose)
 		: transaction_timeout(std::chrono::milliseconds(5000)),
 		serverAddress(server_address),
-		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {};
+		trafficCommandReceiver(std::bind(&CARLA_OSI_client::saveTrafficCommand, this, std::placeholders::_1)) {
+			runtimeParameter->verbose = verbose;
+		};
 
 	CARLA_OSI_client(const std::string& server_address, const std::chrono::milliseconds transaction_timeout)
 		: transaction_timeout(transaction_timeout),

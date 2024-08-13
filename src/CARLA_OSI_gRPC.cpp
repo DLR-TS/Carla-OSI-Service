@@ -246,6 +246,7 @@ grpc::Status CARLA_OSI_client::DoStep(grpc::ServerContext* context, const CoSiMa
 
 	sensorViewer->trySpawnSensors();
 	sensorViewer->groundTruthCreator->invalidateLatestGroundTruth();
+	trafficUpdater->deleteSpawnedVehiclesIfNoTrafficUpdateAvailable();
 
 	double timestep = runtimeParameter->deltaSeconds;
 
@@ -306,16 +307,24 @@ std::string CARLA_OSI_client::getAndSerialize(const std::string& base_name) {
 			message = trafficCommandForEgoVehicle;
 		}
 	}
-	else {
+	else if (std::string::npos != base_name.rfind("OSMP", 0) || std::string::npos != base_name.rfind("OSI", 0)) {
 		// OSMPSensorView of different kinds
-		message = sensorViewer->getSensorView(base_name);
+		auto sv = sensorViewer->getSensorView(base_name);
+		sv->mutable_host_vehicle_data()->CopyFrom(messageCache.getVehicleState(sv->host_vehicle_id().value(), runtimeParameter->verbose));
+		sv->mutable_mounting_position()->mutable_position()->set_x(0);
+		sv->mutable_mounting_position()->mutable_position()->set_y(0);
+		sv->mutable_mounting_position()->mutable_position()->set_z(0);
+		sv->mutable_mounting_position()->mutable_orientation()->set_roll(0);
+		sv->mutable_mounting_position()->mutable_orientation()->set_pitch(0);
+		sv->mutable_mounting_position()->mutable_orientation()->set_yaw(0);
+		message = sv;
 	}
 
 	if (message) {
 		return message->SerializeAsString();
 	}
 	else {
-		std::cerr << __FUNCTION__ << "Error, no message could be created with: " << base_name << std::endl;
+		//default value shall not be overriden
 		return "";
 	}
 }
@@ -332,6 +341,7 @@ int CARLA_OSI_client::deserializeAndSet(const std::string& base_name, const std:
 			return -1;
 		}
 		trafficUpdater->receiveTrafficUpdate(trafficUpdate);
+		messageCache.setVehicleStates(trafficUpdate, runtimeParameter->verbose);
 		return 0;
 	}
 	else if (std::string::npos != base_name.find("OSMPSensorViewConfigurationRequest")) {
