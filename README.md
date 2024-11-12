@@ -38,7 +38,7 @@ It connects OSTAR with [CARLA](https://github.com/carla-simulator/carla) and com
 | \<ip\>:\<port\> | open port and allow only connections from ip |
 
 Many configurations are available through CoSiMa Configuration.
-The complete list can be found [here](https://github.com/DLR-TS/Carla-OSI-Service/blob/master/Configuration.md).
+The complete list can be found [here](https://github.com/DLR-TS/OSTAR-Quickstart/blob/main/docu/Configuration.md).
 
 # Windows
 
